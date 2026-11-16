@@ -229,6 +229,14 @@ class L10nFr extends L10n {
   String get openOutputSwitcher => 'Changer de sortie';
 
   @override
+  String get outputSwitcherUnavailable =>
+      'Impossible d’ouvrir le sélecteur de sortie sur ce téléphone';
+
+  @override
+  String get outputPanelMaybe =>
+      'Si aucun panneau ne s’est ouvert, utilise les réglages Bluetooth';
+
+  @override
   String get openBluetoothSettings => 'Réglages Bluetooth';
 
   @override

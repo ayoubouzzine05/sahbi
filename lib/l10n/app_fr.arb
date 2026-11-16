@@ -71,6 +71,8 @@
   "outputWired": "Casque filaire",
   "outputUsb": "USB",
   "openOutputSwitcher": "Changer de sortie",
+  "outputSwitcherUnavailable": "Impossible d’ouvrir le sélecteur de sortie sur ce téléphone",
+  "outputPanelMaybe": "Si aucun panneau ne s’est ouvert, utilise les réglages Bluetooth",
   "openBluetoothSettings": "Réglages Bluetooth",
   "outputNote": "Sahbi joue sur la sortie Android actuelle. Le changement d’enceinte se fait dans le panneau système.",
   "streamingTitle": "Spotify et YouTube Music",

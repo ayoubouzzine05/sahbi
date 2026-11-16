@@ -525,6 +525,18 @@ abstract class L10n {
   /// **'Switch output'**
   String get openOutputSwitcher;
 
+  /// No description provided for @outputSwitcherUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the output switcher on this phone'**
+  String get outputSwitcherUnavailable;
+
+  /// No description provided for @outputPanelMaybe.
+  ///
+  /// In en, this message translates to:
+  /// **'If no panel opened, use Bluetooth settings'**
+  String get outputPanelMaybe;
+
   /// No description provided for @openBluetoothSettings.
   ///
   /// In en, this message translates to:

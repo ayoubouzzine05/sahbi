@@ -1,0 +1,20 @@
+[===                                    ] 8% Computing updates...               
+[===                                    ] 10% Computing updates...              
+[===                                    ] 10% Installing NDK (Side by side) 28.2
+The message received from the daemon indicates that the daemon has disappeared.
+Build request sent: Build{id=58449511-3be5-4be1-8116-689c31e8dd50, currentDir=/home/user/sahbi/android}
+Attempting to read last messages from the daemon log...
+Daemon pid: 5217
+  log file: /home/user/.cache/gradle/daemon/9.5.0/daemon-5217.out.log
+----- Last 20 lines from daemon log file - daemon-5217.out.log -----
+----- End of the daemon log -----
+FAILURE: Build failed with an exception.
+* What went wrong:
+Gradle build daemon disappeared unexpectedly (it may have been killed or may have crashed)
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+Running Gradle task 'assembleDebug'...                            863.6s
+Gradle task assembleDebug failed with exit code 1

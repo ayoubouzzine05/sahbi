@@ -302,7 +302,15 @@ class _OutputCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: () async {
               final r = await music.bridge.openOutputSwitcher();
-              if (r == 'none') messenger.showSnackBar(SnackBar(content: Text(l.outputUnknown)));
+              if (r == 'none') {
+                messenger.showSnackBar(SnackBar(content: Text(l.outputSwitcherUnavailable)));
+              } else if (r == 'media_output_panel') {
+                // Android 11–13: best-effort SystemUI panel; we cannot confirm it opened.
+                messenger.showSnackBar(SnackBar(
+                  content: Text(l.outputPanelMaybe),
+                  action: SnackBarAction(label: l.openBluetoothSettings, onPressed: music.bridge.openBluetoothSettings),
+                ));
+              }
             },
             icon: const Icon(Icons.cast_rounded, size: 18),
             label: Text(l.openOutputSwitcher),

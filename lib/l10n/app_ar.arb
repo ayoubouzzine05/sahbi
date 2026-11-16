@@ -71,6 +71,8 @@
   "outputWired": "كاسك بالخيط",
   "outputUsb": "USB",
   "openOutputSwitcher": "بدل الخروج",
+  "outputSwitcherUnavailable": "ما قدرتش نحل لوحة الخروج فهاد التيليفون",
+  "outputPanelMaybe": "إلا ما تحلات حتى لوحة، استعمل إعدادات البلوتوث",
   "openBluetoothSettings": "إعدادات البلوتوث",
   "outputNote": "صاحبي كيخرج الصوت فالخروج الحالي ديال أندرويد. التبديل بين السبيكرات كيتدار من لوحة النظام.",
   "streamingTitle": "سبوتيفاي و يوتيوب ميوزيك",

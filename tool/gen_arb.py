@@ -73,6 +73,8 @@ S = {
  "outputWired": ("كاسك بالخيط", "Casque filaire", "Wired headset"),
  "outputUsb": ("USB", "USB", "USB"),
  "openOutputSwitcher": ("بدل الخروج", "Changer de sortie", "Switch output"),
+ "outputSwitcherUnavailable": ("ما قدرتش نحل لوحة الخروج فهاد التيليفون", "Impossible d’ouvrir le sélecteur de sortie sur ce téléphone", "Could not open the output switcher on this phone"),
+ "outputPanelMaybe": ("إلا ما تحلات حتى لوحة، استعمل إعدادات البلوتوث", "Si aucun panneau ne s’est ouvert, utilise les réglages Bluetooth", "If no panel opened, use Bluetooth settings"),
  "openBluetoothSettings": ("إعدادات البلوتوث", "Réglages Bluetooth", "Bluetooth settings"),
  "outputNote": ("صاحبي كيخرج الصوت فالخروج الحالي ديال أندرويد. التبديل بين السبيكرات كيتدار من لوحة النظام.", "Sahbi joue sur la sortie Android actuelle. Le changement d’enceinte se fait dans le panneau système.", "Sahbi plays to the current Android output. Switching speakers happens in the system panel."),
  "streamingTitle": ("سبوتيفاي و يوتيوب ميوزيك", "Spotify et YouTube Music", "Spotify & YouTube Music"),

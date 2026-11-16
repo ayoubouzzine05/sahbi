@@ -227,6 +227,13 @@ class L10nEn extends L10n {
   String get openOutputSwitcher => 'Switch output';
 
   @override
+  String get outputSwitcherUnavailable =>
+      'Could not open the output switcher on this phone';
+
+  @override
+  String get outputPanelMaybe => 'If no panel opened, use Bluetooth settings';
+
+  @override
   String get openBluetoothSettings => 'Bluetooth settings';
 
   @override

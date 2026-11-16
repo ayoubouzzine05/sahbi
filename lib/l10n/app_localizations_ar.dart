@@ -229,6 +229,14 @@ class L10nAr extends L10n {
   String get openOutputSwitcher => 'بدل الخروج';
 
   @override
+  String get outputSwitcherUnavailable =>
+      'ما قدرتش نحل لوحة الخروج فهاد التيليفون';
+
+  @override
+  String get outputPanelMaybe =>
+      'إلا ما تحلات حتى لوحة، استعمل إعدادات البلوتوث';
+
+  @override
   String get openBluetoothSettings => 'إعدادات البلوتوث';
 
   @override
