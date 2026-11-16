@@ -1,0 +1,415 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../core/config.dart';
+import '../../core/providers.dart';
+import '../../core/theme.dart';
+import '../../core/zellige.dart';
+import '../../l10n/app_localizations.dart';
+import '../voice/voice_types.dart';
+import 'app_settings.dart';
+
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late final TextEditingController _url = TextEditingController(text: ref.read(settingsProvider).backendUrl);
+  late final TextEditingController _name = TextEditingController(text: ref.read(settingsProvider).userName);
+  List<TtsVoice>? _voices;
+  int _versionTaps = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(deviceTtsProvider).voices().then((v) {
+      if (mounted) setState(() => _voices = v);
+    }).catchError((_) {
+      if (mounted) setState(() => _voices = const []);
+    });
+  }
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _set(AppSettings Function(AppSettings) f) => ref.read(settingsProvider.notifier).update(f);
+
+  Widget _section(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
+        child: Text(title.toUpperCase(),
+            style: const TextStyle(fontSize: 12, letterSpacing: 1.1, color: SahbiColors.turquoise, fontWeight: FontWeight.w700)),
+      );
+
+  Widget _seg<T>(List<(T, String)> opts, T value, void Function(T) onSel) => SegmentedButton<T>(
+        showSelectedIcon: false,
+        segments: [for (final (v, label) in opts) ButtonSegment(value: v, label: Text(label, style: const TextStyle(fontSize: 12)))],
+        selected: {value},
+        onSelectionChanged: (s) => onSel(s.first),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = L10n.of(context);
+    final s = ref.watch(settingsProvider);
+    final net = ref.watch(connectivityProvider).value;
+    final voice = ref.watch(voiceControllerProvider);
+    final music = ref.watch(musicControllerProvider);
+    final memory = ref.watch(memoryStoreProvider);
+    final health = net.health;
+
+    Widget svc(String name, String label) {
+      final h = health?.services[name];
+      final ok = h?.configured ?? false;
+      return ListTile(
+        dense: true,
+        leading: Icon(ok ? Icons.check_circle_rounded : Icons.remove_circle_outline,
+            color: ok ? SahbiColors.green : SahbiColors.textSecondary, size: 20),
+        title: Text(label),
+        trailing: Text(
+          health == null ? '—' : (ok ? '${l.configured} · ${h!.provider}' : l.notConfigured),
+          style: const TextStyle(fontSize: 12, color: SahbiColors.textSecondary),
+        ),
+      );
+    }
+
+    String modeLabel(String id) => switch (id) {
+          'cloud' => l.providerCloud,
+          'typed' => l.providerTyped,
+          'off' => l.providerOff,
+          _ => l.providerDevice,
+        };
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l.settingsTitle)),
+      body: ZelligeBackground(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          children: [
+            // ---- Language
+            _section(l.secLanguage),
+            ZelligeCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.uiLanguage),
+                const SizedBox(height: 6),
+                _seg([('ar', 'العربية'), ('fr', 'Français'), ('en', 'English')], s.uiLocale,
+                    (v) => _set((x) => x.copyWith(uiLocale: v))),
+                const SizedBox(height: 14),
+                Text(l.replyLanguage),
+                const SizedBox(height: 6),
+                _seg([('darija', l.langDarija), ('ar', l.langArabic), ('fr', l.langFrench), ('en', l.langEnglish)],
+                    s.replyLanguage, (v) => _set((x) => x.copyWith(replyLanguage: v))),
+                const SizedBox(height: 14),
+                Text(l.darijaScript),
+                const SizedBox(height: 6),
+                _seg([('arabic', l.scriptArabic), ('latin', l.scriptLatin)], s.darijaScript,
+                    (v) => _set((x) => x.copyWith(darijaScript: v))),
+              ]),
+            ),
+
+            // ---- Voice
+            _section(l.secVoice),
+            ZelligeCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(child: Text(l.sttProvider)),
+                  Text('${l.activeNow}: ${modeLabel(voice.activeStt)}',
+                      style: const TextStyle(fontSize: 12, color: SahbiColors.textSecondary)),
+                ]),
+                const SizedBox(height: 6),
+                _seg([(SttMode.auto, l.modeAuto), (SttMode.cloud, l.modeCloud), (SttMode.device, l.modeDevice), (SttMode.typed, l.modeTyped)],
+                    s.sttMode, (v) {
+                  _set((x) => x.copyWith(sttMode: v));
+                  voice.resetFallbacks();
+                }),
+                const SizedBox(height: 14),
+                Row(children: [
+                  Expanded(child: Text(l.ttsProvider)),
+                  Text('${l.activeNow}: ${modeLabel(voice.activeTts)}',
+                      style: const TextStyle(fontSize: 12, color: SahbiColors.textSecondary)),
+                ]),
+                const SizedBox(height: 6),
+                _seg([(TtsMode.auto, l.modeAuto), (TtsMode.cloud, l.modeCloud), (TtsMode.device, l.modeDevice), (TtsMode.off, l.modeOff)],
+                    s.ttsMode, (v) {
+                  _set((x) => x.copyWith(ttsMode: v));
+                  voice.resetFallbacks();
+                }),
+                if (!net.cloudSttConfigured || !net.cloudTtsConfigured)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '${l.serviceStt}: ${net.cloudSttConfigured ? l.configured : l.notConfigured} · '
+                      '${l.serviceTts}: ${net.cloudTtsConfigured ? l.configured : l.notConfigured}',
+                      style: const TextStyle(fontSize: 12, color: SahbiColors.amber),
+                    ),
+                  ),
+                const SizedBox(height: 14),
+                Text(l.deviceVoice),
+                DropdownButton<String?>(
+                  isExpanded: true,
+                  value: (_voices ?? const []).any((v) => v.name == s.deviceVoiceName) ? s.deviceVoiceName : null,
+                  items: [
+                    DropdownMenuItem<String?>(value: null, child: Text(l.defaultVoice)),
+                    for (final v in _voices ?? const <TtsVoice>[])
+                      DropdownMenuItem<String?>(value: v.name, child: Text('${v.locale} · ${v.name}', overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) => _set((x) => v == null
+                      ? x.copyWith(clearDeviceVoice: true)
+                      : x.copyWith(
+                          deviceVoiceName: v,
+                          deviceVoiceLocale: _voices!.firstWhere((e) => e.name == v).locale,
+                        )),
+                ),
+                const SizedBox(height: 8),
+                Text(l.cloudVoice),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  value: s.cloudVoice,
+                  items: const [
+                    // Verified in Azure Speech language-support docs (ar-MA).
+                    DropdownMenuItem(value: 'ar-MA-JamalNeural', child: Text('ar-MA · Jamal (Azure)')),
+                    DropdownMenuItem(value: 'ar-MA-MounaNeural', child: Text('ar-MA · Mouna (Azure)')),
+                  ],
+                  onChanged: (v) => _set((x) => x.copyWith(cloudVoice: v)),
+                ),
+                Row(children: [
+                  SizedBox(width: 80, child: Text(l.speechRate)),
+                  Expanded(
+                    child: Slider(
+                      value: s.speechRate,
+                      min: 0.2,
+                      max: 0.9,
+                      onChanged: (v) => _set((x) => x.copyWith(speechRate: v)),
+                    ),
+                  ),
+                ]),
+                Row(children: [
+                  SizedBox(width: 80, child: Text(l.pitch)),
+                  Expanded(
+                    child: Slider(
+                      value: s.pitch,
+                      min: 0.6,
+                      max: 1.5,
+                      onChanged: (v) => _set((x) => x.copyWith(pitch: v)),
+                    ),
+                  ),
+                ]),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton.icon(
+                    onPressed: s.ttsMode == TtsMode.off
+                        ? null
+                        : () => voice.speak(l.testVoiceText, language: s.uiLocale == 'ar' ? 'darija' : s.uiLocale),
+                    icon: const Icon(Icons.play_circle_outline_rounded),
+                    label: Text(l.testVoice),
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.tapFaceToTalk),
+                  value: s.tapFaceToTalk,
+                  onChanged: (v) => _set((x) => x.copyWith(tapFaceToTalk: v)),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.wakeWord),
+                  subtitle: AppConfig.wakeWordAvailable ? null : Text(l.wakeWordUnavailable),
+                  value: AppConfig.wakeWordAvailable && s.wakeWordEnabled,
+                  onChanged: AppConfig.wakeWordAvailable ? (v) => _set((x) => x.copyWith(wakeWordEnabled: v)) : null,
+                ),
+                Text(l.darijaQualityNote, style: const TextStyle(fontSize: 12, color: SahbiColors.textSecondary)),
+              ]),
+            ),
+
+            // ---- AI / backend
+            _section(l.secAi),
+            ZelligeCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                TextField(
+                  controller: _url,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(labelText: l.backendUrl, hintText: 'https://sahbi.example.com'),
+                  onSubmitted: (v) {
+                    _set((x) => x.copyWith(backendUrl: v.trim()));
+                    ref.read(connectivityProvider).check();
+                  },
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      '${l.lastHealthCheck}: ${net.lastCheck == null ? l.never : TimeOfDay.fromDateTime(net.lastCheck!).format(context)}'
+                      '${health != null ? ' · v${health.version} · prompt ${health.promptVersion}' : ''}',
+                      style: const TextStyle(fontSize: 12, color: SahbiColors.textSecondary),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      if (_url.text.trim() != s.backendUrl) _set((x) => x.copyWith(backendUrl: _url.text.trim()));
+                      ref.read(connectivityProvider).check();
+                    },
+                    child: Text(l.checkNow),
+                  ),
+                ]),
+                svc('llm', l.serviceLlm),
+                svc('search', l.serviceSearch),
+                svc('weather', l.serviceWeather),
+                svc('stt', l.serviceStt),
+                svc('tts', l.serviceTts),
+              ]),
+            ),
+
+            // ---- Internet
+            _section(l.secInternet),
+            ZelligeCard(
+              child: Row(children: [
+                Icon(net.online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                    color: net.online ? SahbiColors.green : SahbiColors.amber),
+                const SizedBox(width: 10),
+                Expanded(child: Text(net.online ? l.online : (net.hasNetwork ? l.networkOnly : l.offline))),
+              ]),
+            ),
+
+            // ---- Music
+            _section(l.secMusic),
+            ZelligeCard(
+              child: Column(children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.bluetooth_audio_rounded,
+                      color: music.output.isBluetooth ? SahbiColors.turquoise : SahbiColors.textSecondary),
+                  title: Text(l.bluetoothStatus),
+                  subtitle: Text(music.output.isBluetooth ? '${l.btConnectedOutput} · ${music.output.name}' : l.btNotOutput),
+                  trailing: IconButton(
+                    tooltip: l.openBluetoothSettings,
+                    icon: const Icon(Icons.settings_bluetooth_rounded),
+                    onPressed: () => music.bridge.openBluetoothSettings(),
+                  ),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.library_music_outlined),
+                  title: Text(l.musicTitle),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.go('/music'),
+                ),
+              ]),
+            ),
+
+            // ---- Memory & privacy
+            _section(l.secMemory),
+            ZelligeCard(
+              child: Column(children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.psychology_alt_outlined),
+                  title: Text(l.memoryTitle),
+                  subtitle: Text(memory.anyConsent ? l.memoryOnLabel : l.memoryOffLabel),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/settings/memory'),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(l.secPrivacy),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/settings/privacy'),
+                ),
+              ]),
+            ),
+
+            // ---- Personality
+            _section(l.secPersonality),
+            ZelligeCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                TextField(
+                  controller: _name,
+                  decoration: InputDecoration(labelText: l.userName),
+                  onChanged: (v) => _set((x) => x.copyWith(userName: v.trim())),
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  SizedBox(width: 80, child: Text(l.humor)),
+                  Expanded(child: Slider(value: s.humor, onChanged: (v) => _set((x) => x.copyWith(humor: v)))),
+                ]),
+                Text(l.formality),
+                const SizedBox(height: 6),
+                _seg([('casual', l.casual), ('polite', l.polite)], s.formality, (v) => _set((x) => x.copyWith(formality: v))),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.idleBehavior),
+                  value: s.idleEnabled,
+                  onChanged: (v) => _set((x) => x.copyWith(idleEnabled: v)),
+                ),
+              ]),
+            ),
+
+            // ---- Robot
+            _section(l.secRobot),
+            ZelligeCard(
+              child: Column(children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.robotExperimental),
+                  value: s.robotExperimental,
+                  onChanged: (v) => _set((x) => x.copyWith(robotExperimental: v)),
+                ),
+                if (s.robotExperimental)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.smart_toy_outlined),
+                    title: Text(l.robotTitle),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/settings/robot'),
+                  ),
+              ]),
+            ),
+
+            // ---- About
+            _section(l.secAbout),
+            ZelligeCard(
+              child: Column(children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.version),
+                  trailing: Text(AppConfig.appVersion),
+                  onTap: () {
+                    if (s.debugUnlocked) {
+                      context.push('/settings/debug');
+                      return;
+                    }
+                    if (++_versionTaps >= 7) {
+                      _set((x) => x.copyWith(debugUnlocked: true));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.debugUnlocked)));
+                    }
+                  },
+                ),
+                if (s.debugUnlocked)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: Text(l.debugTitle),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => context.push('/settings/debug'),
+                  ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.licenses),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => showLicensePage(context: context, applicationName: 'SAHBI صاحبي', applicationVersion: AppConfig.appVersion),
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
