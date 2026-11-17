@@ -5,7 +5,7 @@ Legend:
 - **Implemented, device-unverified**: code complete, but it depends on Android or real services that could not be run here (no device or emulator, no API keys).
 - **Partial** / **Not implemented**: as stated.
 
-Nothing in this file has been checked on a phone (see STATUS.md).
+Nothing in this file has been checked on a real phone (see STATUS.md). The integration test passes on an emulator.
 
 ## Face and personality
 
@@ -109,7 +109,7 @@ Nothing in this file has been checked on a phone (see STATUS.md).
 
 ## Known limitations
 
-- Nothing is verified on a device. The APK was not built in this environment (RAM), so the Kotlin platform channel has never been compiled.
+- Nothing is verified on a real phone. APKs are built in GitHub Actions and the integration test passes on an emulator, so the Kotlin channel compiles, but its behaviour on hardware is untested.
 - The launcher icon is still the Flutter default and must be replaced before release.
 - Debug builds allow cleartext HTTP so the emulator can reach `http://10.0.2.2:8080`. Release builds require HTTPS.
 - Goldens were rendered on Linux and may differ slightly on other host OSes; regenerate with `--update-goldens`.

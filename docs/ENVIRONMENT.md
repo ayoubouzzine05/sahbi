@@ -45,3 +45,9 @@ Everything was installed under `~/.cache/sdk`, which is **not persistent** in th
 ## Recommended environment to finish verification
 
 Any machine with ≥ 8 GB RAM, Flutter stable ≥ 3.50, JDK 17, Android SDK 36 and 37, plus a physical Android 8+ phone (ideally one with Arabic (Morocco) speech recognition installed) or an x86_64 emulator with KVM. The GitHub Actions workflow in `.github/workflows/android.yml` (ubuntu-latest, 16 GB) is set up to build both APKs and run the integration test on an emulator.
+
+
+## CI environment (GitHub Actions, verified 2026-11-17)
+
+- `ubuntu-latest`, Temurin **JDK 21** (AGP lint needs it), Flutter stable via subosito/flutter-action.
+- Run 44157728254: format, analyze, tests, debug, release and arm64 APKs, `latest` release, and integration test on an API 34 emulator. All green.

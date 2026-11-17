@@ -4,7 +4,9 @@
 
 > Inspired by the idea of pocket AI pets. The name, design, code, voice lines and assets are original.
 
-**Status: see [`docs/STATUS.md`](docs/STATUS.md).** In short, the analyzer is clean, 250 Flutter tests and 53 backend tests pass, and the backend was smoke-tested. **The APK has not been built or run on a device yet** (the build environment had 2 GB RAM and no device).
+**Status: see [`docs/STATUS.md`](docs/STATUS.md).** In short, the analyzer is clean, 250 Flutter tests and 53 backend tests pass, and the backend was smoke-tested. APKs are built by GitHub Actions. The integration test passes on an Android emulator, but the app has **not been tested on a real phone yet**.
+
+**Download (Android 8+):** [sahbi-arm64.apk](https://github.com/ayoubouzzine05/sahbi/releases/latest/download/sahbi-arm64.apk) (most phones) · [sahbi-universal.apk](https://github.com/ayoubouzzine05/sahbi/releases/latest/download/sahbi-universal.apk). Debug-signed: allow "install unknown apps" for your browser.
 
 ## Repository layout
 

@@ -1,4 +1,4 @@
-# Status (2026-11-16)
+# Status (2026-11-17)
 
 DONE = implemented and verified by commands run here. PARTIAL = part done. NOT DONE = missing. NOT VERIFIED = written but could not be run here; the reason is given.
 
@@ -15,9 +15,10 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | CI smoke step from `backend.yml`, replayed locally | `grep '"llm":{"configured":false'` matches the real health JSON; unauthenticated `/v1/chat` → 401. OK |
 | Backend runtime smoke (`node dist/index.js`, no keys) | `GET /v1/health` 200 with every service `configured:false` except weather; `POST /v1/auth/anonymous` returned a 94-char token; `POST /v1/chat` → **503 not_configured**; without a token → **401** |
 | Live weather through the backend | `/v1/weather?city=Casa` → 502 `upstream_error`. Geocoding answered 200, but `api.open-meteo.com` timed out from the sandbox (curl also timed out). **NOT VERIFIED** live |
-| `flutter build apk --debug` | **FAILED / NOT VERIFIED**, see below |
-| `flutter build apk --release` | **NOT RUN** (debug already could not complete) |
-| `flutter test integration_test` | **NOT RUN.** No device or emulator |
+| `flutter build apk --debug` | Failed in this sandbox (RAM, see below). **Built successfully in GitHub Actions**, run 44157728254 (commit `d7353e7`) |
+| `flutter build apk --release` | **Built in GitHub Actions** (same run): `sahbi-universal.apk` 62,132,059 bytes and `sahbi-arm64.apk` (`--split-per-abi`, arm64) 23,212,833 bytes. **DEBUG-SIGNED** (no keystore secrets). Published at `github.com/ayoubouzzine05/sahbi/releases/tag/latest`. arm64 sha256 `f75d8076…5b6862` |
+| `flutter test integration_test` | **PASSED** on an Android API 34 x86_64 emulator in GitHub Actions (same run, `integration-test` job) |
+| CI: format, analyze, all unit/widget/golden tests on GitHub (Ubuntu, Flutter stable) | **PASSED**. The Linux-generated goldens also match on the CI runner |
 | `docker build backend` | **NOT RUN.** No Docker |
 
 ### APK build attempts (2 GB RAM, no swap)
@@ -28,7 +29,9 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 4. Rebalanced the heap; it compiled most plugin modules (126 s) and was stopped by the watchdog. An orphaned Dart `frontend_server` (**1.3 GB RSS**) was found afterwards.
 5. Gradle plus `frontend_server` together exhausted RAM (MemAvailable about 38 MB for about 50 min). Stopped.
 
-Conclusion: the build needs a machine with more memory, such as the CI runner. **No APK exists, so there are no paths or sizes to report.**
+Conclusion: the build needs a machine with more memory. It was then built on the GitHub Actions runner. The first CI run built the debug APK, but the release build failed in `:url_launcher_android:lintVitalAnalyzeRelease`: AGP's lint crashed with `NoSuchMethodError: List.removeLast()`, a JDK 21 API, on JDK 17. Fixed by running CI on JDK 21 (bytecode target stays 17). The second run passed everything.
+
+Still **not verified on a real phone**: microphone and voice, SAF file picking, output switcher, notification and foreground service, and the face on real hardware. The Kotlin platform channel now **compiles** (APK built), but its behaviour is untested.
 
 ## Requirements
 
@@ -46,7 +49,7 @@ Conclusion: the build needs a machine with more memory, such as the CI runner. *
 | 10 | Face with blink, gaze, touch-follow, breathing; 10 emotions (§3) | DONE (host) / NOT VERIFIED on device | robot_face_test, goldens, personality_test |
 | 11 | Mouth sync documented as approximate (§3) | DONE | FEATURES.md, ROBOT_PROTOCOL.md |
 | 12 | Darija Arabic script and Arabizi, French code-switching (§4) | DONE (parser) / NOT VERIFIED (recognition quality) | command_parser_test (68) |
-| 13 | On-device STT and TTS (§5) | NOT VERIFIED | code in `lib/features/voice`; needs a device |
+| 13 | On-device STT and TTS (§5) | NOT VERIFIED | code in `lib/features/voice`; compiles into the APK; needs a real phone |
 | 14 | Cloud STT and TTS via backend, Azure ar-MA (§5) | NOT VERIFIED | backend routes tested with mocks; no Azure key |
 | 15 | Fallback cloud → device → typed (§5) | DONE (logic) | voice_controller_test |
 | 16 | Push-to-talk, tap face, "Sme3 lia", stop/interrupt (§5) | DONE (logic) / NOT VERIFIED on device | voice and chat tests; interrupt bug found and fixed |
@@ -76,11 +79,11 @@ Conclusion: the build needs a machine with more memory, such as the CI runner. *
 | 40 | Widget tests: face, chat, settings, RTL (§15) | DONE | robot_face_test, app_shell_test, search_sources_test |
 | 41 | Golden tests per emotion (§15) | DONE | all 10 emotions, reviewed visually; rendered on Linux |
 | 42 | Backend tests with mocked providers (§15) | DONE | 53 passing |
-| 43 | Integration test, main flow (§15) | NOT VERIFIED | `integration_test/app_flow_test.dart` analysed; needs a device (CI job provided) |
+| 43 | Integration test, main flow (§15) | DONE (emulator) | passed on API 34 emulator in GitHub Actions |
 | 44 | Manual device checklist (§15) | DONE (written) / all items NOT RUN | docs/TEST_PLAN.md |
-| 45 | CI android.yml plus backend workflow; keystore via secrets (§15) | NOT VERIFIED | `.github/workflows/*`; never executed on GitHub |
-| 46 | Debug APK (§15) | **NOT VERIFIED (build failed: sandbox RAM)** | see above |
-| 47 | Release APK (§15) | **NOT VERIFIED (not run)** | signing config ready (`key.properties` or debug-signed and labelled) |
+| 45 | CI android.yml plus backend workflow; keystore via secrets (§15) | DONE (android.yml) / backend.yml: see run list | android.yml green on GitHub; keystore path not exercised (no secrets) |
+| 46 | Debug APK (§15) | DONE (CI) | built in GitHub Actions; uploaded as artifact `sahbi-debug-apk` |
+| 47 | Release APK (§15) | DONE (CI), **debug-signed** | universal and arm64 APKs in the `latest` release; store signing needs keystore secrets |
 | 48 | Milestones committed (§16) | DONE | `git log` |
 | 49 | README, backend/README, API_KEYS, FEATURES, STATUS, ENVIRONMENT, ASSETS_LICENSES (§17) | DONE | files present |
 | 50 | Screenshots from a real run (§17) | NOT DONE | no device run; golden PNGs are test renders, not screenshots |
