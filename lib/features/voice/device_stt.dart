@@ -21,10 +21,7 @@ class DeviceStt implements SttProvider {
 
   Future<bool> _init() async {
     if (_initialised) return _available;
-    _available = await _stt.initialize(
-      onError: _onError,
-      onStatus: _onStatus,
-    );
+    _available = await _stt.initialize(onError: _onError, onStatus: _onStatus);
     _initialised = true;
     return _available;
   }
@@ -33,7 +30,9 @@ class DeviceStt implements SttProvider {
   Future<ProviderAvailability> availability() async {
     try {
       final ok = await _init();
-      return ok ? ProviderAvailability.available : ProviderAvailability.notInstalled;
+      return ok
+          ? ProviderAvailability.available
+          : ProviderAvailability.notInstalled;
     } catch (_) {
       return ProviderAvailability.notInstalled;
     }
@@ -54,7 +53,12 @@ class DeviceStt implements SttProvider {
     _lastPartial = null;
     () async {
       if (!await _init()) {
-        ctrl.add(const SttFailure('not_available', 'No speech recognizer on this device'));
+        ctrl.add(
+          const SttFailure(
+            'not_available',
+            'No speech recognizer on this device',
+          ),
+        );
         await ctrl.close();
         return;
       }
@@ -105,7 +109,8 @@ class DeviceStt implements SttProvider {
   void _onStatus(String status) {
     final c = _ctrl;
     if (c == null || c.isClosed) return;
-    if (status == SpeechToText.doneStatus || status == SpeechToText.notListeningStatus) {
+    if (status == SpeechToText.doneStatus ||
+        status == SpeechToText.notListeningStatus) {
       // Some engines end without a final result: use the last partial.
       Future<void>.delayed(const Duration(milliseconds: 400), () {
         if (!c.isClosed) {

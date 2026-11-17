@@ -100,11 +100,11 @@ abstract class TtsProvider {
 
 /// Maps reply language → preferred BCP-47 locales, best first.
 List<String> preferredLocales(String replyLanguage) => switch (replyLanguage) {
-      'fr' => ['fr-FR', 'fr-MA', 'fr-CA', 'fr'],
-      'en' => ['en-US', 'en-GB', 'en'],
-      'ar' => ['ar-SA', 'ar-MA', 'ar-EG', 'ar-AE', 'ar'],
-      _ => ['ar-MA', 'ar-DZ', 'ar-TN', 'ar-SA', 'ar-EG', 'ar'],
-    };
+  'fr' => ['fr-FR', 'fr-MA', 'fr-CA', 'fr'],
+  'en' => ['en-US', 'en-GB', 'en'],
+  'ar' => ['ar-SA', 'ar-MA', 'ar-EG', 'ar-AE', 'ar'],
+  _ => ['ar-MA', 'ar-DZ', 'ar-TN', 'ar-SA', 'ar-EG', 'ar'],
+};
 
 /// Picks the best supported locale. Accepts ids like "ar_MA" or "ar-MA".
 String? pickLocale(List<String> supported, String replyLanguage) {

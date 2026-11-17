@@ -29,7 +29,9 @@ class DeviceTts implements TtsProvider {
     if (_handlersSet) return;
     _handlersSet = true;
     _tts.setStartHandler(() => _emit(const TtsStarted()));
-    _tts.setProgressHandler((text, start, end, word) => _emit(TtsWord(start, end, word)));
+    _tts.setProgressHandler(
+      (text, start, end, word) => _emit(TtsWord(start, end, word)),
+    );
     _tts.setCompletionHandler(() => _finish(const TtsDone()));
     _tts.setCancelHandler(() => _finish(const TtsDone(interrupted: true)));
     _tts.setErrorHandler((msg) => _finish(TtsFailure('$msg')));
@@ -62,7 +64,9 @@ class DeviceTts implements TtsProvider {
   @override
   Future<ProviderAvailability> availability() async {
     final l = await _langs();
-    return l.isEmpty ? ProviderAvailability.notInstalled : ProviderAvailability.available;
+    return l.isEmpty
+        ? ProviderAvailability.notInstalled
+        : ProviderAvailability.available;
   }
 
   @override
@@ -97,14 +101,19 @@ class DeviceTts implements TtsProvider {
           final all = await voices();
           final match = all.where((v) => v.name == vn).toList();
           if (match.isNotEmpty) {
-            await _tts.setVoice({'name': match.first.name, 'locale': match.first.locale});
+            await _tts.setVoice({
+              'name': match.first.name,
+              'locale': match.first.locale,
+            });
           }
         }
         await _tts.setSpeechRate(rate());
         await _tts.setPitch(pitch());
         await _tts.awaitSpeakCompletion(false);
         final r = await _tts.speak(text);
-        if (r != 1 && r != null) _finish(const TtsFailure('Engine refused to speak'));
+        if (r != 1 && r != null) {
+          _finish(const TtsFailure('Engine refused to speak'));
+        }
       } catch (e) {
         _finish(TtsFailure('$e'));
       }

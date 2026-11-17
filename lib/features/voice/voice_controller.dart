@@ -65,6 +65,14 @@ class VoiceController extends ChangeNotifier {
   SttProvider? _currentStt;
   TtsProvider? _currentTts;
 
+  /// Completer of the utterance in progress; completed with false when it is
+  /// stopped so `speak()` never hangs.
+  Completer<bool>? _speaking;
+
+  /// Bumped on every stop/interrupt: an interrupted cloud utterance must not
+  /// "fall back" to the device engine and start talking again.
+  int _ttsGeneration = 0;
+
   /// Reset sticky cloud failures (e.g. after a successful health check).
   void resetFallbacks() {
     _cloudSttFailed = false;
@@ -73,7 +81,9 @@ class VoiceController extends ChangeNotifier {
 
   bool _go(VoiceState to, {String? error}) {
     final ok = _sm.tryTransition(to, error: error);
-    if (!ok) log.add('voice', 'ignored transition ${_sm.state.name} → ${to.name}');
+    if (!ok) {
+      log.add('voice', 'ignored transition ${_sm.state.name} → ${to.name}');
+    }
     notifyListeners();
     return ok;
   }
@@ -81,7 +91,8 @@ class VoiceController extends ChangeNotifier {
   Future<String> resolveStt() async {
     final s = settings();
     if (s.sttMode == SttMode.typed) return activeStt = 'typed';
-    final cloudAllowed = s.cloudVoiceEnabled && cloudSttReady() && !_cloudSttFailed;
+    final cloudAllowed =
+        s.cloudVoiceEnabled && cloudSttReady() && !_cloudSttFailed;
     if (s.sttMode != SttMode.device && cloudAllowed) {
       if (await cloudStt.availability() == ProviderAvailability.available) {
         return activeStt = 'cloud';
@@ -98,7 +109,8 @@ class VoiceController extends ChangeNotifier {
   Future<String> resolveTts() async {
     final s = settings();
     if (s.ttsMode == TtsMode.off) return activeTts = 'off';
-    final cloudAllowed = s.cloudVoiceEnabled && cloudTtsReady() && !_cloudTtsFailed;
+    final cloudAllowed =
+        s.cloudVoiceEnabled && cloudTtsReady() && !_cloudTtsFailed;
     if (s.ttsMode != TtsMode.device && cloudAllowed) return activeTts = 'cloud';
     if (await deviceTts.availability() == ProviderAvailability.available) {
       return activeTts = 'device';
@@ -123,51 +135,55 @@ class VoiceController extends ChangeNotifier {
     final s = settings();
     var locale = 'ar-MA';
     final supported = await provider.supportedLocales();
-    locale = pickLocale(supported, s.replyLanguage) ??
+    locale =
+        pickLocale(supported, s.replyLanguage) ??
         (supported.isNotEmpty ? supported.first : locale);
     partial = '';
     lastError = null;
     micOpen = true;
     _go(VoiceState.listening);
     await _sttSub?.cancel();
-    _sttSub = provider.listen(localeId: locale).listen(
-      (e) {
-        switch (e) {
-          case SttPartial(:final text):
-            partial = text;
-            notifyListeners();
-          case SttLevel(level: final l):
-            level = l;
-            notifyListeners();
-          case SttFinal(:final text):
+    _sttSub = provider
+        .listen(localeId: locale)
+        .listen(
+          (e) {
+            switch (e) {
+              case SttPartial(:final text):
+                partial = text;
+                notifyListeners();
+              case SttLevel(level: final l):
+                level = l;
+                notifyListeners();
+              case SttFinal(:final text):
+                _closeMic();
+                partial = text;
+                if (text.trim().isEmpty) {
+                  _go(VoiceState.idle);
+                } else {
+                  _go(VoiceState.thinking);
+                  onFinalText?.call(text.trim());
+                }
+              case SttFailure(:final code, :final message):
+                _closeMic();
+                lastError = code;
+                if (provider.id == 'cloud' &&
+                    (code == 'network' || code == 'server')) {
+                  _cloudSttFailed = true;
+                }
+                log.add('stt.${provider.id}', '$code: $message');
+                if (code == 'no_match') {
+                  _go(VoiceState.idle);
+                } else {
+                  _go(VoiceState.error, error: code);
+                  _go(VoiceState.idle);
+                }
+            }
+          },
+          onDone: () {
             _closeMic();
-            partial = text;
-            if (text.trim().isEmpty) {
-              _go(VoiceState.idle);
-            } else {
-              _go(VoiceState.thinking);
-              onFinalText?.call(text.trim());
-            }
-          case SttFailure(:final code, :final message):
-            _closeMic();
-            lastError = code;
-            if (provider.id == 'cloud' && (code == 'network' || code == 'server')) {
-              _cloudSttFailed = true;
-            }
-            log.add('stt.${provider.id}', '$code: $message');
-            if (code == 'no_match') {
-              _go(VoiceState.idle);
-            } else {
-              _go(VoiceState.error, error: code);
-              _go(VoiceState.idle);
-            }
-        }
-      },
-      onDone: () {
-        _closeMic();
-        if (state == VoiceState.listening) _go(VoiceState.idle);
-      },
-    );
+            if (state == VoiceState.listening) _go(VoiceState.idle);
+          },
+        );
     return which;
   }
 
@@ -212,12 +228,18 @@ class VoiceController extends ChangeNotifier {
       return false;
     }
     await _stopTts();
+    final gen = _ttsGeneration;
     final which = await resolveTts();
-    if (which == 'off') {
+    if (which == 'off' || gen != _ttsGeneration) {
       setThinking(false);
       return false;
     }
-    final ok = await _speakWith(which == 'cloud' ? cloudTts : deviceTts, text, language);
+    final ok = await _speakWith(
+      which == 'cloud' ? cloudTts : deviceTts,
+      text,
+      language,
+    );
+    if (gen != _ttsGeneration) return false; // interrupted: stay quiet
     if (!ok && which == 'cloud' && state != VoiceState.listening) {
       _cloudTtsFailed = true;
       activeTts = 'device';
@@ -232,30 +254,31 @@ class VoiceController extends ChangeNotifier {
     _currentTts = p;
     activeTts = p.id;
     hasWordTimings = false;
-    final done = Completer<bool>();
+    final done = _speaking = Completer<bool>();
     _go(VoiceState.speaking);
     onDuckMusic?.call(true);
-    await _ttsSub?.cancel();
-    _ttsSub = p.speak(text, language: language).listen(
-      (e) {
-        switch (e) {
-          case TtsStarted():
-            break;
-          case TtsWord():
-            hasWordTimings = true;
-            wordPulse.value++;
-          case TtsDone():
-            if (!done.isCompleted) done.complete(true);
-          case TtsFailure(:final message):
-            log.add('tts.${p.id}', message);
-            lastError = 'tts_failed';
+    _ttsSub = p
+        .speak(text, language: language)
+        .listen(
+          (e) {
+            switch (e) {
+              case TtsStarted():
+                break;
+              case TtsWord():
+                hasWordTimings = true;
+                wordPulse.value++;
+              case TtsDone():
+                if (!done.isCompleted) done.complete(true);
+              case TtsFailure(:final message):
+                log.add('tts.${p.id}', message);
+                lastError = 'tts_failed';
+                if (!done.isCompleted) done.complete(false);
+            }
+          },
+          onDone: () {
             if (!done.isCompleted) done.complete(false);
-        }
-      },
-      onDone: () {
-        if (!done.isCompleted) done.complete(false);
-      },
-    );
+          },
+        );
     final ok = await done.future;
     onDuckMusic?.call(false);
     if (state == VoiceState.speaking) _go(VoiceState.idle);
@@ -263,9 +286,16 @@ class VoiceController extends ChangeNotifier {
   }
 
   Future<void> _stopTts() async {
-    await _currentTts?.stop();
-    await _ttsSub?.cancel();
+    _ttsGeneration++;
+    final pending = _speaking;
+    _speaking = null;
+    if (pending != null && !pending.isCompleted) pending.complete(false);
+    // Never await the engine here: cancelling an async* stream waits for the
+    // producer to reach its next yield, which a busy engine may never do.
+    final sub = _ttsSub;
     _ttsSub = null;
+    unawaited(sub?.cancel());
+    await _currentTts?.stop();
   }
 
   /// Interrupt speech immediately (button, new input, barge-in).

@@ -12,7 +12,7 @@ import 'voice_types.dart';
 /// Raw audio is never kept.
 class CloudStt implements SttProvider {
   CloudStt(this._client, {required this.isConfigured, AudioRecorder? recorder})
-      : _rec = recorder ?? AudioRecorder();
+    : _rec = recorder ?? AudioRecorder();
 
   final BackendClient _client;
   final bool Function() isConfigured;
@@ -33,8 +33,12 @@ class CloudStt implements SttProvider {
   }
 
   @override
-  Future<List<String>> supportedLocales() async =>
-      const ['ar-MA', 'ar-SA', 'fr-FR', 'en-US'];
+  Future<List<String>> supportedLocales() async => const [
+    'ar-MA',
+    'ar-SA',
+    'fr-FR',
+    'en-US',
+  ];
 
   @override
   Stream<SttEvent> listen({required String localeId}) {
@@ -46,12 +50,15 @@ class CloudStt implements SttProvider {
     () async {
       try {
         if (!await _rec.hasPermission(request: false)) {
-          ctrl.add(const SttFailure('no_permission', 'Microphone permission missing'));
+          ctrl.add(
+            const SttFailure('no_permission', 'Microphone permission missing'),
+          );
           await ctrl.close();
           return;
         }
         final dir = await getTemporaryDirectory();
-        _path = '${dir.path}/sahbi_utt_${DateTime.now().millisecondsSinceEpoch}.wav';
+        _path =
+            '${dir.path}/sahbi_utt_${DateTime.now().millisecondsSinceEpoch}.wav';
         await _rec.start(
           const RecordConfig(
             encoder: AudioEncoder.wav,
@@ -65,19 +72,21 @@ class CloudStt implements SttProvider {
         var heardSpeech = false;
         var silentMs = 0;
         var totalMs = 0;
-        _ampSub = _rec.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((a) {
-          totalMs += 100;
-          final level = ((a.current + 50) / 50).clamp(0.0, 1.0);
-          if (!ctrl.isClosed) ctrl.add(SttLevel(level));
-          if (a.current > -35) {
-            heardSpeech = true;
-            silentMs = 0;
-          } else {
-            silentMs += 100;
-          }
-          // Auto-stop on 1.5 s of silence after speech, or 20 s max.
-          if ((heardSpeech && silentMs >= 1500) || totalMs >= 20000) stop();
-        });
+        _ampSub = _rec
+            .onAmplitudeChanged(const Duration(milliseconds: 100))
+            .listen((a) {
+              totalMs += 100;
+              final level = ((a.current + 50) / 50).clamp(0.0, 1.0);
+              if (!ctrl.isClosed) ctrl.add(SttLevel(level));
+              if (a.current > -35) {
+                heardSpeech = true;
+                silentMs = 0;
+              } else {
+                silentMs += 100;
+              }
+              // Auto-stop on 1.5 s of silence after speech, or 20 s max.
+              if ((heardSpeech && silentMs >= 1500) || totalMs >= 20000) stop();
+            });
       } catch (e) {
         if (!ctrl.isClosed) {
           ctrl.add(SttFailure('not_available', 'Recorder failed: $e'));
@@ -120,10 +129,12 @@ class CloudStt implements SttProvider {
         }
       }
     } on BackendException catch (e) {
-      ctrl.add(SttFailure(
-        e.code == BackendErrorCode.noInternet ? 'network' : 'server',
-        e.message,
-      ));
+      ctrl.add(
+        SttFailure(
+          e.code == BackendErrorCode.noInternet ? 'network' : 'server',
+          e.message,
+        ),
+      );
     } catch (e) {
       ctrl.add(SttFailure('unknown', '$e'));
     } finally {

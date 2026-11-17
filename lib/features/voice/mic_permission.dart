@@ -23,7 +23,8 @@ class PluginMicPermission implements MicPermission {
   Future<MicStatus> status() async => _map(await Permission.microphone.status);
 
   @override
-  Future<MicStatus> request() async => _map(await Permission.microphone.request());
+  Future<MicStatus> request() async =>
+      _map(await Permission.microphone.request());
 
   @override
   Future<bool> openSettings() => openAppSettings();

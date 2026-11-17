@@ -32,21 +32,22 @@ class CloudTts implements TtsProvider {
   String get id => 'cloud';
 
   @override
-  Future<ProviderAvailability> availability() async =>
-      isConfigured() ? ProviderAvailability.available : ProviderAvailability.notConfigured;
+  Future<ProviderAvailability> availability() async => isConfigured()
+      ? ProviderAvailability.available
+      : ProviderAvailability.notConfigured;
 
   @override
   Future<List<TtsVoice>> voices() async => const [
-        TtsVoice('ar-MA-JamalNeural', 'ar-MA'),
-        TtsVoice('ar-MA-MounaNeural', 'ar-MA'),
-      ];
+    TtsVoice('ar-MA-JamalNeural', 'ar-MA'),
+    TtsVoice('ar-MA-MounaNeural', 'ar-MA'),
+  ];
 
   static String _azureLocale(String lang) => switch (lang) {
-        'fr' => 'fr-FR',
-        'en' => 'en-US',
-        'ar' => 'ar-SA',
-        _ => 'ar-MA',
-      };
+    'fr' => 'fr-FR',
+    'en' => 'en-US',
+    'ar' => 'ar-SA',
+    _ => 'ar-MA',
+  };
 
   @override
   Stream<TtsEvent> speak(String text, {required String language}) {
@@ -67,7 +68,9 @@ class CloudTts implements TtsProvider {
         );
         if (ctrl.isClosed) return;
         final dir = await getTemporaryDirectory();
-        file = File('${dir.path}/sahbi_tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
+        file = File(
+          '${dir.path}/sahbi_tts_${DateTime.now().millisecondsSinceEpoch}.mp3',
+        );
         await file.writeAsBytes(bytes, flush: true);
         final p = _player ??= AudioPlayer();
         await p.setFilePath(file.path);
@@ -76,7 +79,11 @@ class CloudTts implements TtsProvider {
         await p.play();
         // play() completes when playback stops (end or stop()).
         if (!ctrl.isClosed) {
-          ctrl.add(TtsDone(interrupted: p.processingState != ProcessingState.completed));
+          ctrl.add(
+            TtsDone(
+              interrupted: p.processingState != ProcessingState.completed,
+            ),
+          );
           await ctrl.close();
         }
       } on BackendException catch (e) {
