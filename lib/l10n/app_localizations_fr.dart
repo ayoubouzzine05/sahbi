@@ -55,6 +55,9 @@ class L10nFr extends L10n {
   String get phaseRetrying => 'Nouvel essai…';
 
   @override
+  String get phaseWaking => 'Je réveille le serveur… (jusqu\'à 1 min)';
+
+  @override
   String get stopListening => 'Arrêter l’écoute';
 
   @override

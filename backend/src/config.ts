@@ -17,6 +17,8 @@ export interface Config {
     baseUrl: string;
     timeoutMs: number;
     maxOutputTokens: number;
+    /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
+    reasoningEffort: string;
   };
   search: { provider: 'brave' | 'none'; apiKey: string };
   stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
@@ -61,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       baseUrl: str(env, 'LLM_BASE_URL', defaultBase),
       timeoutMs: int(env, 'LLM_TIMEOUT_MS', 30000),
       maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', 800),
+      reasoningEffort: str(env, 'LLM_REASONING_EFFORT'),
     },
     search: {
       provider: oneOf(str(env, 'SEARCH_PROVIDER', 'none'), ['brave', 'none'] as const, 'none'),

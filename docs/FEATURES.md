@@ -47,7 +47,7 @@ Nothing in this file has been checked on a real phone (see STATUS.md). The integ
 
 | Feature | State |
 |---|---|
-| Backend `/v1/chat` over SSE, Anthropic or OpenAI adapter, model from env | Implemented; tested with a scripted LLM. **No real LLM call made** (no key) |
+| Backend `/v1/chat` over SSE, Anthropic or OpenAI(-compatible, e.g. **Gemini free tier**) adapter, model from env. One-click Render deploy (`render.yaml`) | Implemented; tested with a scripted LLM. **No real LLM call made** (no key) |
 | Strict reply schema `{display_text, tts_text, language, emotion, intensity, actions[]}`, validated, one retry | Implemented (backend tests) |
 | Actions executed locally with **real** results shown (music, volume, language) | Implemented (tests: failures reported as failures) |
 | Web search (Brave) with numbered, id-checked citations and confirmed/unconfirmed badge; source chips | Implemented. Backend and UI tested. **No live Brave call made** |
@@ -86,6 +86,7 @@ Nothing in this file has been checked on a real phone (see STATUS.md). The integ
 | Feature | State |
 |---|---|
 | connectivity_plus plus a real `/v1/health` reachability check drive the banner | Implemented |
+| Sleeping free host: "waking the server…" (up to 90 s) before falling back to offline | Implemented (tests) |
 | Offline replies labelled offline, with a reason (AI off, no backend URL, no internet, server unreachable, AI not configured) | Implemented (unit and widget tests) |
 | Face, idle, commands, settings, memory and local music work offline | Implemented |
 

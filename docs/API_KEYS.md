@@ -18,6 +18,25 @@ Every service is optional. Anything unset is reported as `configured: false` by 
 | `OPENAI_STT_API_KEY`, `OPENAI_STT_MODEL` | OpenAI transcription | platform.openai.com | choose a current transcription model |
 | `TTS_PROVIDER`, `AZURE_TTS_VOICE` | cloud TTS | | default voice `ar-MA-JamalNeural` |
 
+## Free AI: Google Gemini + Render (phone-only setup)
+
+1. **Gemini key:** open https://aistudio.google.com/apikey, sign in with Google and create an API key. The free tier needs no card. On the free tier, Google may use prompts and answers to improve its products; a paid key opts out.
+2. **Deploy:** open https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi and sign in (for example with GitHub). Render reads `render.yaml`, asks for `LLM_API_KEY` (paste the Gemini key), and deploys `backend/` on the **free** plan in Frankfurt.
+3. **App:** in Settings → AI, set the backend URL to the service URL Render shows (`https://<name>.onrender.com`).
+4. **Free plan behaviour:** the server sleeps after 15 min idle and wakes in about 1 min. The app shows "waking the server…" and waits up to 90 s before answering offline.
+
+`render.yaml` sets these values:
+
+| Key | Value |
+|---|---|
+| `LLM_PROVIDER` | `openai` |
+| `LLM_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| `LLM_MODEL` | `gemini-3.8-flash` |
+| `LLM_REASONING_EFFORT` | `low` |
+| `LLM_MAX_OUTPUT_TOKENS` | `4096` |
+
+Change the model in Render → Environment. Free-tier rate limits are per project and shown in AI Studio.
+
 ## Production storage
 
 - **Fly.io:** `fly secrets set LLM_API_KEY=...`

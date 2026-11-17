@@ -55,6 +55,9 @@ class L10nEn extends L10n {
   String get phaseRetrying => 'Retrying…';
 
   @override
+  String get phaseWaking => 'Waking the server… (up to 1 min)';
+
+  @override
   String get stopListening => 'Stop listening';
 
   @override

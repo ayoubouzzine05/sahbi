@@ -30,6 +30,8 @@
   "@phaseWeather": {},
   "phaseRetrying": "Retrying…",
   "@phaseRetrying": {},
+  "phaseWaking": "Waking the server… (up to 1 min)",
+  "@phaseWaking": {},
   "stopListening": "Stop listening",
   "@stopListening": {},
   "interruptSpeech": "Interrupt",

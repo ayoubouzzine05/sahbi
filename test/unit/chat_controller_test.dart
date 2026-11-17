@@ -453,4 +453,93 @@ void main() {
       },
     );
   });
+
+  group('sleeping backend (free hosting wakes in ~1 min)', () {
+    void withWake(Future<void> Function() wake) {
+      chat.hooks = ChatHooks(updateSettings: (_) {}, wakeBackend: wake);
+    }
+
+    bool isStreaming(ChatMessage m) => m.role == ChatRole.sahbi && m.streaming;
+
+    test(
+      'shows "waking", then answers with the AI once the server is up',
+      () async {
+        net = const NetState(hasNetwork: true, backendReachable: false);
+        final gate = Completer<void>();
+        var wakeCalls = 0;
+        withWake(() async {
+          wakeCalls++;
+          await gate.future;
+          net = NetState(
+            hasNetwork: true,
+            backendReachable: true,
+            health: healthy,
+          );
+        });
+        final sending = chat.send('salam');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(chat.busy, isTrue);
+        expect(chat.messages.last.phase, 'waking');
+        expect(
+          calls,
+          isEmpty,
+          reason: 'no chat request before the server is awake',
+        );
+
+        gate.complete();
+        await sending;
+        expect(wakeCalls, 1);
+        expect(chat.messages.where((m) => m.phase == 'waking'), isEmpty);
+        expect(chat.messages.last.kind, ChatKind.ai);
+        expect(chat.messages.last.text, 'Salam a sahbi!');
+        expect(chat.busy, isFalse);
+      },
+    );
+
+    test('server still down after waiting: honest offline reply', () async {
+      net = const NetState(hasNetwork: true, backendReachable: false);
+      withWake(() async {});
+      await chat.send('salam');
+      expect(chat.messages.last.kind, ChatKind.offline);
+      expect(chat.messages.last.errorCode, 'server_unreachable');
+      expect(chat.messages.where(isStreaming), isEmpty);
+      expect(chat.busy, isFalse);
+      expect(calls, isEmpty);
+    });
+
+    test('woke up but AI key missing: says "AI not configured"', () async {
+      net = const NetState(hasNetwork: true, backendReachable: false);
+      withWake(() async {
+        net = const NetState(hasNetwork: true, backendReachable: true);
+      });
+      await chat.send('salam');
+      expect(chat.messages.last.errorCode, 'ai_not_configured');
+    });
+
+    test(
+      'stop while waking cancels cleanly (no offline line, no bubble)',
+      () async {
+        net = const NetState(hasNetwork: true, backendReachable: false);
+        withWake(() => Completer<void>().future); // never wakes
+        var done = false;
+        unawaited(chat.send('salam').then((_) => done = true));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await chat.stop().timeout(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(done, isTrue);
+        expect(chat.busy, isFalse);
+        expect(chat.messages.where(isStreaming), isEmpty);
+        expect(chat.messages.last.role, ChatRole.user);
+      },
+    );
+
+    test('other offline reasons never trigger a wake', () async {
+      net = const NetState(hasNetwork: false);
+      var woke = false;
+      withWake(() async => woke = true);
+      await chat.send('salam');
+      expect(woke, isFalse);
+      expect(chat.messages.last.errorCode, 'no_internet');
+    });
+  });
 }

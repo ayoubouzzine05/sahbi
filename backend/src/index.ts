@@ -19,7 +19,7 @@ const promptTemplate = readFileSync(join(here, '..', 'prompts', 'sahbi.md'), 'ut
 let llm: LlmProvider | null = null;
 if (isLlmConfigured(config)) {
   const opts = { apiKey: config.llm.apiKey, model: config.llm.model, baseUrl: config.llm.baseUrl, timeoutMs: config.llm.timeoutMs };
-  llm = config.llm.provider === 'anthropic' ? new AnthropicProvider(opts) : new OpenAiProvider(opts);
+  llm = config.llm.provider === 'anthropic' ? new AnthropicProvider(opts) : new OpenAiProvider({ ...opts, reasoningEffort: config.llm.reasoningEffort || undefined });
 }
 
 const app = await buildServer({

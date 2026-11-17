@@ -29,6 +29,7 @@ class ChatHooks {
     this.openSettings,
     this.openMusic,
     this.requestListen,
+    this.wakeBackend,
   });
   final void Function(AppSettings Function(AppSettings) update) updateSettings;
   final VoidCallback? openSettings;
@@ -36,6 +37,10 @@ class ChatHooks {
 
   /// Starts the mic flow (permission rationale etc.). Returns true if listening.
   final Future<bool> Function()? requestListen;
+
+  /// Re-checks a sleeping backend with a long timeout (free hosting wakes in
+  /// about a minute). When null, an unreachable server means offline at once.
+  final Future<void> Function()? wakeBackend;
 }
 
 /// The single pipeline for typed AND spoken input:
@@ -263,6 +268,37 @@ class ChatController extends ChangeNotifier {
     await _say(m, emotion: line.emotion, intensity: line.intensity);
   }
 
+  /// Shows "waking the server…" while [ChatHooks.wakeBackend] runs.
+  /// Returns the new offline reason ('' = online now), or null if the user
+  /// sent something else or pressed stop meanwhile.
+  Future<String?> _wakeBackend() async {
+    busy = true;
+    voice.setThinking(true);
+    final m = ChatMessage(
+      id: _nextId(),
+      role: ChatRole.sahbi,
+      text: '',
+      language: settings().replyLanguage,
+      kind: ChatKind.ai,
+      streaming: true,
+      phase: 'waking',
+    );
+    messages.add(m);
+    notifyListeners();
+    final released = Completer<void>();
+    final gen = _brainGen;
+    _brainDone = released;
+    _brainMsg = m;
+    await Future.any([hooks.wakeBackend!(), released.future]);
+    if (gen != _brainGen) return null;
+    _brainDone = null;
+    _brainMsg = null;
+    messages.remove(m);
+    busy = false;
+    notifyListeners();
+    return _offlineReason() ?? '';
+  }
+
   Map<String, dynamic> _request(String text) {
     final s = settings();
     final now = _clock();
@@ -289,7 +325,12 @@ class ChatController extends ChangeNotifier {
   }
 
   Future<void> _askBrain(String text) async {
-    final reason = _offlineReason();
+    var reason = _offlineReason();
+    if (reason == 'server_unreachable' && hooks.wakeBackend != null) {
+      final woke = await _wakeBackend();
+      if (woke == null) return; // superseded or stopped while waking
+      reason = woke.isEmpty ? null : woke;
+    }
     if (reason != null) {
       await _offline(text, reason);
       return;

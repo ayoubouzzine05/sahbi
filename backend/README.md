@@ -62,6 +62,15 @@ Error codes (JSON `{error:{code,message}}`): `not_configured` 503, `upstream_tim
 - CORS is closed unless `CORS_ORIGINS` is set (the Android app doesn't need CORS).
 - Upstream calls have timeouts and one retry on 5xx/network errors.
 
+## Deploy on Render (free)
+
+Use [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi), which reads the root `render.yaml` (Gemini via its OpenAI-compatible API). See `docs/API_KEYS.md`.
+
+The OpenAI adapter works with compatible endpoints:
+- Versioned base URLs (such as Gemini's `/v1beta/openai/`) get `/chat/completions` appended; plain hosts get `/v1/chat/completions`.
+- Only `api.openai.com` receives `max_completion_tokens`; other endpoints get `max_tokens`.
+- `LLM_REASONING_EFFORT` is sent only when it is set.
+
 ## Deploy (container)
 
 ```bash

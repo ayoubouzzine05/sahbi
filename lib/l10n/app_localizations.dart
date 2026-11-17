@@ -189,6 +189,12 @@ abstract class L10n {
   /// **'Retrying…'**
   String get phaseRetrying;
 
+  /// No description provided for @phaseWaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Waking the server… (up to 1 min)'**
+  String get phaseWaking;
+
   /// No description provided for @stopListening.
   ///
   /// In en, this message translates to:

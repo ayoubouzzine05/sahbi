@@ -55,6 +55,9 @@ class L10nAr extends L10n {
   String get phaseRetrying => 'كنعاود…';
 
   @override
+  String get phaseWaking => 'كنفيّق السيرفر… (حتى دقيقة)';
+
+  @override
   String get stopListening => 'حبس السمع';
 
   @override

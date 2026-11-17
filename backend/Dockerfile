@@ -1,4 +1,5 @@
-# SAHBI backend — multi-stage build. NOT VERIFIED: no Docker in the build sandbox.
+# SAHBI backend — multi-stage build (built in CI: .github/workflows/backend.yml).
+# PORT is overridden by hosts that inject it (e.g. Render).
 FROM node:20-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

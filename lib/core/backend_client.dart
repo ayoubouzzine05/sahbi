@@ -239,9 +239,11 @@ class BackendClient {
     return res;
   }
 
-  Future<HealthStatus> health() async {
+  Future<HealthStatus> health({
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
     final res = await _guard(
-      () => _http.get(_uri('/v1/health')).timeout(const Duration(seconds: 6)),
+      () => _http.get(_uri('/v1/health')).timeout(timeout),
     );
     _check(res.statusCode, res.body);
     return HealthStatus.fromJson(jsonDecode(res.body) as Map<String, dynamic>);

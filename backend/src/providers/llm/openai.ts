@@ -27,18 +27,42 @@ export function toOpenAiMessages(system: string, messages: LlmMessage[]): OaMess
   return out;
 }
 
+/**
+ * Chat Completions URL for a base URL.
+ * - `https://api.openai.com`                                   → `/v1/chat/completions`
+ * - `https://api.groq.com/openai`                              → `/v1/chat/completions`
+ * - versioned bases such as `https://api.openai.com/v1` or Gemini's
+ *   `https://generativelanguage.googleapis.com/v1beta/openai/` → `/chat/completions`
+ */
+export function chatCompletionsUrl(baseUrl: string): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  return /\/v\d+[a-z0-9]*(\/openai)?$/i.test(base) ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
+}
+
+/** True for OpenAI itself; compatible gateways (Gemini, Groq, OpenRouter…) get `max_tokens`. */
+export function isOfficialOpenAi(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl).hostname === 'api.openai.com';
+  } catch {
+    return false;
+  }
+}
+
 /** OpenAI Chat Completions adapter (also works with compatible gateways via LLM_BASE_URL). */
 export class OpenAiProvider implements LlmProvider {
   readonly name = 'openai';
   constructor(
-    private readonly opts: { apiKey: string; model: string; baseUrl: string; timeoutMs: number },
+    private readonly opts: { apiKey: string; model: string; baseUrl: string; timeoutMs: number; reasoningEffort?: string },
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
     const body = {
       model: this.opts.model,
-      max_completion_tokens: req.maxTokens,
+      // OpenAI deprecated max_tokens for max_completion_tokens; compatible gateways
+      // (e.g. Gemini's OpenAI layer) document max_tokens.
+      ...(isOfficialOpenAi(this.opts.baseUrl) ? { max_completion_tokens: req.maxTokens } : { max_tokens: req.maxTokens }),
+      ...(this.opts.reasoningEffort ? { reasoning_effort: this.opts.reasoningEffort } : {}),
       messages: toOpenAiMessages(req.system, req.messages),
       ...(req.tools.length
         ? { tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } })) }
@@ -46,7 +70,7 @@ export class OpenAiProvider implements LlmProvider {
     };
     const res = await fetchWithRetry(
       this.fetchImpl,
-      `${this.opts.baseUrl.replace(/\/$/, '')}/v1/chat/completions`,
+      chatCompletionsUrl(this.opts.baseUrl),
       { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${this.opts.apiKey}` }, body: JSON.stringify(body) },
       { timeoutMs: this.opts.timeoutMs },
     );

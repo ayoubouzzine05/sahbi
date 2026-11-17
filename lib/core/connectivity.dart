@@ -43,7 +43,7 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
   final Connectivity? _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _sub;
   Timer? _timer;
-  bool _checking = false;
+  Future<void>? _inflight;
 
   void start() {
     final c = _connectivity ?? Connectivity();
@@ -75,9 +75,20 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
     _timer = Timer.periodic(const Duration(seconds: 60), (_) => check());
   }
 
-  Future<void> check() async {
-    if (_checking) return;
-    _checking = true;
+  /// Re-checks backend reachability. Concurrent callers share one request.
+  Future<void> check({Duration timeout = const Duration(seconds: 6)}) =>
+      _inflight ??= _check(timeout).whenComplete(() => _inflight = null);
+
+  /// Free hosting (e.g. Render) sleeps when idle and needs ~1 min to wake.
+  /// Waits for any in-flight check, then retries health with a long timeout.
+  Future<void> wake({Duration timeout = const Duration(seconds: 90)}) async {
+    final running = _inflight;
+    if (running != null) await running;
+    if (value.backendReachable == true || !value.hasNetwork) return;
+    await check(timeout: timeout);
+  }
+
+  Future<void> _check(Duration timeout) async {
     try {
       if (!_client.hasBaseUrl) {
         value = NetState(
@@ -88,7 +99,7 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
         );
         return;
       }
-      final h = await _client.health();
+      final h = await _client.health(timeout: timeout);
       value = NetState(
         hasNetwork: true,
         backendReachable: true,
@@ -112,8 +123,6 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
         lastError: BackendErrorCode.server,
         lastCheck: DateTime.now(),
       );
-    } finally {
-      _checking = false;
     }
   }
 

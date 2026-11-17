@@ -17,6 +17,7 @@ S = {
  "phaseSearching": ("كنقلب فالأنترنيت…", "Recherche sur le web…", "Searching the web…"),
  "phaseWeather": ("كنشوف الطقس…", "Je regarde la météo…", "Checking the weather…"),
  "phaseRetrying": ("كنعاود…", "Nouvel essai…", "Retrying…"),
+ "phaseWaking": ("كنفيّق السيرفر… (حتى دقيقة)", "Je réveille le serveur… (jusqu'à 1 min)", "Waking the server… (up to 1 min)"),
  "stopListening": ("حبس السمع", "Arrêter l’écoute", "Stop listening"),
  "interruptSpeech": ("سكت", "Interrompre", "Interrupt"),
  "typeMessage": ("كتب لصاحبي…", "Écris à Sahbi…", "Message Sahbi…"),

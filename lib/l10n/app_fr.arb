@@ -15,6 +15,7 @@
   "phaseSearching": "Recherche sur le web…",
   "phaseWeather": "Je regarde la météo…",
   "phaseRetrying": "Nouvel essai…",
+  "phaseWaking": "Je réveille le serveur… (jusqu'à 1 min)",
   "stopListening": "Arrêter l’écoute",
   "interruptSpeech": "Interrompre",
   "typeMessage": "Écris à Sahbi…",

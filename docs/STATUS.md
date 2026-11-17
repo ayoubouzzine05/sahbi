@@ -9,9 +9,9 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | `flutter pub get`, `flutter gen-l10n` | OK |
 | `dart format --set-exit-if-changed lib test integration_test` | clean |
 | `flutter analyze` | **No issues found** |
-| `flutter test` (unit + widget + golden) | **250 passed, 0 failed** |
+| `flutter test` (unit + widget + golden) | **258 passed, 0 failed** (full run with `--concurrency=1`; default concurrency can stall this 2-CPU sandbox while loading, but each folder passes) |
 | Note | One full `flutter test` run stalled while *loading* test files (stuck at `loading robot_face_test.dart`) and was stopped at 900 s. Each file then passed on its own, and the next full run passed in 19 s. Not reproduced; recorded for transparency |
-| `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **53 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
+| `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **56 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
 | CI smoke step from `backend.yml`, replayed locally | `grep '"llm":{"configured":false'` matches the real health JSON; unauthenticated `/v1/chat` → 401. OK |
 | Backend runtime smoke (`node dist/index.js`, no keys) | `GET /v1/health` 200 with every service `configured:false` except weather; `POST /v1/auth/anonymous` returned a 94-char token; `POST /v1/chat` → **503 not_configured**; without a token → **401** |
 | Live weather through the backend | `/v1/weather?city=Casa` → 502 `upstream_error`. Geocoding answered 200, but `api.open-meteo.com` timed out from the sandbox (curl also timed out). **NOT VERIFIED** live |
@@ -57,7 +57,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 18 | Mic rationale and denied handling (§5) | NOT VERIFIED | `lib/features/voice/mic_flow.dart`; TEST_PLAN items 1–3 |
 | 19 | LLM reply schema, validate, retry once (§6) | DONE | backend schema.test, brain.test |
 | 20 | Backend proxy: SSE, provider env, token, rate limit, size limits, CORS, health, no bodies in logs (§6) | DONE | server.test (10), providers.test; runtime smoke |
-| 21 | Real LLM answers (§6) | NOT VERIFIED | no LLM key; `LLM_MODEL` deliberately has no default |
+| 21 | Real LLM answers (§6) | NOT VERIFIED (pending) | Gemini free-tier setup prepared (`render.yaml`, OpenAI-compatible adapter tested with mocks); no live call yet |
 | 22 | Search with sources, citations, verification (§7) | DONE (mocked) / NOT VERIFIED live | brain.test, search_sources_test; Brave only (Tavily/SerpAPI NOT DONE) |
 | 23 | Weather via Open-Meteo (§7) | DONE (mocked) / NOT VERIFIED live | providers.test; live forecast host unreachable here |
 | 24 | Translate (§7) | DONE | schema action plus translation card |
@@ -75,7 +75,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 36 | Robot link: Local, Simulated, BLE/Wi-Fi skeletons, ROBOT_PROTOCOL.md (§13) | DONE | robot_protocol_test (25), docs/ROBOT_PROTOCOL.md |
 | 37 | BLE permissions requested only in Robot settings (§13) | NOT DONE (deferred) | BLUETOOTH_SCAN not declared because nothing scans yet; documented |
 | 38 | Settings screen, all §14 sections plus hidden debug screen (§14) | DONE (host) | all sections present; routes render in ar/fr/en |
-| 39 | Unit tests (§15) | DONE | 250 Flutter tests, 53 backend tests |
+| 39 | Unit tests (§15) | DONE | 258 Flutter tests, 56 backend tests |
 | 40 | Widget tests: face, chat, settings, RTL (§15) | DONE | robot_face_test, app_shell_test, search_sources_test |
 | 41 | Golden tests per emotion (§15) | DONE | all 10 emotions, reviewed visually; rendered on Linux |
 | 42 | Backend tests with mocked providers (§15) | DONE | 53 passing |
@@ -98,6 +98,10 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 - **The stop button was dead while Sahbi was thinking.** It only interrupted speech, not the AI request. It now calls `ChatController.stop()`.
 - The README example "tla3 sout" (raise volume, Arabizi) was not recognised, although the Arabic-script طلع was. Added to the parser with tests.
 - `compileSdk` had to be 37 for `permission_handler_android`.
+
+## Sleeping free-tier backend
+
+The free Render plan sleeps after 15 min. Before this change, the 6 s health check marked the server unreachable and the AI was skipped. Now an unreachable server triggers `ConnectivityMonitor.wake()`, a 90 s health check with a "waking the server…" bubble, and only then an honest offline reply. Covered by 5 chat tests (wake → AI answer, still down → offline, woke but no key, stop while waking, no wake for other reasons) and 3 connectivity tests.
 
 ## Missing credentials
 

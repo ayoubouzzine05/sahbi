@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { issueToken, isValidInstallId, verifyToken } from '../src/auth.js';
 import { isLlmConfigured, isSttConfigured, loadConfig } from '../src/config.js';
 import { fetchWithRetry } from '../src/http.js';
-import { toOpenAiMessages } from '../src/providers/llm/openai.js';
+import { OpenAiProvider, chatCompletionsUrl, isOfficialOpenAi, toOpenAiMessages } from '../src/providers/llm/openai.js';
 import { BraveSearchProvider, stripTags } from '../src/providers/search/brave.js';
 import { buildSsml, escapeXml } from '../src/providers/tts/azure.js';
 import { getWeather, normaliseCity } from '../src/tools/weather.js';
@@ -121,5 +121,49 @@ describe('toOpenAiMessages', () => {
     expect(out[0]).toEqual({ role: 'system', content: 'sys' });
     expect(out[2]).toMatchObject({ role: 'assistant', content: null, tool_calls: [{ id: 'c1', function: { name: 'web_search', arguments: '{"query":"q"}' } }] });
     expect(out[3]).toEqual({ role: 'tool', tool_call_id: 'c1', content: 'res' });
+  });
+});
+
+describe('OpenAI-compatible endpoints', () => {
+  it('builds the right chat/completions URL', () => {
+    expect(chatCompletionsUrl('https://api.openai.com')).toBe('https://api.openai.com/v1/chat/completions');
+    expect(chatCompletionsUrl('https://api.openai.com/')).toBe('https://api.openai.com/v1/chat/completions');
+    expect(chatCompletionsUrl('https://api.openai.com/v1')).toBe('https://api.openai.com/v1/chat/completions');
+    expect(chatCompletionsUrl('https://api.groq.com/openai')).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(chatCompletionsUrl('https://generativelanguage.googleapis.com/v1beta/openai/')).toBe(
+      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    );
+  });
+
+  it('only official OpenAI gets max_completion_tokens', () => {
+    expect(isOfficialOpenAi('https://api.openai.com')).toBe(true);
+    expect(isOfficialOpenAi('https://generativelanguage.googleapis.com/v1beta/openai/')).toBe(false);
+    expect(isOfficialOpenAi('not a url')).toBe(false);
+  });
+
+  it('sends a Gemini-shaped request (url, max_tokens, reasoning_effort, bearer key)', async () => {
+    let seenUrl = '';
+    let seenBody: Record<string, unknown> = {};
+    let seenAuth = '';
+    const fake = (async (url: string, init: { body: string; headers: Record<string, string> }) => {
+      seenUrl = url;
+      seenBody = JSON.parse(init.body) as Record<string, unknown>;
+      seenAuth = init.headers.authorization;
+      return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+    const p = new OpenAiProvider(
+      { apiKey: 'k', model: 'gemini-3.8-flash', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/', timeoutMs: 5000, reasoningEffort: 'low' },
+      fake,
+    );
+    const r = await p.complete({ system: 's', messages: [{ role: 'user', content: [{ type: 'text', text: 'salam' }] }], tools: [], maxTokens: 123 });
+    expect(seenUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
+    expect(seenBody.max_tokens).toBe(123);
+    expect(seenBody.max_completion_tokens).toBeUndefined();
+    expect(seenBody.reasoning_effort).toBe('low');
+    expect(seenAuth).toBe('Bearer k');
+    expect(r.stopReason).toBe('end');
   });
 });

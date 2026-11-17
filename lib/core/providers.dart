@@ -157,6 +157,7 @@ final chatControllerProvider = ChangeNotifierProvider<ChatController>((ref) {
     log: ref.read(errorLogProvider),
     hooks: ChatHooks(
       updateSettings: (f) => ref.read(settingsProvider.notifier).update(f),
+      wakeBackend: () => ref.read(connectivityProvider).wake(),
     ),
   );
   ref.read(voiceControllerProvider).onFinalText = chat.send;

@@ -319,6 +319,7 @@ class _Bubble extends StatelessWidget {
               'searching' => l.phaseSearching,
               'weather' => l.phaseWeather,
               'retrying' => l.phaseRetrying,
+              'waking' => l.phaseWaking,
               _ => l.stateThinking,
             }, style: const TextStyle(color: SahbiColors.textSecondary)),
           ],

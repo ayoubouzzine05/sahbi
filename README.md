@@ -68,6 +68,9 @@ CI (`.github/workflows/android.yml`) builds both APKs and writes `key.properties
 
 ## Backend
 
+**Free AI in 2 minutes from a phone:** get a Gemini key at https://aistudio.google.com/apikey, then [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi). Paste the key, and put the Render URL in the app under Settings → AI.
+
+
 ```bash
 cd backend && npm ci && cp .env.example .env && npm run dev
 ```

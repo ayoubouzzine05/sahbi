@@ -1,0 +1,38 @@
+# Render Blueprint for the SAHBI backend (https://render.com/docs/blueprint-spec).
+# One-click deploy: https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi
+#
+# Free plan: the service sleeps after 15 min without traffic and takes about
+# 1 min to wake up (the app shows "waking the server…" meanwhile).
+services:
+  - type: web
+    name: sahbi-backend
+    runtime: docker
+    plan: free
+    region: frankfurt # closest Render region to Morocco
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v1/health
+    envVars:
+      - key: AUTH_SECRET
+        generateValue: true # signs anonymous install tokens
+      # --- AI: Google Gemini through its OpenAI-compatible endpoint (free tier).
+      #     Get a key at https://aistudio.google.com/apikey
+      #     Free tier: Google may use the content to improve its products.
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LLM_MODEL
+        value: gemini-3.8-flash
+      - key: LLM_REASONING_EFFORT
+        value: low
+      - key: LLM_MAX_OUTPUT_TOKENS
+        value: "4096" # thinking tokens count towards output on Gemini
+      - key: LLM_TIMEOUT_MS
+        value: "45000"
+      - key: LLM_API_KEY
+        sync: false # Render asks for it during deploy; never stored in git
+      # Optional later (Render dashboard → Environment): SEARCH_PROVIDER=brave +
+      # BRAVE_SEARCH_API_KEY for web search; Azure keys for cloud voice.
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
