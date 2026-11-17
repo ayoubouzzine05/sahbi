@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21' # AGP's lint needs JDK 21 APIs (List.removeLast)
 
       - uses: subosito/flutter-action@v2
         with:
@@ -51,6 +51,11 @@ jobs:
 
       - name: Debug APK
         run: flutter build apk --debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sahbi-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Release keystore (only if secrets exist)
         id: keystore
@@ -90,11 +95,6 @@ jobs:
       - name: Remove key.properties
         if: always()
         run: rm -f android/key.properties
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sahbi-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -138,7 +138,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21' # AGP's lint needs JDK 21 APIs (List.removeLast)
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
