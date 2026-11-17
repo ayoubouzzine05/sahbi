@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,9 @@ void main() {
   late MemoryStore memory;
   late ChatController chat;
   late List<AppSettings> settingUpdates;
+  // When set, the mock backend waits on this before answering (simulates a
+  // slow/stuck network request).
+  Future<void>? Function(int call)? hold;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -71,6 +75,7 @@ void main() {
     net = NetState(hasNetwork: true, backendReachable: true, health: healthy);
     baseUrl = 'http://sahbi.test';
     settingUpdates = [];
+    hold = null;
 
     final store = MemoryKeyValueStore()..data['install_token'] = 'v1.test';
     final backend = BackendClient(
@@ -78,6 +83,8 @@ void main() {
       store: store,
       client: MockClient((req) async {
         calls.add(req);
+        final h = hold?.call(calls.length);
+        if (h != null) await h;
         return respond(req);
       }),
     );
@@ -380,5 +387,70 @@ void main() {
       expect(chat.messages, isEmpty);
       expect(chat.context.turns, isEmpty);
     });
+  });
+
+  group('superseded / stopped requests', () {
+    bool isStreaming(ChatMessage m) => m.role == ChatRole.sahbi && m.streaming;
+
+    test(
+      'a new message while the AI is stuck does not hang either send',
+      () async {
+        final never = Completer<void>();
+        // only the /v1/chat call #1 hangs
+        hold = (n) => n == 1 ? never.future : null;
+        var firstDone = false;
+        unawaited(chat.send('first').then((_) => firstDone = true));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(chat.busy, isTrue);
+
+        await chat.send('second').timeout(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(firstDone, isTrue, reason: 'superseded send() must complete');
+        expect(chat.busy, isFalse);
+        expect(
+          chat.messages.where(isStreaming),
+          isEmpty,
+          reason: 'no bubble may stay in "thinking" forever',
+        );
+        expect(chat.messages.last.text, 'Salam a sahbi!');
+      },
+    );
+
+    test('superseded request then offline input still clears busy', () async {
+      final never = Completer<void>();
+      hold = (n) => n == 1 ? never.future : null;
+      unawaited(chat.send('first'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      net = NetState(hasNetwork: false, backendReachable: false);
+      await chat.send('second').timeout(const Duration(seconds: 2));
+      expect(chat.busy, isFalse);
+      expect(chat.messages.last.kind, ChatKind.offline);
+      expect(chat.messages.where(isStreaming), isEmpty);
+    });
+
+    test(
+      'stop() cancels a pending AI request (stop button is not dead)',
+      () async {
+        final never = Completer<void>();
+        hold = (_) => never.future;
+        var done = false;
+        unawaited(chat.send('salam').then((_) => done = true));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(chat.busy, isTrue);
+
+        await chat.stop().timeout(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(done, isTrue);
+        expect(chat.busy, isFalse);
+        expect(chat.messages.where(isStreaming), isEmpty);
+        expect(
+          chat.messages.last.role,
+          ChatRole.user,
+          reason: 'the empty "thinking" bubble is removed, nothing is faked',
+        );
+      },
+    );
   });
 }

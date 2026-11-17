@@ -71,6 +71,8 @@ const cases = <Case>[
   // ---- volume
   Case('Zid lvolume', C.volumeUp),
   Case('zid sout', C.volumeUp),
+  Case('tla3 sout', C.volumeUp),
+  Case('tle3 lvolume chwiya', C.volumeUp),
   Case('زيد الصوت', C.volumeUp),
   Case('monte le son', C.volumeUp),
   Case('louder', C.volumeUp),

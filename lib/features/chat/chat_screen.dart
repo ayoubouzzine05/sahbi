@@ -190,7 +190,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     if (voice.state == VoiceState.speaking || chat.busy)
                       IconButton(
                         tooltip: l.interruptSpeech,
-                        onPressed: voice.interrupt,
+                        onPressed: ref.read(chatControllerProvider).stop,
                         icon: const Icon(
                           Icons.stop_circle_outlined,
                           color: SahbiColors.coral,

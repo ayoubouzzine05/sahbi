@@ -80,6 +80,48 @@ class ChatController extends ChangeNotifier {
   int _id = 0;
   bool _wasSpeaking = false;
   StreamSubscription<BrainEvent>? _brainSub;
+  Completer<void>? _brainDone;
+  ChatMessage? _brainMsg;
+  int _brainGen = 0;
+
+  /// Drops the in-flight AI request (new input, stop button, dispose).
+  ///
+  /// Cancelling a subscription does not fire onDone, so the waiting send()
+  /// is released explicitly; the cancel itself is not awaited because the
+  /// backend stream is an async* generator that may be blocked on the
+  /// network. An empty "thinking" bubble is removed; streamed partial text
+  /// is kept as-is (never completed or invented).
+  void _abandonBrain() {
+    _brainGen++;
+    final sub = _brainSub;
+    _brainSub = null;
+    if (sub != null) unawaited(sub.cancel());
+    final m = _brainMsg;
+    _brainMsg = null;
+    if (m != null && m.streaming) {
+      if (m.text.isEmpty) {
+        messages.remove(m);
+      } else {
+        m
+          ..streaming = false
+          ..phase = null;
+      }
+    }
+    final d = _brainDone;
+    _brainDone = null;
+    if (d != null && !d.isCompleted) d.complete();
+    if (busy) {
+      busy = false;
+      voice.setThinking(false);
+    }
+  }
+
+  /// Stop button: cancels a pending AI request and any speech.
+  Future<void> stop() async {
+    _abandonBrain();
+    notifyListeners();
+    await voice.interrupt();
+  }
 
   String _nextId() => '${++_id}';
 
@@ -122,7 +164,7 @@ class ChatController extends ChangeNotifier {
     companion.interact();
     _wasSpeaking = voice.state == VoiceState.speaking;
     await voice.interrupt(); // new input interrupts speech
-    await _brainSub?.cancel();
+    _abandonBrain();
     messages.add(
       ChatMessage(
         id: _nextId(),
@@ -270,6 +312,9 @@ class ChatController extends ChangeNotifier {
     messages.add(m);
     notifyListeners();
     final done = Completer<void>();
+    final gen = _brainGen;
+    _brainDone = done;
+    _brainMsg = m;
     BrainReply? reply;
     _brainSub = backend
         .chat(_request(text))
@@ -309,6 +354,10 @@ class ChatController extends ChangeNotifier {
           cancelOnError: true,
         );
     await done.future;
+    if (gen != _brainGen) return; // superseded or stopped
+    _brainSub = null;
+    _brainDone = null;
+    _brainMsg = null;
     busy = false;
     final r = reply;
     if (r == null) {
@@ -514,7 +563,10 @@ class ChatController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _brainSub?.cancel();
+    _brainGen++;
+    unawaited(_brainSub?.cancel());
+    final d = _brainDone;
+    if (d != null && !d.isCompleted) d.complete();
     super.dispose();
   }
 }

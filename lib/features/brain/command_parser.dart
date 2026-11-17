@@ -79,7 +79,7 @@ class CommandParser {
     r'(?:volume|lvolume|sout|son|الصوت|صوت)\D{0,12}?(\d{1,3})\s*%?',
   );
   static final _volumeUp = RegExp(
-    r'(?:\bzid\b|\b3li\b|\b3eli\b|\bt3li\b|\bmonte|\baugmente|\bplus fort|\bturn up|\blouder|\bup\b|زيد|علي|طلع)'
+    r'(?:\bzid\b|\btl[ae]?3\b|\btale3\b|\b3li\b|\b3eli\b|\bt3li\b|\bmonte|\baugmente|\bplus fort|\bturn up|\blouder|\bup\b|زيد|علي|طلع)'
     r'.{0,14}(?:volume|sout|son|الصوت|صوت)|volume up|louder|plus fort|زيد الصوت|علي الصوت',
   );
   static final _volumeDown = RegExp(

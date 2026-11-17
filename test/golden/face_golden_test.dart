@@ -12,14 +12,7 @@ import 'package:sahbi/features/personality/emotion.dart';
 ///   flutter test --update-goldens test/golden
 /// when the face design changes intentionally.
 void main() {
-  for (final e in [
-    Emotion.neutral,
-    Emotion.happy,
-    Emotion.sad,
-    Emotion.surprised,
-    Emotion.sleepy,
-    Emotion.listening,
-  ]) {
+  for (final e in Emotion.values) {
     testWidgets('face ${e.name}', (t) async {
       await t.binding.setSurfaceSize(const Size(240, 240));
       addTearDown(() => t.binding.setSurfaceSize(null));
