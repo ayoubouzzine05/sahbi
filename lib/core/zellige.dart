@@ -210,7 +210,15 @@ class ZelligeCard extends StatelessWidget {
               painter: ZelligePainter(opacity: 0.35, cell: 14),
             ),
           ),
-          Padding(padding: padding ?? const EdgeInsets.all(16), child: child),
+          // Transparent Material so ListTile/InkWell ripples paint above the
+          // card's coloured decoration instead of being hidden by it.
+          Material(
+            type: MaterialType.transparency,
+            child: Padding(
+              padding: padding ?? const EdgeInsets.all(16),
+              child: child,
+            ),
+          ),
         ],
       ),
     );

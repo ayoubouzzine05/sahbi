@@ -117,7 +117,15 @@ class _SahbiAppState extends ConsumerState<SahbiApp> {
       themeMode: ThemeMode.dark,
       locale: Locale(locale),
       supportedLocales: L10n.supportedLocales,
-      localizationsDelegates: L10n.localizationsDelegates,
+      // NOT L10n.localizationsDelegates: those bundle flutter_localizations'
+      // delegates, which serve the legacy package:flutter/material
+      // MaterialLocalizations type. material_ui widgets look up their own type,
+      // so ar/fr crashed (no MaterialLocalizations). Use material_ui's delegates
+      // (as its README prescribes) plus the app strings.
+      localizationsDelegates: const [
+        L10n.delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
       routerConfig: ref.watch(routerProvider),
     );
   }

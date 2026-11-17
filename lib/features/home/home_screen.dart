@@ -78,17 +78,22 @@ class HomeScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
         children: [
-          StatusPill(
-            icon: net.online
-                ? Icons.cloud_done_outlined
-                : Icons.cloud_off_outlined,
-            label: net.online ? l.online : l.offline,
-            color: net.online ? SahbiColors.green : SahbiColors.amber,
+          // Flexible: long fr labels / large system font must not overflow.
+          Flexible(
+            child: StatusPill(
+              icon: net.online
+                  ? Icons.cloud_done_outlined
+                  : Icons.cloud_off_outlined,
+              label: net.online ? l.online : l.offline,
+              color: net.online ? SahbiColors.green : SahbiColors.amber,
+            ),
           ),
           const SizedBox(width: 8),
-          StatusPill(
-            icon: Icons.record_voice_over_outlined,
-            label: providerLabel,
+          Flexible(
+            child: StatusPill(
+              icon: Icons.record_voice_over_outlined,
+              label: providerLabel,
+            ),
           ),
           const Spacer(),
           MicIndicator(on: voice.micOpen),

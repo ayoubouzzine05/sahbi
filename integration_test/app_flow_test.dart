@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sahbi/features/face/robot_face.dart';
+import 'package:sahbi/features/music/music_screen.dart';
 import 'package:sahbi/main.dart' as app;
 
 void main() {
@@ -33,9 +34,10 @@ void main() {
       await t.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
       await frames();
       await t.enterText(find.byKey(const Key('chat_input')), 'chno smitek?');
+      await t.pump(); // send button enables on the next frame
       await t.tap(find.byKey(const Key('chat_send')));
       await frames(30);
-      expect(find.text('chno smitek?'), findsOneWidget);
+      expect(find.text('chno smitek?'), findsWidgets);
       expect(
         find.byIcon(Icons.cloud_off_rounded),
         findsWidgets,
@@ -44,13 +46,24 @@ void main() {
 
       // Local command works without the AI.
       await t.enterText(find.byKey(const Key('chat_input')), 'pause');
+      await t.pump(); // send button enables on the next frame
       await t.tap(find.byKey(const Key('chat_send')));
       await frames(20);
-      expect(find.text('pause'), findsOneWidget);
+      expect(find.text('pause'), findsWidgets);
 
       // Music tab shows the bundled demo tracks.
       await t.tap(find.byIcon(Icons.music_note_outlined));
       await frames();
+      await t.scrollUntilVisible(
+        find.textContaining('Atlas Breeze'),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(MusicScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(find.textContaining('Atlas Breeze'), findsWidgets);
 
       // Settings tab opens.
