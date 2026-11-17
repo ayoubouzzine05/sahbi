@@ -4,7 +4,7 @@
 
 | Suite | Location | What it covers | Last result (this sandbox) |
 |---|---|---|---|
-| Command parser | `test/unit/command_parser_test.dart` | 66 tests: Darija in Arabic script and Arabizi (3/7/9/5/2), French, English, code-switching, negatives that must *not* trigger | PASSED |
+| Command parser | `test/unit/command_parser_test.dart` | 68 phrase cases: Darija in Arabic script and Arabizi (3/7/9/5/2), French, English, code-switching, negatives that must *not* trigger | PASSED |
 | Personality engine | `test/unit/personality_test.dart` | EmotionDetector, EmotionAnimationMapper (all 10 emotions, interpolation), VoiceState machine, IdleBehavior, ConversationContext, PersonalityResponses | PASSED |
 | Brain models / backend client | `test/unit/brain_test.dart` | BrainReply schema validation, SSE parsing, error-code mapping | PASSED |
 | Robot protocol | `test/unit/robot_protocol_test.dart` | CRC-16 check value, codec round-trip and rejection cases, safety limits, BLE fragmentation at MTU 23–247, out-of-order and interleaved reassembly, CRC corruption, simulator handshake, acks, 500 ms motor watchdog | PASSED |

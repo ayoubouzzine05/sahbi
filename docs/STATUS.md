@@ -9,7 +9,8 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | `flutter pub get`, `flutter gen-l10n` | OK |
 | `dart format --set-exit-if-changed lib test integration_test` | clean |
 | `flutter analyze` | **No issues found** |
-| `flutter test` (unit + widget + golden) | **246 passed, 0 failed** |
+| `flutter test` (unit + widget + golden) | **250 passed, 0 failed** |
+| Note | One full `flutter test` run stalled while *loading* test files (stuck at `loading robot_face_test.dart`) and was stopped at 900 s. Each file then passed on its own, and the next full run passed in 19 s. Not reproduced; recorded for transparency |
 | `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **53 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
 | CI smoke step from `backend.yml`, replayed locally | `grep '"llm":{"configured":false'` matches the real health JSON; unauthenticated `/v1/chat` → 401. OK |
 | Backend runtime smoke (`node dist/index.js`, no keys) | `GET /v1/health` 200 with every service `configured:false` except weather; `POST /v1/auth/anonymous` returned a 94-char token; `POST /v1/chat` → **503 not_configured**; without a token → **401** |
@@ -44,7 +45,7 @@ Conclusion: the build needs a machine with more memory, such as the CI runner. *
 | 9 | Visual design, zellige patterns, original assets (§3) | DONE | goldens, ASSETS_LICENSES.md |
 | 10 | Face with blink, gaze, touch-follow, breathing; 10 emotions (§3) | DONE (host) / NOT VERIFIED on device | robot_face_test, goldens, personality_test |
 | 11 | Mouth sync documented as approximate (§3) | DONE | FEATURES.md, ROBOT_PROTOCOL.md |
-| 12 | Darija Arabic script and Arabizi, French code-switching (§4) | DONE (parser) / NOT VERIFIED (recognition quality) | command_parser_test (66) |
+| 12 | Darija Arabic script and Arabizi, French code-switching (§4) | DONE (parser) / NOT VERIFIED (recognition quality) | command_parser_test (68) |
 | 13 | On-device STT and TTS (§5) | NOT VERIFIED | code in `lib/features/voice`; needs a device |
 | 14 | Cloud STT and TTS via backend, Azure ar-MA (§5) | NOT VERIFIED | backend routes tested with mocks; no Azure key |
 | 15 | Fallback cloud → device → typed (§5) | DONE (logic) | voice_controller_test |
@@ -71,7 +72,7 @@ Conclusion: the build needs a machine with more memory, such as the CI runner. *
 | 36 | Robot link: Local, Simulated, BLE/Wi-Fi skeletons, ROBOT_PROTOCOL.md (§13) | DONE | robot_protocol_test (25), docs/ROBOT_PROTOCOL.md |
 | 37 | BLE permissions requested only in Robot settings (§13) | NOT DONE (deferred) | BLUETOOTH_SCAN not declared because nothing scans yet; documented |
 | 38 | Settings screen, all §14 sections plus hidden debug screen (§14) | DONE (host) | all sections present; routes render in ar/fr/en |
-| 39 | Unit tests (§15) | DONE | 246 Flutter tests, 53 backend tests |
+| 39 | Unit tests (§15) | DONE | 250 Flutter tests, 53 backend tests |
 | 40 | Widget tests: face, chat, settings, RTL (§15) | DONE | robot_face_test, app_shell_test, search_sources_test |
 | 41 | Golden tests per emotion (§15) | DONE | all 10 emotions, reviewed visually; rendered on Linux |
 | 42 | Backend tests with mocked providers (§15) | DONE | 53 passing |
