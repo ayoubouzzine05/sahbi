@@ -53,7 +53,11 @@ class FacePainter extends CustomPainter {
     canvas.translate(-center.dx, -center.dy);
 
     // ---- body ---------------------------------------------------------------
-    final bodyRect = Rect.fromCenter(center: center, width: s * 0.92, height: s * 0.84);
+    final bodyRect = Rect.fromCenter(
+      center: center,
+      width: s * 0.92,
+      height: s * 0.84,
+    );
     final body = RRect.fromRectAndRadius(bodyRect, Radius.circular(s * 0.3));
     canvas.drawRRect(
       body.shift(Offset(0, s * 0.03)),
@@ -67,12 +71,18 @@ class FacePainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: const [Color(0xFFFFFFFF), SahbiColors.body, SahbiColors.bodyShade],
+          colors: const [
+            Color(0xFFFFFFFF),
+            SahbiColors.body,
+            SahbiColors.bodyShade,
+          ],
           stops: const [0, 0.55, 1],
         ).createShader(bodyRect),
     );
     // Ear pods with accent LEDs (pulse when listening).
-    final podGlow = frame.listening ? 0.5 + 0.5 * frame.listenLevel : 0.25 + 0.1 * p.glow;
+    final podGlow = frame.listening
+        ? 0.5 + 0.5 * frame.listenLevel
+        : 0.25 + 0.1 * p.glow;
     for (final side in [-1.0, 1.0]) {
       final podC = Offset(center.dx + side * bodyRect.width / 2, center.dy);
       final pod = RRect.fromRectAndRadius(
@@ -117,7 +127,11 @@ class FacePainter extends CustomPainter {
     // faint zellige inside the visor
     canvas.save();
     canvas.translate(visorRect.left, visorRect.top);
-    ZelligePainter(color: p.accent, opacity: 0.045, cell: s * 0.16).paint(canvas, visorRect.size);
+    ZelligePainter(
+      color: p.accent,
+      opacity: 0.045,
+      cell: s * 0.16,
+    ).paint(canvas, visorRect.size);
     canvas.restore();
 
     // ---- eyes -----------------------------------------------------------------
@@ -141,7 +155,9 @@ class FacePainter extends CustomPainter {
         visorRect.center.dx + side * s * 0.15 + gaze.dx * 0.6,
         eyeY - eyeH / 2 - s * (0.035 + 0.04 * p.browLift),
       );
-      final angle = p.browAngle * 0.35 * side; // inner end down when angry
+      // browAngle > 0 = angry (inner ends down), < 0 = sad/worried (inner ends up).
+      // Screen y grows downward, so the inner end (+dx side) needs -side.
+      final angle = -p.browAngle * 0.35 * side;
       final dx = math.cos(angle) * s * 0.06;
       final dy = math.sin(angle) * s * 0.06;
       canvas.drawLine(bc - Offset(dx, dy), bc + Offset(dx, dy), browPaint);
@@ -152,7 +168,10 @@ class FacePainter extends CustomPainter {
       for (final side in [-1.0, 1.0]) {
         canvas.drawOval(
           Rect.fromCenter(
-            center: Offset(visorRect.center.dx + side * s * 0.25, eyeY + eyeH * 0.6),
+            center: Offset(
+              visorRect.center.dx + side * s * 0.25,
+              eyeY + eyeH * 0.6,
+            ),
             width: s * 0.09,
             height: s * 0.045,
           ),
@@ -164,14 +183,27 @@ class FacePainter extends CustomPainter {
     }
 
     // ---- mouth ----------------------------------------------------------------
-    _mouth(canvas, Offset(visorRect.center.dx + gaze.dx * 0.3, visorRect.center.dy + s * 0.15), p, s);
+    _mouth(
+      canvas,
+      Offset(
+        visorRect.center.dx + gaze.dx * 0.3,
+        visorRect.center.dy + s * 0.15,
+      ),
+      p,
+      s,
+    );
 
     // ---- listening ring / music notes -------------------------------------------
     if (frame.musicNotes) _notes(canvas, visorRect, p, s);
     // glossy reflection
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(visorRect.left + s * 0.04, visorRect.top + s * 0.03, visorRect.width * 0.5, s * 0.05),
+        Rect.fromLTWH(
+          visorRect.left + s * 0.04,
+          visorRect.top + s * 0.03,
+          visorRect.width * 0.5,
+          s * 0.05,
+        ),
         Radius.circular(s * 0.03),
       ),
       Paint()..color = const Color(0x12FFFFFF),
@@ -185,48 +217,85 @@ class FacePainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = s * 0.01
-          ..color = SahbiColors.green.withValues(alpha: 0.35 + 0.5 * frame.listenLevel),
+          ..color = SahbiColors.green.withValues(
+            alpha: 0.35 + 0.5 * frame.listenLevel,
+          ),
       );
     }
     canvas.restore();
   }
 
-  void _eye(Canvas canvas, Offset c, double w, double h, double open, FaceParams p, double side, double s) {
+  void _eye(
+    Canvas canvas,
+    Offset c,
+    double w,
+    double h,
+    double open,
+    FaceParams p,
+    double side,
+    double s,
+  ) {
     final rect = Rect.fromCenter(center: c, width: w, height: h);
     final rr = RRect.fromRectAndRadius(rect, Radius.circular(w * 0.45));
     canvas.save();
     // Upper lid: clip from the top according to openness.
     final visibleTop = rect.top + h * (1 - open) * 0.98;
     // Lower lid curve for smiles ("^ ^").
-    final smileLift = h * 0.55 * p.eyeSmile;
-    final clip = Path()
-      ..moveTo(rect.left - 2, visibleTop)
-      ..lineTo(rect.right + 2, visibleTop)
-      ..lineTo(rect.right + 2, rect.bottom + 2)
-      ..quadraticBezierTo(c.dx, rect.bottom + 2 - smileLift * 2.2, rect.left - 2, rect.bottom + 2)
+    final smileLift = h * 0.42 * p.eyeSmile;
+    Path lidPath(double m) => Path()
+      ..moveTo(rect.left - m, visibleTop)
+      ..lineTo(rect.right + m, visibleTop)
+      ..lineTo(rect.right + m, rect.bottom + m)
+      ..quadraticBezierTo(
+        c.dx,
+        rect.bottom + m - smileLift * 2.2,
+        rect.left - m,
+        rect.bottom + m,
+      )
       ..close();
-    canvas.clipPath(clip);
-    // glow
+    // Glow: clipped by the lids but with room for the blur, so it never
+    // shows up as a hard-edged box.
+    final glowM = s * 0.07;
+    canvas.save();
+    canvas.clipPath(lidPath(glowM));
     canvas.drawRRect(
       rr.inflate(s * 0.012),
       Paint()
         ..color = p.accent.withValues(alpha: 0.35 * p.glow)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.03),
     );
+    canvas.restore();
+    canvas.clipPath(lidPath(2));
     canvas.drawRRect(
       rr,
       Paint()
         ..shader = RadialGradient(
           center: const Alignment(0, -0.2),
           radius: 0.9,
-          colors: [Color.lerp(p.accent, const Color(0xFFFFFFFF), 0.45)!, p.accent],
+          colors: [
+            Color.lerp(p.accent, const Color(0xFFFFFFFF), 0.45)!,
+            p.accent,
+          ],
         ).createShader(rect),
     );
     // pupil (darker iris) + highlight
     final pr = w * (0.18 + 0.16 * p.pupilSize);
     final pc = c + Offset(p.gazeX * w * 0.12, p.gazeY * h * 0.1);
-    canvas.drawCircle(pc, pr, Paint()..color = SahbiColors.visor.withValues(alpha: 0.55));
-    canvas.drawCircle(pc + Offset(-pr * 0.35, -pr * 0.4), pr * 0.32, Paint()..color = const Color(0xE6FFFFFF));
+    // Smiling "^ ^" eyes read better without a pupil: fade it out.
+    final pupilA = (1 - (p.eyeSmile - 0.35) / 0.4).clamp(0.0, 1.0);
+    if (pupilA > 0) {
+      canvas.drawCircle(
+        pc,
+        pr,
+        Paint()..color = SahbiColors.visor.withValues(alpha: 0.55 * pupilA),
+      );
+      canvas.drawCircle(
+        pc + Offset(-pr * 0.35, -pr * 0.4),
+        pr * 0.32,
+        Paint()
+          ..color = const Color(0xE6FFFFFF).withValues(alpha: 0.9 * pupilA),
+      );
+    }
     canvas.restore();
     // When nearly closed, draw a lash line so the eye never "disappears".
     if (open < 0.12) {
@@ -260,8 +329,18 @@ class FacePainter extends CustomPainter {
     }
     final path = Path()
       ..moveTo(c.dx - w / 2, c.dy)
-      ..quadraticBezierTo(c.dx, c.dy + curve * 1.4 - openH * 0.3, c.dx + w / 2, c.dy)
-      ..quadraticBezierTo(c.dx, c.dy + curve * 1.4 + openH * 1.6, c.dx - w / 2, c.dy)
+      ..quadraticBezierTo(
+        c.dx,
+        c.dy + curve * 1.4 - openH * 0.3,
+        c.dx + w / 2,
+        c.dy,
+      )
+      ..quadraticBezierTo(
+        c.dx,
+        c.dy + curve * 1.4 + openH * 1.6,
+        c.dx - w / 2,
+        c.dy,
+      )
       ..close();
     canvas.drawPath(path, Paint()..color = p.accent.withValues(alpha: 0.9));
     // tongue hint
@@ -279,7 +358,10 @@ class FacePainter extends CustomPainter {
     final paint = Paint()..color = p.accent.withValues(alpha: 0.7);
     for (var i = 0; i < 3; i++) {
       final t = (frame.time * 0.4 + i / 3) % 1.0;
-      final x = visor.left + visor.width * (0.15 + 0.35 * i) + math.sin(t * math.pi * 2) * s * 0.02;
+      final x =
+          visor.left +
+          visor.width * (0.15 + 0.35 * i) +
+          math.sin(t * math.pi * 2) * s * 0.02;
       final y = visor.bottom - visor.height * t;
       final a = math.sin(t * math.pi);
       paint.color = p.accent.withValues(alpha: 0.6 * a);

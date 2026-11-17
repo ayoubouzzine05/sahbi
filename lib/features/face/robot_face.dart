@@ -60,7 +60,8 @@ class RobotFace extends StatefulWidget {
   State<RobotFace> createState() => _RobotFaceState();
 }
 
-class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMixin {
+class _RobotFaceState extends State<RobotFace>
+    with SingleTickerProviderStateMixin {
   static const _mapper = EmotionAnimationMapper();
   final _rand = math.Random();
   late final Ticker _ticker;
@@ -90,10 +91,10 @@ class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMix
     final e = i.listening
         ? Emotion.listening
         : i.music && !i.speaking
-            ? Emotion.music
-            : i.speaking && i.emotion == Emotion.neutral
-                ? Emotion.speaking
-                : i.emotion;
+        ? Emotion.music
+        : i.speaking && i.emotion == Emotion.neutral
+        ? Emotion.speaking
+        : i.emotion;
     return _mapper.map(e, i.intensity);
   }
 
@@ -144,7 +145,8 @@ class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMix
     if (_blinkStart >= 0 && _t - _blinkStart > 0.16) {
       _blinkStart = -1;
       // Occasional double blink.
-      _nextBlink = _t + (_rand.nextDouble() < 0.15 ? 0.25 : 2 + _rand.nextDouble() * 4);
+      _nextBlink =
+          _t + (_rand.nextDouble() < 0.15 ? 0.25 : 2 + _rand.nextDouble() * 4);
     }
 
     // Gaze.
@@ -155,18 +157,29 @@ class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMix
       _gazeTarget = i.lookAt!;
     } else if (_t >= _nextGaze) {
       _gazeTarget = switch (spec.gaze) {
-        GazeBehavior.wander => Offset(_rand.nextDouble() * 1.6 - 0.8, _rand.nextDouble() * 0.8 - 0.4),
-        GazeBehavior.focus => Offset(_rand.nextDouble() * 0.3 - 0.15, _rand.nextDouble() * 0.2 - 0.1),
-        GazeBehavior.dart => Offset(_rand.nextDouble() * 2 - 1, _rand.nextDouble() - 0.5),
+        GazeBehavior.wander => Offset(
+          _rand.nextDouble() * 1.6 - 0.8,
+          _rand.nextDouble() * 0.8 - 0.4,
+        ),
+        GazeBehavior.focus => Offset(
+          _rand.nextDouble() * 0.3 - 0.15,
+          _rand.nextDouble() * 0.2 - 0.1,
+        ),
+        GazeBehavior.dart => Offset(
+          _rand.nextDouble() * 2 - 1,
+          _rand.nextDouble() - 0.5,
+        ),
         GazeBehavior.down => Offset(_rand.nextDouble() * 0.4 - 0.2, 0.7),
         GazeBehavior.up => Offset(_rand.nextDouble() * 0.8 - 0.4, -0.7),
         GazeBehavior.rest => Offset.zero,
       };
-      _nextGaze = _t + switch (spec.gaze) {
-        GazeBehavior.dart => 0.4 + _rand.nextDouble() * 0.6,
-        GazeBehavior.focus => 1.2 + _rand.nextDouble() * 1.5,
-        _ => 1.5 + _rand.nextDouble() * 2.5,
-      };
+      _nextGaze =
+          _t +
+          switch (spec.gaze) {
+            GazeBehavior.dart => 0.4 + _rand.nextDouble() * 0.6,
+            GazeBehavior.focus => 1.2 + _rand.nextDouble() * 1.5,
+            _ => 1.5 + _rand.nextDouble() * 2.5,
+          };
     }
     final gk = 1 - math.exp(-dt * (_touch != null ? 14 : 6));
     _gaze = Offset.lerp(_gaze, _gazeTarget, gk)!;
@@ -180,7 +193,11 @@ class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMix
         mouth = math.max(mouth, 0.15 + 0.6 * _mouthEnv);
       } else {
         // Approximate syllable rhythm (~4.5 Hz with variation).
-        final syll = (math.sin(_t * 2 * math.pi * 4.5) + math.sin(_t * 2 * math.pi * 2.3) * 0.5 + 1.5) / 3;
+        final syll =
+            (math.sin(_t * 2 * math.pi * 4.5) +
+                math.sin(_t * 2 * math.pi * 2.3) * 0.5 +
+                1.5) /
+            3;
         mouth = math.max(mouth, 0.1 + 0.55 * syll.clamp(0, 1));
       }
     }
@@ -223,38 +240,55 @@ class _RobotFaceState extends State<RobotFace> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final size = Size(c.maxWidth, c.maxHeight.isFinite ? c.maxHeight : c.maxWidth);
-      return Semantics(
-        label: widget.semanticLabel ?? 'Sahbi',
-        button: widget.onTap != null,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+    return LayoutBuilder(
+      builder: (context, c) {
+        final size = Size(
+          c.maxWidth,
+          c.maxHeight.isFinite ? c.maxHeight : c.maxWidth,
+        );
+        return Semantics(
+          label: widget.semanticLabel ?? 'Sahbi',
+          button: widget.onTap != null,
+          // Expose only meaningful actions to TalkBack; the drag-to-look pan
+          // would otherwise show up as four bogus "scroll" actions.
           onTap: widget.onTap,
           onLongPress: widget.onLongPress,
-          onPanStart: (d) => _updateTouch(d.localPosition, size),
-          onPanUpdate: (d) => _updateTouch(d.localPosition, size),
-          onPanEnd: (_) => setState(() => _touch = null),
-          onPanCancel: () => setState(() => _touch = null),
-          child: RepaintBoundary(
-            child: ValueListenableBuilder<int>(
-              valueListenable: _repaint,
-              builder: (context, _, _) => CustomPaint(
-                size: size,
-                painter: FacePainter(FaceFrame(
-                  params: widget.animate ? (_frameParams ?? _current) : _spec.params,
-                  blink: widget.animate ? _blinkAmount : 0,
-                  breath: widget.animate ? math.sin(_t * 2 * math.pi / 4) : 0,
-                  time: _t,
-                  listening: widget.inputs.listening,
-                  listenLevel: widget.inputs.listenLevel,
-                  musicNotes: widget.inputs.music && !widget.inputs.speaking,
-                )),
+          child: GestureDetector(
+            excludeFromSemantics: true,
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
+            onPanStart: (d) => _updateTouch(d.localPosition, size),
+            onPanUpdate: (d) => _updateTouch(d.localPosition, size),
+            onPanEnd: (_) => setState(() => _touch = null),
+            onPanCancel: () => setState(() => _touch = null),
+            child: RepaintBoundary(
+              child: ValueListenableBuilder<int>(
+                valueListenable: _repaint,
+                builder: (context, _, _) => CustomPaint(
+                  size: size,
+                  painter: FacePainter(
+                    FaceFrame(
+                      params: widget.animate
+                          ? (_frameParams ?? _current)
+                          : _spec.params,
+                      blink: widget.animate ? _blinkAmount : 0,
+                      breath: widget.animate
+                          ? math.sin(_t * 2 * math.pi / 4)
+                          : 0,
+                      time: _t,
+                      listening: widget.inputs.listening,
+                      listenLevel: widget.inputs.listenLevel,
+                      musicNotes:
+                          widget.inputs.music && !widget.inputs.speaking,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }

@@ -46,7 +46,9 @@ class TalkControls extends ConsumerWidget {
           label: listening ? l.stopListening : l.tapToTalk,
           child: GestureDetector(
             onLongPressStart: (_) {
-              if (!listening) startListeningFlow(context, ref, onTypedFallback: onKeyboard);
+              if (!listening) {
+                startListeningFlow(context, ref, onTypedFallback: onKeyboard);
+              }
             },
             onLongPressEnd: (_) => voice.stopListening(),
             child: AnimatedContainer(
@@ -62,7 +64,9 @@ class TalkControls extends ConsumerWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (listening ? SahbiColors.coral : SahbiColors.turquoise).withValues(alpha: 0.35 + 0.4 * voice.level),
+                    color:
+                        (listening ? SahbiColors.coral : SahbiColors.turquoise)
+                            .withValues(alpha: 0.35 + 0.4 * voice.level),
                     blurRadius: 18 + 24 * voice.level,
                     spreadRadius: 1 + 6 * voice.level,
                   ),
@@ -76,7 +80,11 @@ class TalkControls extends ConsumerWidget {
                   customBorder: const CircleBorder(),
                   onTap: toggle,
                   child: Icon(
-                    listening ? Icons.stop_rounded : (thinking ? Icons.more_horiz_rounded : Icons.mic_rounded),
+                    listening
+                        ? Icons.stop_rounded
+                        : (thinking
+                              ? Icons.more_horiz_rounded
+                              : Icons.mic_rounded),
                     size: big * 0.45,
                     color: SahbiColors.background,
                   ),
@@ -92,8 +100,8 @@ class TalkControls extends ConsumerWidget {
           onPressed: listening
               ? voice.cancelListening
               : (speaking || thinking)
-                  ? voice.interrupt
-                  : null,
+              ? voice.interrupt
+              : null,
         ),
       ],
     );
@@ -101,7 +109,12 @@ class TalkControls extends ConsumerWidget {
 }
 
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({super.key, required this.icon, required this.tooltip, this.onPressed});
+  const _RoundButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
