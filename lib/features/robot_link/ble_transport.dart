@@ -53,14 +53,19 @@ class BleTransport extends RobotTransport with AckTracker {
     final l = link;
     if (l == null) {
       _set(RobotConnection.failed);
-      throw UnsupportedError('No BLE implementation is bundled in this build (v1).');
+      throw UnsupportedError(
+        'No BLE implementation is bundled in this build (v1).',
+      );
     }
     _set(RobotConnection.connecting);
     await l.connect(deviceId);
     _mtu = await l.requestMtu(247);
     _notifySub = l.notifications(RobotProtocol.eventCharUuid).listen(_onFrame);
     final ack = await send(
-      const RobotMessage(type: 'system.hello', payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'}),
+      const RobotMessage(
+        type: 'system.hello',
+        payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'},
+      ),
       awaitAck: true,
     );
     if (ack?.type != 'ack' && ack?.type != 'system.hello_ack') {
@@ -70,7 +75,8 @@ class BleTransport extends RobotTransport with AckTracker {
     _info = RobotInfo.fromHelloAck(ack!.payload);
     _set(RobotConnection.connected);
     _heartbeat = Timer.periodic(RobotProtocol.heartbeatInterval, (_) {
-      if (DateTime.now().difference(_lastSeen) > RobotProtocol.heartbeatTimeout) {
+      if (DateTime.now().difference(_lastSeen) >
+          RobotProtocol.heartbeatTimeout) {
         disconnect();
         return;
       }
@@ -90,7 +96,12 @@ class BleTransport extends RobotTransport with AckTracker {
       resolveAck(m);
       _events.add(m);
     } on ProtocolException catch (e) {
-      _events.add(RobotMessage(type: 'error', payload: {'code': e.code, 'message': e.message}));
+      _events.add(
+        RobotMessage(
+          type: 'error',
+          payload: {'code': e.code, 'message': e.message},
+        ),
+      );
     }
   }
 
@@ -105,7 +116,11 @@ class BleTransport extends RobotTransport with AckTracker {
   }
 
   @override
-  Future<RobotMessage?> send(RobotMessage message, {bool awaitAck = false, Duration timeout = const Duration(seconds: 2)}) async {
+  Future<RobotMessage?> send(
+    RobotMessage message, {
+    bool awaitAck = false,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
     final l = link;
     if (l == null) throw UnsupportedError('No BLE implementation bundled');
     final seq = nextSeq();

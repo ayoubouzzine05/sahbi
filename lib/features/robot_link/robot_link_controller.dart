@@ -28,9 +28,13 @@ class RobotLinkController extends ChangeNotifier {
       notifyListeners();
     });
     _events = t.events.listen((m) {
-      eventLog.insert(0, '${DateTime.now().toIso8601String().substring(11, 19)} ${m.type} ${m.payload}');
+      eventLog.insert(
+        0,
+        '${DateTime.now().toIso8601String().substring(11, 19)} ${m.type} ${m.payload}',
+      );
       if (eventLog.length > 50) eventLog.removeLast();
-      if (m.type == 'sensor.touch' || (m.type == 'sensor.presence' && m.payload['present'] == true)) {
+      if (m.type == 'sensor.touch' ||
+          (m.type == 'sensor.presence' && m.payload['present'] == true)) {
         companion.interact();
       }
       notifyListeners();
@@ -60,12 +64,17 @@ class RobotLinkController extends ChangeNotifier {
     if (e == _lastSentEmotion) return;
     _lastSentEmotion = e;
     t
-        .send(RobotMessage(type: 'face.set_emotion', payload: {'emotion': e, 'intensity': companion.intensity}))
+        .send(
+          RobotMessage(
+            type: 'face.set_emotion',
+            payload: {'emotion': e, 'intensity': companion.intensity},
+          ),
+        )
         .catchError((Object err) {
-      lastError = '$err';
-      notifyListeners();
-      return null;
-    });
+          lastError = '$err';
+          notifyListeners();
+          return null;
+        });
   }
 
   Future<RobotMessage?> send(RobotMessage m) async {

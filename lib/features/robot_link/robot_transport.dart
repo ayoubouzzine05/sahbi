@@ -17,11 +17,13 @@ class RobotInfo {
   final double? battery;
 
   static RobotInfo fromHelloAck(Map<String, dynamic> p) => RobotInfo(
-        deviceId: '${p['device_id'] ?? 'unknown'}',
-        firmware: '${p['fw'] ?? '?'}',
-        capabilities: {for (final c in (p['capabilities'] as List? ?? const [])) '$c'},
-        battery: (p['battery'] as num?)?.toDouble(),
-      );
+    deviceId: '${p['device_id'] ?? 'unknown'}',
+    firmware: '${p['fw'] ?? '?'}',
+    capabilities: {
+      for (final c in (p['capabilities'] as List? ?? const [])) '$c',
+    },
+    battery: (p['battery'] as num?)?.toDouble(),
+  );
 }
 
 /// Transport-agnostic link to a face/ears/mouth device.
@@ -58,10 +60,13 @@ mixin AckTracker on RobotTransport {
     if (!awaitAck) return Future.value(null);
     final c = Completer<RobotMessage>();
     _pending[seq] = c;
-    return c.future.timeout(timeout, onTimeout: () {
-      _pending.remove(seq);
-      throw ProtocolException(RobotError.timeout, 'no ack for #$seq');
-    });
+    return c.future.timeout(
+      timeout,
+      onTimeout: () {
+        _pending.remove(seq);
+        throw ProtocolException(RobotError.timeout, 'no ack for #$seq');
+      },
+    );
   }
 
   /// Call for every incoming message.
@@ -73,7 +78,9 @@ mixin AckTracker on RobotTransport {
 
   void failAllPending() {
     for (final c in _pending.values) {
-      if (!c.isCompleted) c.completeError(ProtocolException(RobotError.timeout, 'disconnected'));
+      if (!c.isCompleted) {
+        c.completeError(ProtocolException(RobotError.timeout, 'disconnected'));
+      }
     }
     _pending.clear();
   }

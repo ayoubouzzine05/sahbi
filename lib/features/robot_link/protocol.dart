@@ -7,9 +7,11 @@ abstract final class RobotProtocol {
 
   /// Custom 128-bit UUIDs (randomly generated for SAHBI, not assigned by SIG).
   static const serviceUuid = '7a1b0001-5a48-4249-9c3e-6d0b5e1f2a10';
-  static const commandCharUuid = '7a1b0002-5a48-4249-9c3e-6d0b5e1f2a10'; // write
+  static const commandCharUuid =
+      '7a1b0002-5a48-4249-9c3e-6d0b5e1f2a10'; // write
   static const eventCharUuid = '7a1b0003-5a48-4249-9c3e-6d0b5e1f2a10'; // notify
-  static const telemetryCharUuid = '7a1b0004-5a48-4249-9c3e-6d0b5e1f2a10'; // notify
+  static const telemetryCharUuid =
+      '7a1b0004-5a48-4249-9c3e-6d0b5e1f2a10'; // notify
 
   static const heartbeatInterval = Duration(seconds: 2);
   static const heartbeatTimeout = Duration(seconds: 6);
@@ -89,15 +91,20 @@ class RobotMessage {
   final bool ackRequested;
 
   Map<String, dynamic> toJson() => {
-        'v': v,
-        'seq': seq,
-        'type': type,
-        if (payload.isNotEmpty) 'payload': payload,
-        if (ackRequested) 'ack': true,
-      };
+    'v': v,
+    'seq': seq,
+    'type': type,
+    if (payload.isNotEmpty) 'payload': payload,
+    if (ackRequested) 'ack': true,
+  };
 
-  RobotMessage withSeq(int s) =>
-      RobotMessage(type: type, seq: s, payload: payload, ackRequested: ackRequested, v: v);
+  RobotMessage withSeq(int s) => RobotMessage(
+    type: type,
+    seq: s,
+    payload: payload,
+    ackRequested: ackRequested,
+    v: v,
+  );
 
   @override
   String toString() => 'RobotMessage(#$seq $type $payload)';
@@ -130,12 +137,16 @@ abstract final class RobotCodec {
     if (type is! String || seq is! int || seq < 0 || seq > 0xFFFF) {
       throw ProtocolException(RobotError.badPayload, 'missing type/seq');
     }
-    if (!RobotProtocol.commands.contains(type) && !RobotProtocol.events.contains(type)) {
+    if (!RobotProtocol.commands.contains(type) &&
+        !RobotProtocol.events.contains(type)) {
       throw ProtocolException(RobotError.unknownCommand, type);
     }
     final payload = j['payload'];
     if (payload != null && payload is! Map<String, dynamic>) {
-      throw ProtocolException(RobotError.badPayload, 'payload must be an object');
+      throw ProtocolException(
+        RobotError.badPayload,
+        'payload must be an object',
+      );
     }
     final m = RobotMessage(
       v: v,
@@ -152,7 +163,9 @@ abstract final class RobotCodec {
   static void validate(RobotMessage m) {
     final p = m.payload;
     void need(bool ok, String what) {
-      if (!ok) throw ProtocolException(RobotError.badPayload, '${m.type}: $what');
+      if (!ok) {
+        throw ProtocolException(RobotError.badPayload, '${m.type}: $what');
+      }
     }
 
     switch (m.type) {
@@ -162,16 +175,33 @@ abstract final class RobotCodec {
         need(i == null || (i is num && i >= 0 && i <= 1), 'intensity 0..1');
       case 'face.look':
         need(p['x'] is num && p['y'] is num, 'x,y');
-        need((p['x'] as num).abs() <= 1 && (p['y'] as num).abs() <= 1, 'x,y in -1..1');
+        need(
+          (p['x'] as num).abs() <= 1 && (p['y'] as num).abs() <= 1,
+          'x,y in -1..1',
+        );
       case 'audio.volume':
-        need(p['level'] is num && (p['level'] as num) >= 0 && (p['level'] as num) <= 1, 'level 0..1');
+        need(
+          p['level'] is num &&
+              (p['level'] as num) >= 0 &&
+              (p['level'] as num) <= 1,
+          'level 0..1',
+        );
       case 'motor.move':
-        need(p['left'] is num && p['right'] is num && p['duration_ms'] is int, 'left,right,duration_ms');
+        need(
+          p['left'] is num && p['right'] is num && p['duration_ms'] is int,
+          'left,right,duration_ms',
+        );
         final l = (p['left'] as num).abs();
         final r = (p['right'] as num).abs();
         final d = p['duration_ms'] as int;
-        if (l > RobotProtocol.maxMotorSpeed || r > RobotProtocol.maxMotorSpeed || d <= 0 || d > RobotProtocol.maxMotorDurationMs) {
-          throw ProtocolException(RobotError.safetyLimit, 'motor.move exceeds limits');
+        if (l > RobotProtocol.maxMotorSpeed ||
+            r > RobotProtocol.maxMotorSpeed ||
+            d <= 0 ||
+            d > RobotProtocol.maxMotorDurationMs) {
+          throw ProtocolException(
+            RobotError.safetyLimit,
+            'motor.move exceeds limits',
+          );
         }
       case 'sensor.subscribe':
         need(p['sensors'] is List, 'sensors');
@@ -187,7 +217,9 @@ int crc16(List<int> data) {
   for (final b in data) {
     crc ^= (b & 0xFF) << 8;
     for (var i = 0; i < 8; i++) {
-      crc = (crc & 0x8000) != 0 ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+      crc = (crc & 0x8000) != 0
+          ? ((crc << 1) ^ 0x1021) & 0xFFFF
+          : (crc << 1) & 0xFFFF;
     }
   }
   return crc;
@@ -208,7 +240,9 @@ abstract final class BleFraming {
     final crc = crc16(message);
     final body = Uint8List.fromList([...message, crc >> 8, crc & 0xFF]);
     final count = (body.length / chunk).ceil();
-    if (count > 255) throw ProtocolException(RobotError.badPayload, 'message too large');
+    if (count > 255) {
+      throw ProtocolException(RobotError.badPayload, 'message too large');
+    }
     return [
       for (var i = 0; i < count; i++)
         Uint8List.fromList([
@@ -218,7 +252,10 @@ abstract final class BleFraming {
           seq & 0xFF,
           i,
           count,
-          ...body.sublist(i * chunk, (i + 1) * chunk > body.length ? body.length : (i + 1) * chunk),
+          ...body.sublist(
+            i * chunk,
+            (i + 1) * chunk > body.length ? body.length : (i + 1) * chunk,
+          ),
         ]),
     ];
   }
@@ -235,7 +272,10 @@ class BleReassembler {
       throw ProtocolException(RobotError.badPayload, 'short frame');
     }
     if (frame[0] != RobotProtocol.version) {
-      throw ProtocolException(RobotError.unsupportedVersion, 'frame version ${frame[0]}');
+      throw ProtocolException(
+        RobotError.unsupportedVersion,
+        'frame version ${frame[0]}',
+      );
     }
     final seq = (frame[2] << 8) | frame[3];
     final index = frame[4];
@@ -249,10 +289,14 @@ class BleReassembler {
     final body = <int>[for (var i = 0; i < count; i++) ..._parts[seq]![i]!];
     _parts.remove(seq);
     _counts.remove(seq);
-    if (body.length < 2) throw ProtocolException(RobotError.badPayload, 'empty');
+    if (body.length < 2) {
+      throw ProtocolException(RobotError.badPayload, 'empty');
+    }
     final msg = body.sublist(0, body.length - 2);
     final crc = (body[body.length - 2] << 8) | body[body.length - 1];
-    if (crc16(msg) != crc) throw ProtocolException(RobotError.badPayload, 'CRC mismatch');
+    if (crc16(msg) != crc) {
+      throw ProtocolException(RobotError.badPayload, 'CRC mismatch');
+    }
     return Uint8List.fromList(msg);
   }
 

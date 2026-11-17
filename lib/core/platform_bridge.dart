@@ -19,18 +19,22 @@ class PickedAudio {
   final int? durationMs;
 
   static PickedAudio fromMap(Map<dynamic, dynamic> m) => PickedAudio(
-        uri: '${m['uri']}',
-        name: '${m['name'] ?? 'audio'}',
-        title: m['title'] as String?,
-        artist: m['artist'] as String?,
-        album: m['album'] as String?,
-        artPath: m['artPath'] as String?,
-        durationMs: (m['durationMs'] as num?)?.toInt(),
-      );
+    uri: '${m['uri']}',
+    name: '${m['name'] ?? 'audio'}',
+    title: m['title'] as String?,
+    artist: m['artist'] as String?,
+    album: m['album'] as String?,
+    artPath: m['artPath'] as String?,
+    durationMs: (m['durationMs'] as num?)?.toInt(),
+  );
 }
 
 class AudioOutputInfo {
-  const AudioOutputInfo({required this.type, required this.name, this.isBluetooth = false});
+  const AudioOutputInfo({
+    required this.type,
+    required this.name,
+    this.isBluetooth = false,
+  });
 
   /// speaker | wired | bluetooth | usb | hdmi | other | unknown
   final String type;
@@ -40,10 +44,10 @@ class AudioOutputInfo {
   static const unknown = AudioOutputInfo(type: 'unknown', name: '');
 
   static AudioOutputInfo fromMap(Map<dynamic, dynamic> m) => AudioOutputInfo(
-        type: '${m['type'] ?? 'unknown'}',
-        name: '${m['name'] ?? ''}',
-        isBluetooth: m['isBluetooth'] == true,
-      );
+    type: '${m['type'] ?? 'unknown'}',
+    name: '${m['name'] ?? ''}',
+    isBluetooth: m['isBluetooth'] == true,
+  );
 }
 
 /// Thin wrapper over the Kotlin MethodChannel in MainActivity.kt:
@@ -54,18 +58,24 @@ class PlatformBridge {
   final MethodChannel _ch;
 
   Future<List<PickedAudio>> pickAudioFiles() async {
-    final r = await _ch.invokeListMethod<Map<dynamic, dynamic>>('pickAudioFiles');
+    final r = await _ch.invokeListMethod<Map<dynamic, dynamic>>(
+      'pickAudioFiles',
+    );
     return [for (final m in r ?? const []) PickedAudio.fromMap(m)];
   }
 
   Future<List<PickedAudio>> pickAudioFolder() async {
-    final r = await _ch.invokeListMethod<Map<dynamic, dynamic>>('pickAudioFolder');
+    final r = await _ch.invokeListMethod<Map<dynamic, dynamic>>(
+      'pickAudioFolder',
+    );
     return [for (final m in r ?? const []) PickedAudio.fromMap(m)];
   }
 
   Future<AudioOutputInfo> activeOutput() async {
     try {
-      final r = await _ch.invokeMapMethod<dynamic, dynamic>('getActiveAudioOutput');
+      final r = await _ch.invokeMapMethod<dynamic, dynamic>(
+        'getActiveAudioOutput',
+      );
       return r == null ? AudioOutputInfo.unknown : AudioOutputInfo.fromMap(r);
     } on MissingPluginException {
       return AudioOutputInfo.unknown;
@@ -82,16 +92,24 @@ class PlatformBridge {
   /// System media (STREAM_MUSIC) volume. Returns the new level 0..1, or
   /// null if it could not be changed (e.g. fixed-volume device).
   Future<double?> adjustMediaVolume(int direction) async =>
-      (await _ch.invokeMethod<num>('adjustMediaVolume', {'direction': direction}))?.toDouble();
+      (await _ch.invokeMethod<num>('adjustMediaVolume', {
+        'direction': direction,
+      }))?.toDouble();
 
   Future<double?> setMediaVolume(double level) async =>
-      (await _ch.invokeMethod<num>('setMediaVolume', {'level': level}))?.toDouble();
+      (await _ch.invokeMethod<num>('setMediaVolume', {
+        'level': level,
+      }))?.toDouble();
 
   Future<double?> getMediaVolume() async =>
       (await _ch.invokeMethod<num>('getMediaVolume'))?.toDouble();
 
   /// Returns true if the user saved the file.
-  Future<bool> saveDocument(String fileName, Uint8List bytes, String mime) async =>
+  Future<bool> saveDocument(
+    String fileName,
+    Uint8List bytes,
+    String mime,
+  ) async =>
       await _ch.invokeMethod<bool>('saveDocument', {
         'name': fileName,
         'bytes': bytes,

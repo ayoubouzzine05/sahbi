@@ -8,7 +8,9 @@ import 'music_models.dart';
 
 /// audio_service handler around just_audio: media notification, lock screen
 /// controls, headset buttons and audio focus (via audio_session).
-class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler implements MusicEngine {
+class SahbiAudioHandler extends BaseAudioHandler
+    with QueueHandler, SeekHandler
+    implements MusicEngine {
   SahbiAudioHandler() {
     _init();
   }
@@ -37,35 +39,44 @@ class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     _player.playbackEventStream.listen(
       (event) {
         final playing = _player.playing;
-        playbackState.add(playbackState.value.copyWith(
-          controls: [
-            MediaControl.skipToPrevious,
-            if (playing) MediaControl.pause else MediaControl.play,
-            MediaControl.stop,
-            MediaControl.skipToNext,
-          ],
-          systemActions: const {MediaAction.seek, MediaAction.seekForward, MediaAction.seekBackward},
-          androidCompactActionIndices: const [0, 1, 3],
-          processingState: const {
-            ProcessingState.idle: AudioProcessingState.idle,
-            ProcessingState.loading: AudioProcessingState.loading,
-            ProcessingState.buffering: AudioProcessingState.buffering,
-            ProcessingState.ready: AudioProcessingState.ready,
-            ProcessingState.completed: AudioProcessingState.completed,
-          }[_player.processingState]!,
-          playing: playing,
-          updatePosition: _player.position,
-          bufferedPosition: _player.bufferedPosition,
-          speed: _player.speed,
-          queueIndex: event.currentIndex,
-        ));
-        _emit(_s.copyWith(
-          playing: playing,
-          loading: _player.processingState == ProcessingState.loading ||
-              _player.processingState == ProcessingState.buffering,
-          index: event.currentIndex,
-          duration: _player.duration,
-        ));
+        playbackState.add(
+          playbackState.value.copyWith(
+            controls: [
+              MediaControl.skipToPrevious,
+              if (playing) MediaControl.pause else MediaControl.play,
+              MediaControl.stop,
+              MediaControl.skipToNext,
+            ],
+            systemActions: const {
+              MediaAction.seek,
+              MediaAction.seekForward,
+              MediaAction.seekBackward,
+            },
+            androidCompactActionIndices: const [0, 1, 3],
+            processingState: const {
+              ProcessingState.idle: AudioProcessingState.idle,
+              ProcessingState.loading: AudioProcessingState.loading,
+              ProcessingState.buffering: AudioProcessingState.buffering,
+              ProcessingState.ready: AudioProcessingState.ready,
+              ProcessingState.completed: AudioProcessingState.completed,
+            }[_player.processingState]!,
+            playing: playing,
+            updatePosition: _player.position,
+            bufferedPosition: _player.bufferedPosition,
+            speed: _player.speed,
+            queueIndex: event.currentIndex,
+          ),
+        );
+        _emit(
+          _s.copyWith(
+            playing: playing,
+            loading:
+                _player.processingState == ProcessingState.loading ||
+                _player.processingState == ProcessingState.buffering,
+            index: event.currentIndex,
+            duration: _player.duration,
+          ),
+        );
       },
       onError: (Object e, StackTrace _) {
         _emit(_s.copyWith(error: 'playback_error: $e', playing: false));
@@ -86,17 +97,20 @@ class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   }
 
   MediaItem _toMediaItem(Track t) => MediaItem(
-        id: t.id,
-        title: t.title,
-        artist: t.artist,
-        album: t.album,
-        duration: t.duration,
-        artUri: t.artUri == null ? null : Uri.parse(t.artUri!),
-      );
+    id: t.id,
+    title: t.title,
+    artist: t.artist,
+    album: t.album,
+    duration: t.duration,
+    artUri: t.artUri == null ? null : Uri.parse(t.artUri!),
+  );
 
   AudioSource _source(Track t) {
     if (t.uri.startsWith('asset:///')) {
-      return AudioSource.asset(t.uri.substring('asset:///'.length), tag: _toMediaItem(t));
+      return AudioSource.asset(
+        t.uri.substring('asset:///'.length),
+        tag: _toMediaItem(t),
+      );
     }
     return AudioSource.uri(Uri.parse(t.uri), tag: _toMediaItem(t));
   }
@@ -107,10 +121,9 @@ class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     queue.add([for (final t in tracks) _toMediaItem(t)]);
     _emit(_s.copyWith(queue: _tracks, index: start, clearError: true));
     try {
-      await _player.setAudioSources(
-        [for (final t in tracks) _source(t)],
-        initialIndex: start,
-      );
+      await _player.setAudioSources([
+        for (final t in tracks) _source(t),
+      ], initialIndex: start);
     } catch (e) {
       _emit(_s.copyWith(error: 'load_failed: $e'));
       rethrow;
@@ -143,7 +156,8 @@ class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   Future<void> skipToPrevious() => _player.seekToPrevious();
 
   @override
-  Future<void> skipToQueueItem(int index) => _player.seek(Duration.zero, index: index);
+  Future<void> skipToQueueItem(int index) =>
+      _player.seek(Duration.zero, index: index);
 
   @override
   Future<void> next() => skipToNext();
@@ -155,5 +169,6 @@ class SahbiAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   Future<void> skipTo(int index) => skipToQueueItem(index);
 
   @override
-  Future<void> setVolume(double volume) => _player.setVolume(volume.clamp(0.0, 1.0));
+  Future<void> setVolume(double volume) =>
+      _player.setVolume(volume.clamp(0.0, 1.0));
 }

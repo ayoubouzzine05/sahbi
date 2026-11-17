@@ -26,20 +26,20 @@ class MemoryItem {
   DateTime updatedAt;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'kind': kind,
-        'text': text,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'kind': kind,
+    'text': text,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   static MemoryItem fromJson(Map<String, dynamic> j) => MemoryItem(
-        id: '${j['id']}',
-        kind: '${j['kind']}',
-        text: '${j['text']}',
-        createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(),
-        updatedAt: DateTime.tryParse('${j['updatedAt']}'),
-      );
+    id: '${j['id']}',
+    kind: '${j['kind']}',
+    text: '${j['text']}',
+    createdAt: DateTime.tryParse('${j['createdAt']}') ?? DateTime.now(),
+    updatedAt: DateTime.tryParse('${j['updatedAt']}'),
+  );
 }
 
 /// Where the encrypted blob lives (file in the app, memory in tests).
@@ -91,8 +91,8 @@ class InMemoryBlobStorage implements BlobStorage {
 /// backed flutter_secure_storage. Nothing here is synced anywhere.
 class MemoryStore extends ChangeNotifier {
   MemoryStore({required KeyValueStore keyStore, required BlobStorage blob})
-      : _keys = keyStore,
-        _blob = blob;
+    : _keys = keyStore,
+      _blob = blob;
 
   final KeyValueStore _keys;
   final BlobStorage _blob;
@@ -109,7 +109,8 @@ class MemoryStore extends ChangeNotifier {
 
   List<MemoryItem> get items => List.unmodifiable(_items);
   List<MemoryItem> get facts => _items.where((i) => i.kind == 'fact').toList();
-  List<MemoryItem> get history => _items.where((i) => i.kind != 'fact').toList();
+  List<MemoryItem> get history =>
+      _items.where((i) => i.kind != 'fact').toList();
   bool get anyConsent => consentFacts || consentHistory;
 
   Future<SecretKey> _key() async {
@@ -127,7 +128,11 @@ class MemoryStore extends ChangeNotifier {
     try {
       final data = await _blob.read();
       if (data != null && data.length > 28) {
-        final box = SecretBox.fromConcatenation(data, nonceLength: 12, macLength: 16);
+        final box = SecretBox.fromConcatenation(
+          data,
+          nonceLength: 12,
+          macLength: 16,
+        );
         final clear = await _aes.decrypt(box, secretKey: await _key());
         final j = jsonDecode(utf8.decode(clear)) as Map<String, dynamic>;
         consentFacts = j['consentFacts'] == true;
@@ -135,7 +140,10 @@ class MemoryStore extends ChangeNotifier {
         consentedAt = DateTime.tryParse('${j['consentedAt']}');
         _items
           ..clear()
-          ..addAll([for (final i in (j['items'] as List? ?? const [])) MemoryItem.fromJson(i as Map<String, dynamic>)]);
+          ..addAll([
+            for (final i in (j['items'] as List? ?? const []))
+              MemoryItem.fromJson(i as Map<String, dynamic>),
+          ]);
       }
       loadError = null;
     } catch (e) {
@@ -148,12 +156,12 @@ class MemoryStore extends ChangeNotifier {
   }
 
   Map<String, dynamic> _toJson() => {
-        'v': 1,
-        'consentFacts': consentFacts,
-        'consentHistory': consentHistory,
-        'consentedAt': consentedAt?.toIso8601String(),
-        'items': [for (final i in _items) i.toJson()],
-      };
+    'v': 1,
+    'consentFacts': consentFacts,
+    'consentHistory': consentHistory,
+    'consentedAt': consentedAt?.toIso8601String(),
+    'items': [for (final i in _items) i.toJson()],
+  };
 
   Future<void> _save() async {
     final clear = utf8.encode(jsonEncode(_toJson()));
@@ -174,25 +182,35 @@ class MemoryStore extends ChangeNotifier {
     await _save();
   }
 
-  String _id() => '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 20)}';
+  String _id() =>
+      '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 20)}';
 
   /// Returns false (and stores nothing) without consent.
   Future<bool> addFact(String text) async {
     final t = text.trim();
     if (!consentFacts || t.isEmpty) return false;
-    _items.add(MemoryItem(id: _id(), kind: 'fact', text: t.length > 300 ? t.substring(0, 300) : t, createdAt: DateTime.now()));
+    _items.add(
+      MemoryItem(
+        id: _id(),
+        kind: 'fact',
+        text: t.length > 300 ? t.substring(0, 300) : t,
+        createdAt: DateTime.now(),
+      ),
+    );
     await _save();
     return true;
   }
 
   Future<bool> addChat(String role, String text) async {
     if (!consentHistory || text.trim().isEmpty) return false;
-    _items.add(MemoryItem(
-      id: _id(),
-      kind: role == 'user' ? 'chat_user' : 'chat_sahbi',
-      text: text.trim(),
-      createdAt: DateTime.now(),
-    ));
+    _items.add(
+      MemoryItem(
+        id: _id(),
+        kind: role == 'user' ? 'chat_user' : 'chat_sahbi',
+        text: text.trim(),
+        createdAt: DateTime.now(),
+      ),
+    );
     final hist = history;
     if (hist.length > maxHistory) {
       final drop = hist.take(hist.length - maxHistory).map((e) => e.id).toSet();
@@ -224,11 +242,12 @@ class MemoryStore extends ChangeNotifier {
   }
 
   String exportJson() => const JsonEncoder.withIndent('  ').convert({
-        'exported_at': DateTime.now().toIso8601String(),
-        'app': 'SAHBI',
-        ..._toJson(),
-      });
+    'exported_at': DateTime.now().toIso8601String(),
+    'app': 'SAHBI',
+    ..._toJson(),
+  });
 
   /// Facts sent to the AI, only with consent.
-  List<String> factsForBrain() => consentFacts ? facts.map((f) => f.text).take(30).toList() : const [];
+  List<String> factsForBrain() =>
+      consentFacts ? facts.map((f) => f.text).take(30).toList() : const [];
 }

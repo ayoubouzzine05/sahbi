@@ -25,7 +25,9 @@ class StreamingLinks {
 
   static Uri spotifyWeb(String? query) => query == null || query.isEmpty
       ? Uri.parse('https://open.spotify.com/')
-      : Uri.parse('https://open.spotify.com/search/${Uri.encodeComponent(query)}');
+      : Uri.parse(
+          'https://open.spotify.com/search/${Uri.encodeComponent(query)}',
+        );
 
   static Uri youtubeMusic(String? query) => query == null || query.isEmpty
       ? Uri.parse('https://music.youtube.com/')
@@ -36,7 +38,9 @@ class StreamingLinks {
       return const ActionResult.ok('Opened Spotify');
     }
     if (await _open(spotifyWeb(query))) {
-      return const ActionResult.ok('Spotify app not found — opened open.spotify.com');
+      return const ActionResult.ok(
+        'Spotify app not found — opened open.spotify.com',
+      );
     }
     return const ActionResult.fail('Could not open Spotify');
   }

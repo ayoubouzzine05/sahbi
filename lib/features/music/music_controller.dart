@@ -62,7 +62,8 @@ class MusicController extends ChangeNotifier {
     if (raw == null) return;
     try {
       library = [
-        for (final j in jsonDecode(raw) as List) Track.fromJson(j as Map<String, dynamic>),
+        for (final j in jsonDecode(raw) as List)
+          Track.fromJson(j as Map<String, dynamic>),
       ];
     } catch (_) {
       library = [];
@@ -70,7 +71,10 @@ class MusicController extends ChangeNotifier {
   }
 
   Future<void> _saveLibrary() async {
-    await _prefs?.setString('music_library', jsonEncode([for (final t in library) t.toJson()]));
+    await _prefs?.setString(
+      'music_library',
+      jsonEncode([for (final t in library) t.toJson()]),
+    );
   }
 
   Future<ActionResult> importFiles() async {
@@ -94,7 +98,9 @@ class MusicController extends ChangeNotifier {
   Future<ActionResult> _addPicked(List<PickedAudio> picked) async {
     if (picked.isEmpty) return const ActionResult.fail('nothing_selected');
     final ids = library.map((t) => t.id).toSet();
-    final added = [for (final p in picked) Track.fromPicked(p)].where((t) => ids.add(t.id)).toList();
+    final added = [for (final p in picked) Track.fromPicked(p)]
+        .where((t) => ids.add(t.id))
+        .toList();
     library = [...library, ...added];
     await _saveLibrary();
     notifyListeners();
@@ -126,7 +132,11 @@ class MusicController extends ChangeNotifier {
     if (query != null && query.trim().isNotEmpty) {
       final q = query.toLowerCase();
       final matches = all
-          .where((t) => t.title.toLowerCase().contains(q) || (t.artist?.toLowerCase().contains(q) ?? false))
+          .where(
+            (t) =>
+                t.title.toLowerCase().contains(q) ||
+                (t.artist?.toLowerCase().contains(q) ?? false),
+          )
           .toList();
       if (matches.isEmpty) return ActionResult.fail('no_local_match:$query');
       return playTracks(matches);
@@ -157,7 +167,9 @@ class MusicController extends ChangeNotifier {
 
   Future<ActionResult> next() async {
     final i = snapshot.index ?? 0;
-    if (i + 1 >= snapshot.queue.length) return const ActionResult.fail('end_of_queue');
+    if (i + 1 >= snapshot.queue.length) {
+      return const ActionResult.fail('end_of_queue');
+    }
     await engine.next();
     return const ActionResult.ok('Next track');
   }

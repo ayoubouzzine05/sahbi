@@ -16,8 +16,8 @@ class IdleBehavior {
     this.sleepAfter = const Duration(seconds: 120),
     this.lookAroundEvery = const Duration(seconds: 8),
     this.enabled = true,
-  })  : _clock = clock ?? DateTime.now,
-        _random = random ?? math.Random() {
+  }) : _clock = clock ?? DateTime.now,
+       _random = random ?? math.Random() {
     _lastInteraction = _clock();
     _lastLook = _lastInteraction;
   }

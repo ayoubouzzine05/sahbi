@@ -5,7 +5,14 @@ typedef C = CommandType;
 
 /// (phrase, expected type or null, optional checks)
 class Case {
-  const Case(this.phrase, this.type, {this.query, this.source, this.value, this.language});
+  const Case(
+    this.phrase,
+    this.type, {
+    this.query,
+    this.source,
+    this.value,
+    this.language,
+  });
   final String phrase;
   final CommandType? type;
   final String? query;
@@ -19,8 +26,17 @@ const cases = <Case>[
   Case('Ch3el lia chi music', C.musicPlay, source: MusicSource.any),
   Case('ch3el lmusic', C.musicPlay),
   Case('Sh3el lia chi musique', C.musicPlay),
-  Case('dir lia chi ghnya dyal Hoba Hoba Spirit', C.musicPlay, query: 'hoba hoba spirit'),
-  Case('ch3el lia nass el ghiwane f spotify', C.musicPlay, query: 'nass el ghiwane', source: MusicSource.spotify),
+  Case(
+    'dir lia chi ghnya dyal Hoba Hoba Spirit',
+    C.musicPlay,
+    query: 'hoba hoba spirit',
+  ),
+  Case(
+    'ch3el lia nass el ghiwane f spotify',
+    C.musicPlay,
+    query: 'nass el ghiwane',
+    source: MusicSource.spotify,
+  ),
   Case('ch3el spotify', C.musicPlay, source: MusicSource.spotify),
   Case('Ch3el lia chi music!!', C.musicPlay),
   // ---- play: Arabic script
@@ -29,7 +45,12 @@ const cases = <Case>[
   // ---- play: French / English
   Case('mets de la musique', C.musicPlay),
   Case('play some music', C.musicPlay),
-  Case('play Saad Lamjarred on youtube music', C.musicPlay, query: 'saad lamjarred', source: MusicSource.youtubeMusic),
+  Case(
+    'play Saad Lamjarred on youtube music',
+    C.musicPlay,
+    query: 'saad lamjarred',
+    source: MusicSource.youtubeMusic,
+  ),
   // ---- stop / pause / resume / next / previous
   Case('Wqef lmusic', C.musicStop),
   Case('Wqeeef lmusic!!', C.musicStop),
@@ -97,7 +118,10 @@ const cases = <Case>[
 void main() {
   const p = CommandParser();
 
-  test('has at least 60 phrases', () => expect(cases.length, greaterThanOrEqualTo(60)));
+  test(
+    'has at least 60 phrases',
+    () => expect(cases.length, greaterThanOrEqualTo(60)),
+  );
 
   for (final c in cases) {
     test('"${c.phrase}" → ${c.type?.name ?? 'null'}', () {

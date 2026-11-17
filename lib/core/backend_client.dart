@@ -74,7 +74,7 @@ abstract class KeyValueStore {
 
 class SecureKeyValueStore implements KeyValueStore {
   SecureKeyValueStore([FlutterSecureStorage? storage])
-      : _s = storage ?? const FlutterSecureStorage();
+    : _s = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _s;
   @override
   Future<String?> read(String key) => _s.read(key: key);
@@ -113,9 +113,9 @@ class BackendClient {
     required KeyValueStore store,
     http.Client? client,
     this.timeout = const Duration(seconds: 45),
-  })  : _baseUrl = baseUrl,
-        _store = store,
-        _http = client ?? http.Client();
+  }) : _baseUrl = baseUrl,
+       _store = store,
+       _http = client ?? http.Client();
 
   final String Function() _baseUrl;
   final KeyValueStore _store;
@@ -168,8 +168,8 @@ class BackendClient {
   }
 
   Future<Map<String, String>> _authHeaders({bool force = false}) async => {
-        'authorization': 'Bearer ${await _getToken(force: force)}',
-      };
+    'authorization': 'Bearer ${await _getToken(force: force)}',
+  };
 
   Future<T> _guard<T>(Future<T> Function() f) async {
     try {
@@ -177,7 +177,10 @@ class BackendClient {
     } on BackendException {
       rethrow;
     } on TimeoutException {
-      throw const BackendException(BackendErrorCode.timeout, 'Request timed out');
+      throw const BackendException(
+        BackendErrorCode.timeout,
+        'Request timed out',
+      );
     } on SocketException {
       throw const BackendException(BackendErrorCode.noInternet, 'No internet');
     } on HandshakeException {
@@ -200,14 +203,14 @@ class BackendClient {
   }
 
   static BackendErrorCode codeFromString(String code) => switch (code) {
-        'not_configured' => BackendErrorCode.notConfigured,
-        'upstream_timeout' => BackendErrorCode.timeout,
-        'invalid_output' => BackendErrorCode.invalidOutput,
-        'rate_limited' => BackendErrorCode.rateLimited,
-        'unauthorized' => BackendErrorCode.unauthorized,
-        'bad_request' => BackendErrorCode.badRequest,
-        _ => BackendErrorCode.server,
-      };
+    'not_configured' => BackendErrorCode.notConfigured,
+    'upstream_timeout' => BackendErrorCode.timeout,
+    'invalid_output' => BackendErrorCode.invalidOutput,
+    'rate_limited' => BackendErrorCode.rateLimited,
+    'unauthorized' => BackendErrorCode.unauthorized,
+    'bad_request' => BackendErrorCode.badRequest,
+    _ => BackendErrorCode.server,
+  };
 
   static BackendErrorCode _mapCode(int status, String code) {
     if (code == 'not_configured' || status == 503) {
@@ -274,9 +277,8 @@ class BackendClient {
     String? event;
     final data = StringBuffer();
     try {
-      await for (final line in bytes
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
+      await for (final line
+          in bytes.transform(utf8.decoder).transform(const LineSplitter())) {
         if (line.isEmpty) {
           if (event != null) {
             final ev = _toEvent(event, data.toString());
@@ -291,12 +293,17 @@ class BackendClient {
         }
       }
     } on TimeoutException {
-      throw const BackendException(BackendErrorCode.timeout, 'Stream timed out');
+      throw const BackendException(
+        BackendErrorCode.timeout,
+        'Stream timed out',
+      );
     }
   }
 
   static BrainEvent? _toEvent(String event, String data) {
-    final j = data.isEmpty ? <String, dynamic>{} : jsonDecode(data) as Map<String, dynamic>;
+    final j = data.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(data) as Map<String, dynamic>;
     switch (event) {
       case 'status':
         return BrainStatus('${j['phase']}');
@@ -317,7 +324,10 @@ class BackendClient {
     return null;
   }
 
-  Future<String> summarize(String? summary, List<Map<String, dynamic>> turns) async {
+  Future<String> summarize(
+    String? summary,
+    List<Map<String, dynamic>> turns,
+  ) async {
     final res = await _authed(
       (h) => _http
           .post(

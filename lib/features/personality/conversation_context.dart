@@ -28,7 +28,8 @@ class ConversationContext {
 
   void _trim() {
     int chars() => _turns.fold(0, (a, t) => a + t.text.length);
-    while (_turns.length > maxTurns || (chars() > maxChars && _turns.length > 2)) {
+    while (_turns.length > maxTurns ||
+        (chars() > maxChars && _turns.length > 2)) {
       pendingForSummary.add(_turns.removeAt(0));
     }
   }

@@ -26,36 +26,40 @@ class Track {
   final String source;
 
   static Track fromPicked(PickedAudio p) => Track(
-        id: p.uri,
-        uri: p.uri,
-        title: (p.title?.trim().isNotEmpty ?? false) ? p.title!.trim() : p.name,
-        artist: p.artist,
-        album: p.album,
-        artUri: p.artPath == null ? null : Uri.file(p.artPath!).toString(),
-        duration: p.durationMs == null ? null : Duration(milliseconds: p.durationMs!),
-      );
+    id: p.uri,
+    uri: p.uri,
+    title: (p.title?.trim().isNotEmpty ?? false) ? p.title!.trim() : p.name,
+    artist: p.artist,
+    album: p.album,
+    artUri: p.artPath == null ? null : Uri.file(p.artPath!).toString(),
+    duration: p.durationMs == null
+        ? null
+        : Duration(milliseconds: p.durationMs!),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'uri': uri,
-        'title': title,
-        'artist': artist,
-        'album': album,
-        'artUri': artUri,
-        'durationMs': duration?.inMilliseconds,
-        'source': source,
-      };
+    'id': id,
+    'uri': uri,
+    'title': title,
+    'artist': artist,
+    'album': album,
+    'artUri': artUri,
+    'durationMs': duration?.inMilliseconds,
+    'source': source,
+  };
 
   static Track fromJson(Map<String, dynamic> j) => Track(
-        id: '${j['id']}',
-        uri: '${j['uri']}',
-        title: '${j['title']}',
-        artist: j['artist'] as String?,
-        album: j['album'] as String?,
-        artUri: j['artUri'] as String?,
-        duration: j['durationMs'] == null ? null : Duration(milliseconds: (j['durationMs'] as num).toInt()),
-        source: (j['source'] as String?) ?? 'local',
-      );
+    id: '${j['id']}',
+    uri: '${j['uri']}',
+    title: '${j['title']}',
+    artist: j['artist'] as String?,
+    album: j['album'] as String?,
+    artUri: j['artUri'] as String?,
+    duration: j['durationMs'] == null
+        ? null
+        : Duration(milliseconds: (j['durationMs'] as num).toInt()),
+    source: (j['source'] as String?) ?? 'local',
+  );
 }
 
 class PlaybackSnapshot {
@@ -79,8 +83,9 @@ class PlaybackSnapshot {
   final double volume;
   final String? error;
 
-  Track? get current =>
-      index != null && index! >= 0 && index! < queue.length ? queue[index!] : null;
+  Track? get current => index != null && index! >= 0 && index! < queue.length
+      ? queue[index!]
+      : null;
 
   PlaybackSnapshot copyWith({
     List<Track>? queue,
@@ -92,17 +97,16 @@ class PlaybackSnapshot {
     double? volume,
     String? error,
     bool clearError = false,
-  }) =>
-      PlaybackSnapshot(
-        queue: queue ?? this.queue,
-        index: index ?? this.index,
-        playing: playing ?? this.playing,
-        loading: loading ?? this.loading,
-        position: position ?? this.position,
-        duration: duration ?? this.duration,
-        volume: volume ?? this.volume,
-        error: clearError ? null : (error ?? this.error),
-      );
+  }) => PlaybackSnapshot(
+    queue: queue ?? this.queue,
+    index: index ?? this.index,
+    playing: playing ?? this.playing,
+    loading: loading ?? this.loading,
+    position: position ?? this.position,
+    duration: duration ?? this.duration,
+    volume: volume ?? this.volume,
+    error: clearError ? null : (error ?? this.error),
+  );
 }
 
 /// Result of an action the app executed — reported back honestly.

@@ -97,7 +97,8 @@ class CommandParser {
   );
 
   static final _listen = RegExp(
-    r'^(?:ya sahbi |sahbi )?(?:sme3|sm3|sma3|sme3ni|sma3ni|tsenani nhder|ecoute|ecoute moi|ecoutes|listen|listen to me|سمع|سمعني|اسمع|اسمعني)' r'(?:\s+(?:lia|lya|liya|li|ليا|لي|moi|me|mzyan))?$',
+    r'^(?:ya sahbi |sahbi )?(?:sme3|sm3|sma3|sme3ni|sma3ni|tsenani nhder|ecoute|ecoute moi|ecoutes|listen|listen to me|سمع|سمعني|اسمع|اسمعني)'
+    r'(?:\s+(?:lia|lya|liya|li|ليا|لي|moi|me|mzyan))?$',
   );
   static final _stopListening = RegExp(
     r'(?:stop listening|arete d ecouter|ma tsme3ch|wqef ma tsme3|حبس ما تسمع)',
@@ -140,7 +141,9 @@ class CommandParser {
     r'(?<rest>.*)$',
   );
   static final _playDirect = RegExp(
-    r'^(?:ch3el|ch3al|chghel|chghl|play|joue|mets|شعل|شغل)' '$_lia' r'\s+(?<rest>.+)$',
+    r'^(?:ch3el|ch3al|chghel|chghl|play|joue|mets|شعل|شغل)'
+    '$_lia'
+    r'\s+(?<rest>.+)$',
   );
 
   static final _settings = RegExp(
@@ -165,8 +168,11 @@ class CommandParser {
     final script = _scriptSwitch.firstMatch(t);
     if (script != null) {
       final w = script.group(1)!;
-      final latin = w.contains('lat') || w.contains('arabizi') ||
-          w.contains('francais') || w.contains('لاتيني');
+      final latin =
+          w.contains('lat') ||
+          w.contains('arabizi') ||
+          w.contains('francais') ||
+          w.contains('لاتيني');
       return Command(
         CommandType.setDarijaScript,
         language: latin ? 'latin' : 'arabic',
@@ -224,8 +230,9 @@ class CommandParser {
   /// Returns the tail of the *uncollapsed* text with as many words as
   /// [normRest], so queries keep their spelling ("Nass El Ghiwane").
   static String _lightTail(String raw, String norm, String normRest) {
-    final restWords =
-        normRest.trim().isEmpty ? 0 : normRest.trim().split(' ').length;
+    final restWords = normRest.trim().isEmpty
+        ? 0
+        : normRest.trim().split(' ').length;
     if (restWords == 0) return '';
     final light = normalizeText(raw, collapse: false).split(' ');
     if (light.length != norm.split(' ').length) return normRest;
@@ -269,9 +276,9 @@ class CommandParser {
       r = r.replaceAll(_sourceLocal, ' ');
     }
     r = r.trim().replaceFirst(
-          RegExp(r'^(?:dyal|dial|diyal|d|de|du|des|by|of|from|ديال|د|ل)\s+'),
-          '',
-        );
+      RegExp(r'^(?:dyal|dial|diyal|d|de|du|des|by|of|from|ديال|د|ل)\s+'),
+      '',
+    );
     r = r.trim();
     return (r.isEmpty ? null : r, source);
   }

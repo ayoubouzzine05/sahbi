@@ -51,7 +51,10 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
   Future<void> connect() async {
     _set(RobotConnection.connecting);
     final ack = await send(
-      const RobotMessage(type: 'system.hello', payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'}),
+      const RobotMessage(
+        type: 'system.hello',
+        payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'},
+      ),
       awaitAck: true,
     );
     if (ack == null || ack.type != 'system.hello_ack') {
@@ -62,7 +65,9 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
     _set(RobotConnection.connected);
     _telemetry = Timer.periodic(const Duration(seconds: 5), (_) {
       battery = (battery - 0.001).clamp(0, 1);
-      _deviceEmit(RobotMessage(type: 'sensor.battery', payload: {'level': battery}));
+      _deviceEmit(
+        RobotMessage(type: 'sensor.battery', payload: {'level': battery}),
+      );
     });
   }
 
@@ -76,8 +81,13 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
   }
 
   @override
-  Future<RobotMessage?> send(RobotMessage message, {bool awaitAck = false, Duration timeout = const Duration(seconds: 2)}) async {
-    if (_state == RobotConnection.disconnected && message.type != 'system.hello') {
+  Future<RobotMessage?> send(
+    RobotMessage message, {
+    bool awaitAck = false,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    if (_state == RobotConnection.disconnected &&
+        message.type != 'system.hello') {
       throw ProtocolException(RobotError.timeout, 'not connected');
     }
     final seq = nextSeq();
@@ -106,33 +116,63 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
     try {
       m = RobotCodec.decode(bytes);
     } on ProtocolException catch (e) {
-      _deviceEmit(RobotMessage(type: 'error', payload: {'ref': -1, 'code': e.code, 'message': e.message}));
+      _deviceEmit(
+        RobotMessage(
+          type: 'error',
+          payload: {'ref': -1, 'code': e.code, 'message': e.message},
+        ),
+      );
       return;
     }
     log.add(m.type);
-    void ack([Map<String, dynamic> extra = const {}]) =>
-        _deviceEmit(RobotMessage(type: 'ack', payload: {'ref': m.seq, ...extra}));
+    void ack([Map<String, dynamic> extra = const {}]) => _deviceEmit(
+      RobotMessage(type: 'ack', payload: {'ref': m.seq, ...extra}),
+    );
     switch (m.type) {
       case 'system.hello':
         if (m.payload['protocol'] != RobotProtocol.version) {
-          _deviceEmit(RobotMessage(type: 'error', payload: {'ref': m.seq, 'code': RobotError.unsupportedVersion}));
+          _deviceEmit(
+            RobotMessage(
+              type: 'error',
+              payload: {'ref': m.seq, 'code': RobotError.unsupportedVersion},
+            ),
+          );
           return;
         }
-        _deviceEmit(RobotMessage(type: 'system.hello_ack', payload: {
-          'ref': m.seq,
-          'protocol': RobotProtocol.version,
-          'device_id': deviceId,
-          'fw': 'sim-1.0.0',
-          'capabilities': ['face', 'audio', 'touch', 'presence', 'imu', 'battery', 'motor'],
-          'battery': battery,
-        }));
+        _deviceEmit(
+          RobotMessage(
+            type: 'system.hello_ack',
+            payload: {
+              'ref': m.seq,
+              'protocol': RobotProtocol.version,
+              'device_id': deviceId,
+              'fw': 'sim-1.0.0',
+              'capabilities': [
+                'face',
+                'audio',
+                'touch',
+                'presence',
+                'imu',
+                'battery',
+                'motor',
+              ],
+              'battery': battery,
+            },
+          ),
+        );
       case 'system.ping':
         _deviceEmit(RobotMessage(type: 'system.pong', payload: {'ref': m.seq}));
         ack();
       case 'face.set_emotion':
         faceEmotion = '${m.payload['emotion']}';
         ack();
-      case 'face.look' || 'face.speak_start' || 'face.speak_stop' || 'face.viseme' || 'sensor.subscribe' || 'audio.play' || 'audio.stop':
+      case 'face.look' ||
+          'face.speak_start' ||
+          'face.speak_stop' ||
+          'face.viseme' ||
+          'sensor.subscribe' ||
+          'audio.play' ||
+          'audio.stop':
         ack();
       case 'audio.volume':
         volume = (m.payload['level'] as num).toDouble();
@@ -142,21 +182,43 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
         _watchdog?.cancel();
         // Watchdog: stops unless refreshed within the duration (capped).
         final d = m.payload['duration_ms'] as int;
-        _watchdog = Timer(Duration(milliseconds: d.clamp(1, RobotProtocol.motorWatchdog.inMilliseconds)), () {
-          motorRunning = false;
-        });
+        _watchdog = Timer(
+          Duration(
+            milliseconds: d.clamp(
+              1,
+              RobotProtocol.motorWatchdog.inMilliseconds,
+            ),
+          ),
+          () {
+            motorRunning = false;
+          },
+        );
         ack();
       case 'motor.stop':
         _watchdog?.cancel();
         motorRunning = false;
         ack();
       case 'system.ota_info':
-        _deviceEmit(RobotMessage(type: 'system.ota_info', payload: {'ref': m.seq, 'fw': 'sim-1.0.0', 'update_available': false}));
+        _deviceEmit(
+          RobotMessage(
+            type: 'system.ota_info',
+            payload: {
+              'ref': m.seq,
+              'fw': 'sim-1.0.0',
+              'update_available': false,
+            },
+          ),
+        );
         ack();
       case 'system.reboot':
         ack();
       default:
-        _deviceEmit(RobotMessage(type: 'error', payload: {'ref': m.seq, 'code': RobotError.unknownCommand}));
+        _deviceEmit(
+          RobotMessage(
+            type: 'error',
+            payload: {'ref': m.seq, 'code': RobotError.unknownCommand},
+          ),
+        );
     }
   }
 
@@ -164,7 +226,11 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
     _deviceSeq = (_deviceSeq + 1) & 0xFFFF;
     final msg = m.withSeq(_deviceSeq);
     // Device → app over "BLE".
-    for (final f in BleFraming.fragment(RobotCodec.encode(msg), _deviceSeq, mtu: mtu)) {
+    for (final f in BleFraming.fragment(
+      RobotCodec.encode(msg),
+      _deviceSeq,
+      mtu: mtu,
+    )) {
       final full = _toApp.add(f);
       if (full != null) {
         final decoded = RobotCodec.decode(full);
@@ -182,6 +248,7 @@ class SimulatedRobotTransport extends RobotTransport with AckTracker {
   void simulateTouch({String zone = 'head'}) =>
       _deviceEmit(RobotMessage(type: 'sensor.touch', payload: {'zone': zone}));
 
-  void simulatePresence(bool present) =>
-      _deviceEmit(RobotMessage(type: 'sensor.presence', payload: {'present': present}));
+  void simulatePresence(bool present) => _deviceEmit(
+    RobotMessage(type: 'sensor.presence', payload: {'present': present}),
+  );
 }

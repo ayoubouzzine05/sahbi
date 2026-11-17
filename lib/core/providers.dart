@@ -23,17 +23,29 @@ import 'error_log.dart';
 import 'platform_bridge.dart';
 
 /// Must be overridden in main() / tests.
-final sharedPrefsProvider = Provider<SharedPreferences>((ref) => throw UnimplementedError('override sharedPrefsProvider'));
-final musicEngineProvider = Provider<MusicEngine>((ref) => throw UnimplementedError('override musicEngineProvider'));
+final sharedPrefsProvider = Provider<SharedPreferences>(
+  (ref) => throw UnimplementedError('override sharedPrefsProvider'),
+);
+final musicEngineProvider = Provider<MusicEngine>(
+  (ref) => throw UnimplementedError('override musicEngineProvider'),
+);
 
-final keyValueStoreProvider = Provider<KeyValueStore>((ref) => SecureKeyValueStore());
+final keyValueStoreProvider = Provider<KeyValueStore>(
+  (ref) => SecureKeyValueStore(),
+);
 final blobStorageProvider = Provider<BlobStorage>((ref) => FileBlobStorage());
-final platformBridgeProvider = Provider<PlatformBridge>((ref) => const PlatformBridge());
-final micPermissionProvider = Provider<MicPermission>((ref) => const PluginMicPermission());
+final platformBridgeProvider = Provider<PlatformBridge>(
+  (ref) => const PlatformBridge(),
+);
+final micPermissionProvider = Provider<MicPermission>(
+  (ref) => const PluginMicPermission(),
+);
 
 class SettingsNotifier extends Notifier<AppSettings> {
   @override
-  AppSettings build() => AppSettings.decode(ref.read(sharedPrefsProvider).getString('settings_v1'));
+  AppSettings build() => AppSettings.decode(
+    ref.read(sharedPrefsProvider).getString('settings_v1'),
+  );
 
   void update(AppSettings Function(AppSettings) f) {
     state = f(state);
@@ -41,7 +53,9 @@ class SettingsNotifier extends Notifier<AppSettings> {
   }
 }
 
-final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(
+  SettingsNotifier.new,
+);
 
 final errorLogProvider = ChangeNotifierProvider<ErrorLog>((ref) => ErrorLog());
 
@@ -67,28 +81,37 @@ final musicControllerProvider = ChangeNotifierProvider<MusicController>((ref) {
 });
 
 final memoryStoreProvider = ChangeNotifierProvider<MemoryStore>((ref) {
-  final s = MemoryStore(keyStore: ref.read(keyValueStoreProvider), blob: ref.read(blobStorageProvider));
+  final s = MemoryStore(
+    keyStore: ref.read(keyValueStoreProvider),
+    blob: ref.read(blobStorageProvider),
+  );
   s.load();
   return s;
 });
 
 final deviceSttProvider = Provider<SttProvider>((ref) => DeviceStt());
-final cloudSttProvider = Provider<SttProvider>((ref) => CloudStt(
-      ref.read(backendClientProvider),
-      isConfigured: () => ref.read(connectivityProvider).value.cloudSttConfigured,
-    ));
-final deviceTtsProvider = Provider<TtsProvider>((ref) => DeviceTts(
-      voiceName: () => ref.read(settingsProvider).deviceVoiceName,
-      rate: () => ref.read(settingsProvider).speechRate,
-      pitch: () => ref.read(settingsProvider).pitch,
-    ));
-final cloudTtsProvider = Provider<TtsProvider>((ref) => CloudTts(
-      ref.read(backendClientProvider),
-      isConfigured: () => ref.read(connectivityProvider).value.cloudTtsConfigured,
-      voice: () => ref.read(settingsProvider).cloudVoice,
-      rate: () => ref.read(settingsProvider).speechRate,
-      pitch: () => ref.read(settingsProvider).pitch,
-    ));
+final cloudSttProvider = Provider<SttProvider>(
+  (ref) => CloudStt(
+    ref.read(backendClientProvider),
+    isConfigured: () => ref.read(connectivityProvider).value.cloudSttConfigured,
+  ),
+);
+final deviceTtsProvider = Provider<TtsProvider>(
+  (ref) => DeviceTts(
+    voiceName: () => ref.read(settingsProvider).deviceVoiceName,
+    rate: () => ref.read(settingsProvider).speechRate,
+    pitch: () => ref.read(settingsProvider).pitch,
+  ),
+);
+final cloudTtsProvider = Provider<TtsProvider>(
+  (ref) => CloudTts(
+    ref.read(backendClientProvider),
+    isConfigured: () => ref.read(connectivityProvider).value.cloudTtsConfigured,
+    voice: () => ref.read(settingsProvider).cloudVoice,
+    rate: () => ref.read(settingsProvider).speechRate,
+    pitch: () => ref.read(settingsProvider).pitch,
+  ),
+);
 
 final voiceControllerProvider = ChangeNotifierProvider<VoiceController>((ref) {
   final music = ref.read(musicControllerProvider);
@@ -98,18 +121,24 @@ final voiceControllerProvider = ChangeNotifierProvider<VoiceController>((ref) {
     deviceTts: ref.read(deviceTtsProvider),
     cloudTts: ref.read(cloudTtsProvider),
     settings: () => ref.read(settingsProvider),
-    cloudSttReady: () => ref.read(connectivityProvider).value.cloudSttConfigured,
-    cloudTtsReady: () => ref.read(connectivityProvider).value.cloudTtsConfigured,
+    cloudSttReady: () =>
+        ref.read(connectivityProvider).value.cloudSttConfigured,
+    cloudTtsReady: () =>
+        ref.read(connectivityProvider).value.cloudTtsConfigured,
     log: ref.read(errorLogProvider),
     onDuckMusic: music.duck,
   );
 });
 
 final companionProvider = ChangeNotifierProvider<CompanionController>((ref) {
-  final c = CompanionController(busy: () {
-    final v = ref.read(voiceControllerProvider);
-    return v.state == VoiceState.listening || v.state == VoiceState.speaking || ref.read(musicControllerProvider).playing;
-  });
+  final c = CompanionController(
+    busy: () {
+      final v = ref.read(voiceControllerProvider);
+      return v.state == VoiceState.listening ||
+          v.state == VoiceState.speaking ||
+          ref.read(musicControllerProvider).playing;
+    },
+  );
   c.idle.enabled = ref.read(settingsProvider).idleEnabled;
   ref.listen(settingsProvider, (_, s) => c.idle.enabled = s.idleEnabled);
   c.start();
@@ -126,7 +155,9 @@ final chatControllerProvider = ChangeNotifierProvider<ChatController>((ref) {
     memory: ref.read(memoryStoreProvider),
     companion: ref.read(companionProvider),
     log: ref.read(errorLogProvider),
-    hooks: ChatHooks(updateSettings: (f) => ref.read(settingsProvider.notifier).update(f)),
+    hooks: ChatHooks(
+      updateSettings: (f) => ref.read(settingsProvider.notifier).update(f),
+    ),
   );
   ref.read(voiceControllerProvider).onFinalText = chat.send;
   return chat;

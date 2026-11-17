@@ -31,7 +31,10 @@ void main() {
       '': Emotion.neutral,
     };
     table.forEach((text, expected) {
-      test('"$text" → ${expected.name}', () => expect(d.detect(text).emotion, expected));
+      test(
+        '"$text" → ${expected.name}',
+        () => expect(d.detect(text).emotion, expected),
+      );
     });
 
     test('ASCII words need word boundaries (top ≠ stop)', () {
@@ -66,13 +69,22 @@ void main() {
         expect(s.params.eyeOpen, inInclusiveRange(0.0, 1.2), reason: e.name);
       }
     });
-    test('happy smiles, sad frowns, surprised opens eyes wider than neutral', () {
-      final n = m.map(Emotion.neutral, 1).params;
-      expect(m.map(Emotion.happy, 1).params.mouthCurve, greaterThan(n.mouthCurve));
-      expect(m.map(Emotion.sad, 1).params.mouthCurve, lessThan(n.mouthCurve));
-      expect(m.map(Emotion.surprised, 1).params.eyeOpen, greaterThanOrEqualTo(n.eyeOpen));
-      expect(m.map(Emotion.sleepy, 1).params.eyeOpen, lessThan(n.eyeOpen));
-    });
+    test(
+      'happy smiles, sad frowns, surprised opens eyes wider than neutral',
+      () {
+        final n = m.map(Emotion.neutral, 1).params;
+        expect(
+          m.map(Emotion.happy, 1).params.mouthCurve,
+          greaterThan(n.mouthCurve),
+        );
+        expect(m.map(Emotion.sad, 1).params.mouthCurve, lessThan(n.mouthCurve));
+        expect(
+          m.map(Emotion.surprised, 1).params.eyeOpen,
+          greaterThanOrEqualTo(n.eyeOpen),
+        );
+        expect(m.map(Emotion.sleepy, 1).params.eyeOpen, lessThan(n.eyeOpen));
+      },
+    );
     test('intensity moves the face further from neutral', () {
       final n = EmotionAnimationMapper.neutral;
       final lo = m.map(Emotion.happy, 0).params.distanceTo(n);
@@ -92,7 +104,10 @@ void main() {
       expect(FaceParams.lerp(a, b, 0).eyeOpen, 0);
       expect(FaceParams.lerp(a, b, 1).eyeOpen, 1);
       expect(FaceParams.lerp(a, b, 0.5).mouthCurve, closeTo(0, 1e-9));
-      expect(FaceParams.lerp(a, b, 0.5).distanceTo(a), closeTo(FaceParams.lerp(a, b, 0.5).distanceTo(b), 1e-9));
+      expect(
+        FaceParams.lerp(a, b, 0.5).distanceTo(a),
+        closeTo(FaceParams.lerp(a, b, 0.5).distanceTo(b), 1e-9),
+      );
     });
   });
 
@@ -111,7 +126,10 @@ void main() {
     });
     test('listening → speaking is illegal', () {
       final sm = VoiceStateMachine(VoiceState.listening);
-      expect(() => sm.transition(VoiceState.speaking), throwsA(isA<IllegalTransition>()));
+      expect(
+        () => sm.transition(VoiceState.speaking),
+        throwsA(isA<IllegalTransition>()),
+      );
       expect(sm.tryTransition(VoiceState.speaking), isFalse);
       expect(sm.state, VoiceState.listening);
     });
@@ -124,7 +142,8 @@ void main() {
 
   group('IdleBehavior', () {
     late DateTime now;
-    IdleBehavior make({double rnd = 0.1}) => IdleBehavior(clock: () => now, random: _FixedRandom(rnd));
+    IdleBehavior make({double rnd = 0.1}) =>
+        IdleBehavior(clock: () => now, random: _FixedRandom(rnd));
     setUp(() => now = DateTime(2026, 1, 1, 12));
 
     test('yawns after 60 s, sleeps after 120 s, wakes on interaction', () {
@@ -219,7 +238,10 @@ void main() {
           expect(l.display(lang).trim(), isNotEmpty, reason: '$i/$lang');
           expect(l.tts(lang).trim(), isNotEmpty, reason: '$i/$lang');
         }
-        expect(l.display('darija', latinDarija: true), isNot(contains(RegExp('[\u0600-\u06FF]'))));
+        expect(
+          l.display('darija', latinDarija: true),
+          isNot(contains(RegExp('[\u0600-\u06FF]'))),
+        );
       }
     });
     test('darija TTS text is in Arabic script', () {
@@ -227,8 +249,12 @@ void main() {
       expect(l.tts('darija'), contains(RegExp('[\u0600-\u06FF]')));
     });
     test('time-of-day greeting differs morning vs night', () {
-      final morning = {for (var k = 0; k < 20; k++) r.greetingFor(DateTime(2026, 1, 1, 8)).en};
-      final night = {for (var k = 0; k < 20; k++) r.greetingFor(DateTime(2026, 1, 1, 23)).en};
+      final morning = {
+        for (var k = 0; k < 20; k++) r.greetingFor(DateTime(2026, 1, 1, 8)).en,
+      };
+      final night = {
+        for (var k = 0; k < 20; k++) r.greetingFor(DateTime(2026, 1, 1, 23)).en,
+      };
       expect(morning.intersection(night), isEmpty);
     });
     test('honest action lines exist', () {

@@ -20,11 +20,13 @@ Future<void> main() async {
       androidStopForegroundOnPause: true,
     ),
   );
-  runApp(ProviderScope(
-    overrides: [
-      sharedPrefsProvider.overrideWithValue(prefs),
-      musicEngineProvider.overrideWithValue(handler),
-    ],
-    child: const SahbiApp(),
-  ));
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPrefsProvider.overrideWithValue(prefs),
+        musicEngineProvider.overrideWithValue(handler),
+      ],
+      child: const SahbiApp(),
+    ),
+  );
 }

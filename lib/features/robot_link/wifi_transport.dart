@@ -54,16 +54,29 @@ class WifiTransport extends RobotTransport with AckTracker {
       _set(RobotConnection.failed);
       rethrow;
     }
-    _ws!.listen(_onData, onDone: () => disconnect(), onError: (_) => disconnect());
+    _ws!.listen(
+      _onData,
+      onDone: () => disconnect(),
+      onError: (_) => disconnect(),
+    );
     _hello = Completer<RobotMessage>();
-    await send(const RobotMessage(type: 'system.hello', payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'}));
-    final ack = await _hello!.future.timeout(const Duration(seconds: 3), onTimeout: () {
-      throw ProtocolException(RobotError.timeout, 'no hello_ack');
-    });
+    await send(
+      const RobotMessage(
+        type: 'system.hello',
+        payload: {'protocol': RobotProtocol.version, 'app': 'sahbi'},
+      ),
+    );
+    final ack = await _hello!.future.timeout(
+      const Duration(seconds: 3),
+      onTimeout: () {
+        throw ProtocolException(RobotError.timeout, 'no hello_ack');
+      },
+    );
     _info = RobotInfo.fromHelloAck(ack.payload);
     _set(RobotConnection.connected);
     _heartbeat = Timer.periodic(RobotProtocol.heartbeatInterval, (_) {
-      if (DateTime.now().difference(_lastSeen) > RobotProtocol.heartbeatTimeout) {
+      if (DateTime.now().difference(_lastSeen) >
+          RobotProtocol.heartbeatTimeout) {
         disconnect();
       } else {
         send(const RobotMessage(type: 'system.ping')).ignore();
@@ -73,7 +86,9 @@ class WifiTransport extends RobotTransport with AckTracker {
 
   void _onData(dynamic data) {
     try {
-      final m = RobotCodec.decode(data is String ? utf8.encode(data) : data as List<int>);
+      final m = RobotCodec.decode(
+        data is String ? utf8.encode(data) : data as List<int>,
+      );
       _lastSeen = DateTime.now();
       if (m.type == 'system.hello_ack') {
         _hello?.complete(m);
@@ -82,7 +97,12 @@ class WifiTransport extends RobotTransport with AckTracker {
       resolveAck(m);
       _events.add(m);
     } on ProtocolException catch (e) {
-      _events.add(RobotMessage(type: 'error', payload: {'code': e.code, 'message': e.message}));
+      _events.add(
+        RobotMessage(
+          type: 'error',
+          payload: {'code': e.code, 'message': e.message},
+        ),
+      );
     }
   }
 
@@ -93,13 +113,21 @@ class WifiTransport extends RobotTransport with AckTracker {
     await _ws?.close();
     _ws = null;
     _info = null;
-    if (_state != RobotConnection.disconnected) _set(RobotConnection.disconnected);
+    if (_state != RobotConnection.disconnected) {
+      _set(RobotConnection.disconnected);
+    }
   }
 
   @override
-  Future<RobotMessage?> send(RobotMessage message, {bool awaitAck = false, Duration timeout = const Duration(seconds: 2)}) async {
+  Future<RobotMessage?> send(
+    RobotMessage message, {
+    bool awaitAck = false,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
     final ws = _ws;
-    if (ws == null) throw ProtocolException(RobotError.timeout, 'not connected');
+    if (ws == null) {
+      throw ProtocolException(RobotError.timeout, 'not connected');
+    }
     final seq = nextSeq();
     final m = message.withSeq(seq);
     final ack = trackAck(seq, awaitAck, timeout);

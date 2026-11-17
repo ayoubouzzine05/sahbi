@@ -26,7 +26,8 @@ class NetState {
 
   bool get online => hasNetwork && backendReachable == true;
   bool get aiConfigured => online && (health?.configured('llm') ?? false);
-  bool get searchConfigured => online && (health?.configured('search') ?? false);
+  bool get searchConfigured =>
+      online && (health?.configured('search') ?? false);
   bool get cloudSttConfigured => online && (health?.configured('stt') ?? false);
   bool get cloudTtsConfigured => online && (health?.configured('tts') ?? false);
 }
@@ -35,8 +36,8 @@ class NetState {
 /// against `/v1/health` (every 60 s and on every change).
 class ConnectivityMonitor extends ValueNotifier<NetState> {
   ConnectivityMonitor(this._client, {Connectivity? connectivity})
-      : _connectivity = connectivity,
-        super(const NetState());
+    : _connectivity = connectivity,
+      super(const NetState());
 
   final BackendClient _client;
   final Connectivity? _connectivity;
@@ -57,17 +58,20 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
       );
       check();
     });
-    c.checkConnectivity().then((r) {
-      value = NetState(
-        hasNetwork: r.any((x) => x != ConnectivityResult.none),
-        backendReachable: value.backendReachable,
-        health: value.health,
-        lastCheck: value.lastCheck,
-      );
-      check();
-    }).catchError((Object _) {
-      check();
-    });
+    c
+        .checkConnectivity()
+        .then((r) {
+          value = NetState(
+            hasNetwork: r.any((x) => x != ConnectivityResult.none),
+            backendReachable: value.backendReachable,
+            health: value.health,
+            lastCheck: value.lastCheck,
+          );
+          check();
+        })
+        .catchError((Object _) {
+          check();
+        });
     _timer = Timer.periodic(const Duration(seconds: 60), (_) => check());
   }
 

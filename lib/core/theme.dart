@@ -23,17 +23,18 @@ abstract final class SahbiColors {
 const kFontFamily = 'Tajawal';
 
 ThemeData buildSahbiTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: SahbiColors.turquoise,
-    brightness: Brightness.dark,
-  ).copyWith(
-    primary: SahbiColors.turquoise,
-    secondary: SahbiColors.green,
-    surface: SahbiColors.surface,
-    onSurface: SahbiColors.textPrimary,
-    error: SahbiColors.coral,
-    outline: SahbiColors.outline,
-  );
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: SahbiColors.turquoise,
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: SahbiColors.turquoise,
+        secondary: SahbiColors.green,
+        surface: SahbiColors.surface,
+        onSurface: SahbiColors.textPrimary,
+        error: SahbiColors.coral,
+        outline: SahbiColors.outline,
+      );
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,

@@ -60,3 +60,6 @@ backend/coverage/
 *.keystore
 android/key.properties
 android/local.properties
+
+# Kotlin compiler cache
+android/.kotlin/

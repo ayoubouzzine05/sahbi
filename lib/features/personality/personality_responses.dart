@@ -39,11 +39,11 @@ class Line {
 
   /// Text for TTS (always Arabic script for Darija).
   String tts(String replyLanguage) => switch (replyLanguage) {
-        'ar' => msa,
-        'fr' => fr,
-        'en' => en,
-        _ => darijaAr,
-      };
+    'ar' => msa,
+    'fr' => fr,
+    'en' => en,
+    _ => darijaAr,
+  };
 }
 
 enum OfflineIntent { greeting, howAreYou, whoAreYou, thanks, joke, bye, love }
@@ -144,14 +144,14 @@ class PersonalityResponses {
   }
 
   Line forIntent(OfflineIntent intent, DateTime now) => switch (intent) {
-        OfflineIntent.greeting => greetingFor(now),
-        OfflineIntent.howAreYou => pick(_howAreYou),
-        OfflineIntent.whoAreYou => pick(_whoAreYou),
-        OfflineIntent.thanks => pick(_thanks),
-        OfflineIntent.joke => pick(_jokes),
-        OfflineIntent.bye => pick(_bye),
-        OfflineIntent.love => pick(_love),
-      };
+    OfflineIntent.greeting => greetingFor(now),
+    OfflineIntent.howAreYou => pick(_howAreYou),
+    OfflineIntent.whoAreYou => pick(_whoAreYou),
+    OfflineIntent.thanks => pick(_thanks),
+    OfflineIntent.joke => pick(_jokes),
+    OfflineIntent.bye => pick(_bye),
+    OfflineIntent.love => pick(_love),
+  };
 
   static const _howAreYou = [
     Line(
@@ -192,7 +192,8 @@ class PersonalityResponses {
     ),
     Line(
       darijaAr: 'علاش الروبو ما كيشربش أتاي؟ حيت كيخاف يدير كورت سيركوي!',
-      darijaLatin: '3lach rrobot makaychrebch atay? 7it kaykhaf ydir court-circuit!',
+      darijaLatin:
+          '3lach rrobot makaychrebch atay? 7it kaykhaf ydir court-circuit!',
       msa: 'لماذا لا يشرب الروبوت الشاي؟ لأنه يخاف من الدارة القصيرة!',
       fr: 'Pourquoi le robot ne boit pas de thé ? Peur du court-circuit !',
       en: 'Why does the robot skip tea? Afraid of a short circuit!',
@@ -259,22 +260,22 @@ class PersonalityResponses {
 
   // ---- command results (built from the REAL action result) ---------------------
   static Line actionOk(String what) => Line(
-        darijaAr: 'صافي: $what',
-        darijaLatin: 'Safi: $what',
-        msa: 'تم: $what',
-        fr: 'C’est fait : $what',
-        en: 'Done: $what',
-        emotion: Emotion.happy,
-        intensity: 0.5,
-      );
+    darijaAr: 'صافي: $what',
+    darijaLatin: 'Safi: $what',
+    msa: 'تم: $what',
+    fr: 'C’est fait : $what',
+    en: 'Done: $what',
+    emotion: Emotion.happy,
+    intensity: 0.5,
+  );
 
   static Line actionFailed(String reason) => Line(
-        darijaAr: 'سمح ليا، ما قدرتش: $reason',
-        darijaLatin: 'Sme7 lia, ma9dertch: $reason',
-        msa: 'عذرا، لم أستطع: $reason',
-        fr: 'Désolé, je n’ai pas pu : $reason',
-        en: 'Sorry, I could not: $reason',
-        emotion: Emotion.sad,
-        intensity: 0.5,
-      );
+    darijaAr: 'سمح ليا، ما قدرتش: $reason',
+    darijaLatin: 'Sme7 lia, ma9dertch: $reason',
+    msa: 'عذرا، لم أستطع: $reason',
+    fr: 'Désolé, je n’ai pas pu : $reason',
+    en: 'Sorry, I could not: $reason',
+    emotion: Emotion.sad,
+    intensity: 0.5,
+  );
 }

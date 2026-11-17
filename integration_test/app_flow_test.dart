@@ -1,0 +1,62 @@
+// Main-flow integration test. Runs on a device/emulator:
+//   flutter test integration_test
+// Built without SAHBI_BACKEND_URL, so the AI is honestly "offline" and
+// replies must be labelled as offline (cloud_off icon). Local commands work.
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:sahbi/features/face/robot_face.dart';
+import 'package:sahbi/main.dart' as app;
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'home face → chat (offline label + local command) → music → settings',
+    (t) async {
+      await app.main();
+      // The face animates forever, so pumpAndSettle would never return: pump frames.
+      Future<void> frames([int n = 20]) async {
+        for (var i = 0; i < n; i++) {
+          await t.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      await frames(30);
+      expect(
+        find.byType(RobotFace),
+        findsWidgets,
+        reason: 'home shows the robot face',
+      );
+
+      // Chat tab.
+      await t.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
+      await frames();
+      await t.enterText(find.byKey(const Key('chat_input')), 'chno smitek?');
+      await t.tap(find.byKey(const Key('chat_send')));
+      await frames(30);
+      expect(find.text('chno smitek?'), findsOneWidget);
+      expect(
+        find.byIcon(Icons.cloud_off_rounded),
+        findsWidgets,
+        reason: 'no backend → reply is labelled offline',
+      );
+
+      // Local command works without the AI.
+      await t.enterText(find.byKey(const Key('chat_input')), 'pause');
+      await t.tap(find.byKey(const Key('chat_send')));
+      await frames(20);
+      expect(find.text('pause'), findsOneWidget);
+
+      // Music tab shows the bundled demo tracks.
+      await t.tap(find.byIcon(Icons.music_note_outlined));
+      await frames();
+      expect(find.textContaining('Atlas Breeze'), findsWidgets);
+
+      // Settings tab opens.
+      await t.tap(find.byIcon(Icons.tune_outlined));
+      await frames();
+      expect(find.byType(ListView), findsWidgets);
+    },
+  );
+}

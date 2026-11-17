@@ -25,7 +25,11 @@ class LocalPhoneTransport extends RobotTransport with AckTracker {
   Stream<RobotMessage> get events => _events.stream;
   @override
   RobotInfo? get info => _state == RobotConnection.connected
-      ? const RobotInfo(deviceId: 'phone', firmware: 'app', capabilities: {'face', 'audio'})
+      ? const RobotInfo(
+          deviceId: 'phone',
+          firmware: 'app',
+          capabilities: {'face', 'audio'},
+        )
       : null;
 
   @override
@@ -41,14 +45,24 @@ class LocalPhoneTransport extends RobotTransport with AckTracker {
   }
 
   @override
-  Future<RobotMessage?> send(RobotMessage message, {bool awaitAck = false, Duration timeout = const Duration(seconds: 2)}) async {
+  Future<RobotMessage?> send(
+    RobotMessage message, {
+    bool awaitAck = false,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
     RobotCodec.validate(message);
     final seq = nextSeq();
     if (message.type.startsWith('face.')) {
       onFace(message.withSeq(seq));
-      return awaitAck ? RobotMessage(type: 'ack', seq: seq, payload: {'ref': seq}) : null;
+      return awaitAck
+          ? RobotMessage(type: 'ack', seq: seq, payload: {'ref': seq})
+          : null;
     }
-    final err = RobotMessage(type: 'error', seq: seq, payload: {'ref': seq, 'code': RobotError.unknownCommand});
+    final err = RobotMessage(
+      type: 'error',
+      seq: seq,
+      payload: {'ref': seq, 'code': RobotError.unknownCommand},
+    );
     _events.add(err);
     return awaitAck ? err : null;
   }

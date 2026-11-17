@@ -97,8 +97,12 @@ class AppSettings {
       darijaScript: darijaScript ?? this.darijaScript,
       sttMode: sttMode ?? this.sttMode,
       ttsMode: ttsMode ?? this.ttsMode,
-      deviceVoiceName: clearDeviceVoice ? null : (deviceVoiceName ?? this.deviceVoiceName),
-      deviceVoiceLocale: clearDeviceVoice ? null : (deviceVoiceLocale ?? this.deviceVoiceLocale),
+      deviceVoiceName: clearDeviceVoice
+          ? null
+          : (deviceVoiceName ?? this.deviceVoiceName),
+      deviceVoiceLocale: clearDeviceVoice
+          ? null
+          : (deviceVoiceLocale ?? this.deviceVoiceLocale),
       cloudVoice: cloudVoice ?? this.cloudVoice,
       speechRate: speechRate ?? this.speechRate,
       pitch: pitch ?? this.pitch,
@@ -118,29 +122,29 @@ class AppSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'uiLocale': uiLocale,
-        'replyLanguage': replyLanguage,
-        'darijaScript': darijaScript,
-        'sttMode': sttMode.name,
-        'ttsMode': ttsMode.name,
-        'deviceVoiceName': deviceVoiceName,
-        'deviceVoiceLocale': deviceVoiceLocale,
-        'cloudVoice': cloudVoice,
-        'speechRate': speechRate,
-        'pitch': pitch,
-        'backendUrl': backendUrl,
-        'humor': humor,
-        'formality': formality,
-        'userName': userName,
-        'idleEnabled': idleEnabled,
-        'sendToAi': sendToAi,
-        'cloudVoiceEnabled': cloudVoiceEnabled,
-        'tapFaceToTalk': tapFaceToTalk,
-        'wakeWordEnabled': wakeWordEnabled,
-        'robotExperimental': robotExperimental,
-        'debugUnlocked': debugUnlocked,
-        'micRationaleSeen': micRationaleSeen,
-      };
+    'uiLocale': uiLocale,
+    'replyLanguage': replyLanguage,
+    'darijaScript': darijaScript,
+    'sttMode': sttMode.name,
+    'ttsMode': ttsMode.name,
+    'deviceVoiceName': deviceVoiceName,
+    'deviceVoiceLocale': deviceVoiceLocale,
+    'cloudVoice': cloudVoice,
+    'speechRate': speechRate,
+    'pitch': pitch,
+    'backendUrl': backendUrl,
+    'humor': humor,
+    'formality': formality,
+    'userName': userName,
+    'idleEnabled': idleEnabled,
+    'sendToAi': sendToAi,
+    'cloudVoiceEnabled': cloudVoiceEnabled,
+    'tapFaceToTalk': tapFaceToTalk,
+    'wakeWordEnabled': wakeWordEnabled,
+    'robotExperimental': robotExperimental,
+    'debugUnlocked': debugUnlocked,
+    'micRationaleSeen': micRationaleSeen,
+  };
 
   static AppSettings fromJson(Map<String, dynamic> j) {
     const d = AppSettings();
@@ -153,18 +157,21 @@ class AppSettings {
         allowed.contains(j[k]) ? j[k] as String : fallback;
     return AppSettings(
       uiLocale: oneOf('uiLocale', ['ar', 'fr', 'en'], d.uiLocale),
-      replyLanguage:
-          oneOf('replyLanguage', ['darija', 'ar', 'fr', 'en'], d.replyLanguage),
+      replyLanguage: oneOf('replyLanguage', [
+        'darija',
+        'ar',
+        'fr',
+        'en',
+      ], d.replyLanguage),
       darijaScript: oneOf('darijaScript', ['arabic', 'latin'], d.darijaScript),
       sttMode: enumOf(SttMode.values, 'sttMode', d.sttMode),
       ttsMode: enumOf(TtsMode.values, 'ttsMode', d.ttsMode),
       deviceVoiceName: j['deviceVoiceName'] as String?,
       deviceVoiceLocale: j['deviceVoiceLocale'] as String?,
-      cloudVoice: oneOf(
-        'cloudVoice',
-        ['ar-MA-JamalNeural', 'ar-MA-MounaNeural'],
-        d.cloudVoice,
-      ),
+      cloudVoice: oneOf('cloudVoice', [
+        'ar-MA-JamalNeural',
+        'ar-MA-MounaNeural',
+      ], d.cloudVoice),
       speechRate: num_('speechRate', d.speechRate).clamp(0.1, 1.0),
       pitch: num_('pitch', d.pitch).clamp(0.5, 2.0),
       backendUrl: pick('backendUrl', d.backendUrl),

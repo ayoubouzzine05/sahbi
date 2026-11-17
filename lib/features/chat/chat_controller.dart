@@ -56,9 +56,9 @@ class ChatController extends ChangeNotifier {
     PersonalityResponses? responses,
     ConversationContext? context,
     DateTime Function()? clock,
-  })  : responses = responses ?? PersonalityResponses(),
-        context = context ?? ConversationContext(),
-        _clock = clock ?? DateTime.now;
+  }) : responses = responses ?? PersonalityResponses(),
+       context = context ?? ConversationContext(),
+       _clock = clock ?? DateTime.now;
 
   final BackendClient backend;
   final AppSettings Function() settings;
@@ -87,7 +87,11 @@ class ChatController extends ChangeNotifier {
     r'^(?:3[q9]el|aq[l]|3a9el|tfeker|tfkker|remember|retiens|souviens toi|n3qel|عقل|تفكر|تذكر)\s+(?:3la|3ela|bli|that|que|على|بلي|ان)?\s*(.+)$',
   );
 
-  ChatMessage _sahbi(Line line, ChatKind kind, {List<ActionResult> results = const []}) {
+  ChatMessage _sahbi(
+    Line line,
+    ChatKind kind, {
+    List<ActionResult> results = const [],
+  }) {
     final s = settings();
     return ChatMessage(
       id: _nextId(),
@@ -100,7 +104,11 @@ class ChatController extends ChangeNotifier {
     );
   }
 
-  Future<void> _say(ChatMessage m, {Emotion? emotion, double intensity = 0.6}) async {
+  Future<void> _say(
+    ChatMessage m, {
+    Emotion? emotion,
+    double intensity = 0.6,
+  }) async {
     messages.add(m);
     notifyListeners();
     if (emotion != null) companion.show(DetectedEmotion(emotion, intensity));
@@ -115,13 +123,15 @@ class ChatController extends ChangeNotifier {
     _wasSpeaking = voice.state == VoiceState.speaking;
     await voice.interrupt(); // new input interrupts speech
     await _brainSub?.cancel();
-    messages.add(ChatMessage(
-      id: _nextId(),
-      role: ChatRole.user,
-      text: text,
-      language: isArabicScript(text) ? 'ar' : 'latin',
-      kind: ChatKind.ai,
-    ));
+    messages.add(
+      ChatMessage(
+        id: _nextId(),
+        role: ChatRole.user,
+        text: text,
+        language: isArabicScript(text) ? 'ar' : 'latin',
+        kind: ChatKind.ai,
+      ),
+    );
     notifyListeners();
     // Immediate reaction to the user's tone (rules, offline).
     final userTone = detector.detect(text);
@@ -133,10 +143,15 @@ class ChatController extends ChangeNotifier {
     final rem = _rememberRe.firstMatch(normalizeText(text, collapse: false));
     if (rem != null) {
       final ok = await memory.addFact(rem.group(1)!);
-      final r = ok ? const ActionResult.ok('Remembered') : const ActionResult.fail('memory_off');
+      final r = ok
+          ? const ActionResult.ok('Remembered')
+          : const ActionResult.fail('memory_off');
       final line = resultLine(r);
       voice.setThinking(false);
-      await _say(_sahbi(line, ChatKind.command, results: [r]), emotion: line.emotion);
+      await _say(
+        _sahbi(line, ChatKind.command, results: [r]),
+        emotion: line.emotion,
+      );
       return;
     }
 
@@ -148,10 +163,14 @@ class ChatController extends ChangeNotifier {
       voice.setThinking(false);
       final m = _sahbi(line, ChatKind.command, results: [r]);
       // Don't talk over music we just started, or after "stop talking".
-      final quiet = cmd.type == CommandType.stopSpeaking ||
+      final quiet =
+          cmd.type == CommandType.stopSpeaking ||
           cmd.type == CommandType.listen ||
-          (cmd.type == CommandType.stopGeneric && r.message == 'Stopped talking') ||
-          (cmd.type == CommandType.musicPlay && r.ok && r.message.startsWith('Playing'));
+          (cmd.type == CommandType.stopGeneric &&
+              r.message == 'Stopped talking') ||
+          (cmd.type == CommandType.musicPlay &&
+              r.ok &&
+              r.message.startsWith('Playing'));
       if (quiet) {
         messages.add(m);
         notifyListeners();
@@ -194,7 +213,9 @@ class ChatController extends ChangeNotifier {
 
   Future<void> _offline(String text, String reason) async {
     final intent = responses.detectIntent(text);
-    final line = intent != null ? responses.forIntent(intent, _clock()) : responses.offlineFallback();
+    final line = intent != null
+        ? responses.forIntent(intent, _clock())
+        : responses.offlineFallback();
     final m = _sahbi(line, ChatKind.offline)..errorCode = reason;
     voice.setThinking(false);
     await _say(m, emotion: line.emotion, intensity: line.intensity);
@@ -214,10 +235,13 @@ class ChatController extends ChangeNotifier {
         'formality': s.formality,
         if (s.userName.trim().isNotEmpty) 'user_name': s.userName.trim(),
       },
-      if (memory.consentFacts && memory.facts.isNotEmpty) 'memory': {'facts': memory.factsForBrain()},
+      if (memory.consentFacts && memory.facts.isNotEmpty)
+        'memory': {'facts': memory.factsForBrain()},
       'client': {
         'local_time': now.toIso8601String(),
-        'app_state': music.playing ? 'music playing: ${music.snapshot.current?.title ?? ''}' : 'idle',
+        'app_state': music.playing
+            ? 'music playing: ${music.snapshot.current?.title ?? ''}'
+            : 'idle',
       },
     };
   }
@@ -230,7 +254,10 @@ class ChatController extends ChangeNotifier {
     }
     busy = true;
     voice.setThinking(true);
-    companion.show(const DetectedEmotion(Emotion.curious, 0.4), hold: const Duration(seconds: 30));
+    companion.show(
+      const DetectedEmotion(Emotion.curious, 0.4),
+      hold: const Duration(seconds: 30),
+    );
     final m = ChatMessage(
       id: _nextId(),
       role: ChatRole.sahbi,
@@ -244,34 +271,43 @@ class ChatController extends ChangeNotifier {
     notifyListeners();
     final done = Completer<void>();
     BrainReply? reply;
-    _brainSub = backend.chat(_request(text)).listen(
-      (e) {
-        switch (e) {
-          case BrainStatus(:final phase):
-            m.phase = phase;
-          case BrainDelta(text: final t):
-            m.text += t;
-          case BrainFinal(reply: final r):
-            reply = r;
-        }
-        notifyListeners();
-      },
-      onError: (Object err) {
-        final code = err is BackendException ? err.code : BackendErrorCode.server;
-        log.add('brain', err is BackendException ? '${err.code.name}: ${err.message}' : '$err');
-        m
-          ..streaming = false
-          ..kind = ChatKind.error
-          ..errorCode = code.name
-          ..retryText = text
-          ..text = '';
-        if (!done.isCompleted) done.complete();
-      },
-      onDone: () {
-        if (!done.isCompleted) done.complete();
-      },
-      cancelOnError: true,
-    );
+    _brainSub = backend
+        .chat(_request(text))
+        .listen(
+          (e) {
+            switch (e) {
+              case BrainStatus(:final phase):
+                m.phase = phase;
+              case BrainDelta(text: final t):
+                m.text += t;
+              case BrainFinal(reply: final r):
+                reply = r;
+            }
+            notifyListeners();
+          },
+          onError: (Object err) {
+            final code = err is BackendException
+                ? err.code
+                : BackendErrorCode.server;
+            log.add(
+              'brain',
+              err is BackendException
+                  ? '${err.code.name}: ${err.message}'
+                  : '$err',
+            );
+            m
+              ..streaming = false
+              ..kind = ChatKind.error
+              ..errorCode = code.name
+              ..retryText = text
+              ..text = '';
+            if (!done.isCompleted) done.complete();
+          },
+          onDone: () {
+            if (!done.isCompleted) done.complete();
+          },
+          cancelOnError: true,
+        );
     await done.future;
     busy = false;
     final r = reply;
@@ -324,7 +360,9 @@ class ChatController extends ChangeNotifier {
     }
     m.results = results;
     notifyListeners();
-    final quietForMusic = results.any((x) => x.ok && x.message.startsWith('Playing'));
+    final quietForMusic = results.any(
+      (x) => x.ok && x.message.startsWith('Playing'),
+    );
     if (!quietForMusic) {
       await voice.speak(r.ttsText, language: r.language);
     } else {
@@ -336,10 +374,9 @@ class ChatController extends ChangeNotifier {
   Future<void> _maybeSummarize() async {
     if (!context.needsSummary) return;
     try {
-      final s = await backend.summarize(
-        context.summary,
-        [for (final t in context.pendingForSummary) t.toJson()],
-      );
+      final s = await backend.summarize(context.summary, [
+        for (final t in context.pendingForSummary) t.toJson(),
+      ]);
       context.applySummary(s);
     } catch (e) {
       log.add('summary', '$e');
@@ -358,7 +395,11 @@ class ChatController extends ChangeNotifier {
           _ => MusicSource.any,
         };
         final q = a.args['query'];
-        return Command(CommandType.musicPlay, query: q is String && q.trim().isNotEmpty ? q.trim() : null, source: src);
+        return Command(
+          CommandType.musicPlay,
+          query: q is String && q.trim().isNotEmpty ? q.trim() : null,
+          source: src,
+        );
       case 'music.pause':
         return const Command(CommandType.musicPause);
       case 'music.resume':
@@ -372,12 +413,23 @@ class ChatController extends ChangeNotifier {
       case 'set_volume':
         final level = a.args['level'];
         final delta = a.args['delta'];
-        if (level is num) return Command(CommandType.volumeSet, value: (level * 100).round().clamp(0, 100));
-        if (delta is num) return Command(delta >= 0 ? CommandType.volumeUp : CommandType.volumeDown);
+        if (level is num) {
+          return Command(
+            CommandType.volumeSet,
+            value: (level * 100).round().clamp(0, 100),
+          );
+        }
+        if (delta is num) {
+          return Command(
+            delta >= 0 ? CommandType.volumeUp : CommandType.volumeDown,
+          );
+        }
         return null;
       case 'set_reply_language':
         final l = a.args['language'];
-        return l is String ? Command(CommandType.setReplyLanguage, language: l) : null;
+        return l is String
+            ? Command(CommandType.setReplyLanguage, language: l)
+            : null;
     }
     return null;
   }
@@ -420,7 +472,9 @@ class ChatController extends ChangeNotifier {
           return const ActionResult.ok('Stopped talking');
         case CommandType.listen:
           final ok = await (hooks.requestListen?.call() ?? Future.value(false));
-          return ok ? const ActionResult.ok('Listening') : const ActionResult.fail('mic_unavailable');
+          return ok
+              ? const ActionResult.ok('Listening')
+              : const ActionResult.fail('mic_unavailable');
         case CommandType.stopListening:
           await voice.stopListening();
           return const ActionResult.ok('Stopped listening');
@@ -429,7 +483,12 @@ class ChatController extends ChangeNotifier {
           hooks.updateSettings((s) => s.copyWith(replyLanguage: l));
           return const ActionResult.ok('Language changed');
         case CommandType.setDarijaScript:
-          hooks.updateSettings((s) => s.copyWith(darijaScript: c.language ?? 'arabic', replyLanguage: 'darija'));
+          hooks.updateSettings(
+            (s) => s.copyWith(
+              darijaScript: c.language ?? 'arabic',
+              replyLanguage: 'darija',
+            ),
+          );
           return const ActionResult.ok('Script changed');
         case CommandType.openSettings:
           hooks.openSettings?.call();

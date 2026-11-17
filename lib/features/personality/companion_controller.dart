@@ -10,8 +10,8 @@ import 'idle_behavior.dart';
 /// Owns the conversational emotion shown on the face and the idle engine.
 class CompanionController extends ChangeNotifier {
   CompanionController({IdleBehavior? idle, this.busy, math.Random? random})
-      : idle = idle ?? IdleBehavior(),
-        _r = random ?? math.Random();
+    : idle = idle ?? IdleBehavior(),
+      _r = random ?? math.Random();
 
   final IdleBehavior idle;
 
@@ -46,7 +46,10 @@ class CompanionController extends ChangeNotifier {
         });
         notifyListeners();
       case IdleAction.yawn:
-        show(const DetectedEmotion(Emotion.sleepy, 0.6, source: 'idle'), hold: const Duration(seconds: 3));
+        show(
+          const DetectedEmotion(Emotion.sleepy, 0.6, source: 'idle'),
+          hold: const Duration(seconds: 3),
+        );
       case IdleAction.fallAsleep:
         _revert?.cancel();
         emotion = Emotion.sleepy;
@@ -54,7 +57,10 @@ class CompanionController extends ChangeNotifier {
         source = 'idle';
         notifyListeners();
       case IdleAction.wakeUp:
-        show(const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'), hold: const Duration(milliseconds: 1200));
+        show(
+          const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'),
+          hold: const Duration(milliseconds: 1200),
+        );
       case IdleAction.none:
         break;
     }
@@ -65,7 +71,10 @@ class CompanionController extends ChangeNotifier {
   void interact() {
     final a = idle.interact();
     if (a == IdleAction.wakeUp) {
-      show(const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'), hold: const Duration(milliseconds: 1200));
+      show(
+        const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'),
+        hold: const Duration(milliseconds: 1200),
+      );
     }
   }
 

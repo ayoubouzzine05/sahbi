@@ -15,15 +15,20 @@ class SourceRef {
   final String kind; // web | data
 
   static SourceRef fromJson(Map<String, dynamic> j) => SourceRef(
-        id: (j['id'] as num?)?.toInt() ?? 0,
-        title: (j['title'] as String?) ?? '',
-        url: (j['url'] as String?) ?? '',
-        date: j['date'] as String?,
-        kind: (j['kind'] as String?) ?? 'web',
-      );
+    id: (j['id'] as num?)?.toInt() ?? 0,
+    title: (j['title'] as String?) ?? '',
+    url: (j['url'] as String?) ?? '',
+    date: j['date'] as String?,
+    kind: (j['kind'] as String?) ?? 'web',
+  );
 
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'title': title, 'url': url, 'date': date, 'kind': kind};
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'url': url,
+    'date': date,
+    'kind': kind,
+  };
 
   String get domain {
     final u = Uri.tryParse(url);

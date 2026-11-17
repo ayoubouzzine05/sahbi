@@ -19,31 +19,59 @@ import 'l10n/app_localizations.dart';
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter buildRouter() => GoRouter(
-      navigatorKey: rootNavigatorKey,
-      initialLocation: '/',
-      routes: [
-        StatefulShellRoute.indexedStack(
-          builder: (context, state, shell) => _Shell(shell: shell),
-          branches: [
-            StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())]),
-            StatefulShellBranch(routes: [GoRoute(path: '/chat', builder: (_, _) => const ChatScreen())]),
-            StatefulShellBranch(routes: [GoRoute(path: '/music', builder: (_, _) => const MusicScreen())]),
-            StatefulShellBranch(routes: [
-              GoRoute(
-                path: '/settings',
-                builder: (_, _) => const SettingsScreen(),
-                routes: [
-                  GoRoute(path: 'memory', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const MemoryScreen()),
-                  GoRoute(path: 'privacy', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const PrivacyScreen()),
-                  GoRoute(path: 'robot', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const RobotLinkScreen()),
-                  GoRoute(path: 'debug', parentNavigatorKey: rootNavigatorKey, builder: (_, _) => const DebugScreen()),
-                ],
-              ),
-            ]),
+  navigatorKey: rootNavigatorKey,
+  initialLocation: '/',
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) => _Shell(shell: shell),
+      branches: [
+        StatefulShellBranch(
+          routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/chat', builder: (_, _) => const ChatScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/music', builder: (_, _) => const MusicScreen()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/settings',
+              builder: (_, _) => const SettingsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'memory',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (_, _) => const MemoryScreen(),
+                ),
+                GoRoute(
+                  path: 'privacy',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (_, _) => const PrivacyScreen(),
+                ),
+                GoRoute(
+                  path: 'robot',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (_, _) => const RobotLinkScreen(),
+                ),
+                GoRoute(
+                  path: 'debug',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (_, _) => const DebugScreen(),
+                ),
+              ],
+            ),
           ],
         ),
       ],
-    );
+    ),
+  ],
+);
 
 final routerProvider = Provider<GoRouter>((ref) => buildRouter());
 
@@ -107,18 +135,36 @@ class _Shell extends ConsumerWidget {
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        onDestinationSelected: (i) =>
+            shell.goBranch(i, initialLocation: i == shell.currentIndex),
         backgroundColor: SahbiColors.surface,
         indicatorColor: SahbiColors.turquoise.withValues(alpha: 0.18),
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.face_retouching_natural_outlined), selectedIcon: const Icon(Icons.face_retouching_natural), label: l.tabHome),
-          NavigationDestination(icon: const Icon(Icons.chat_bubble_outline_rounded), selectedIcon: const Icon(Icons.chat_bubble_rounded), label: l.tabChat),
           NavigationDestination(
-            icon: Badge(isLabelVisible: playing, smallSize: 8, backgroundColor: SahbiColors.green, child: const Icon(Icons.music_note_outlined)),
+            icon: const Icon(Icons.face_retouching_natural_outlined),
+            selectedIcon: const Icon(Icons.face_retouching_natural),
+            label: l.tabHome,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            selectedIcon: const Icon(Icons.chat_bubble_rounded),
+            label: l.tabChat,
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: playing,
+              smallSize: 8,
+              backgroundColor: SahbiColors.green,
+              child: const Icon(Icons.music_note_outlined),
+            ),
             selectedIcon: const Icon(Icons.music_note_rounded),
             label: l.tabMusic,
           ),
-          NavigationDestination(icon: const Icon(Icons.tune_outlined), selectedIcon: const Icon(Icons.tune_rounded), label: l.tabSettings),
+          NavigationDestination(
+            icon: const Icon(Icons.tune_outlined),
+            selectedIcon: const Icon(Icons.tune_rounded),
+            label: l.tabSettings,
+          ),
         ],
       ),
     );
