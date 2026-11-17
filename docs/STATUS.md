@@ -19,7 +19,7 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | `flutter build apk --release` | **Built in GitHub Actions** (same run): `sahbi-universal.apk` 62,132,059 bytes and `sahbi-arm64.apk` (`--split-per-abi`, arm64) 23,212,833 bytes. **DEBUG-SIGNED** (no keystore secrets). Published at `github.com/ayoubouzzine05/sahbi/releases/tag/latest`. arm64 sha256 `f75d8076…5b6862` |
 | `flutter test integration_test` | **PASSED** on an Android API 34 x86_64 emulator in GitHub Actions (same run, `integration-test` job) |
 | CI: format, analyze, all unit/widget/golden tests on GitHub (Ubuntu, Flutter stable) | **PASSED**. The Linux-generated goldens also match on the CI runner |
-| `docker build backend` | **NOT RUN.** No Docker |
+| `docker build backend` | No Docker in the sandbox; **built successfully in GitHub Actions** (Backend run 44159622121) |
 
 ### APK build attempts (2 GB RAM, no swap)
 
@@ -81,7 +81,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 42 | Backend tests with mocked providers (§15) | DONE | 53 passing |
 | 43 | Integration test, main flow (§15) | DONE (emulator) | passed on API 34 emulator in GitHub Actions |
 | 44 | Manual device checklist (§15) | DONE (written) / all items NOT RUN | docs/TEST_PLAN.md |
-| 45 | CI android.yml plus backend workflow; keystore via secrets (§15) | DONE (android.yml) / backend.yml: see run list | android.yml green on GitHub; keystore path not exercised (no secrets) |
+| 45 | CI android.yml plus backend workflow; keystore via secrets (§15) | DONE | android.yml and backend.yml (lint, 53 tests, build, smoke, docker) green on GitHub; keystore path not exercised (no secrets) |
 | 46 | Debug APK (§15) | DONE (CI) | built in GitHub Actions; uploaded as artifact `sahbi-debug-apk` |
 | 47 | Release APK (§15) | DONE (CI), **debug-signed** | universal and arm64 APKs in the `latest` release; store signing needs keystore secrets |
 | 48 | Milestones committed (§16) | DONE | `git log` |
