@@ -1,16 +1,15 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/ui_helpers.dart';
 import '../../core/zellige.dart';
 import '../../l10n/app_localizations.dart';
-import '../brain/brain_models.dart';
 import '../face/robot_face.dart';
 import '../personality/voice_state.dart';
+import '../search/search_sources.dart';
 import '../voice/mic_flow.dart';
 import 'chat_models.dart';
 
@@ -400,60 +399,12 @@ class _Bubble extends StatelessWidget {
         ),
       );
     }
-    if (m.searchUnavailable) {
+    if (m.searchUnavailable || m.sources.isNotEmpty) {
       content.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            l.searchUnavailable,
-            style: const TextStyle(fontSize: 12, color: SahbiColors.amber),
-          ),
-        ),
-      );
-    }
-    if (m.sources.isNotEmpty) {
-      content.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (m.verification == Verification.confirmed ||
-                  m.verification == Verification.unconfirmed)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        m.verification == Verification.confirmed
-                            ? Icons.verified_outlined
-                            : Icons.help_outline,
-                        size: 14,
-                        color: m.verification == Verification.confirmed
-                            ? SahbiColors.green
-                            : SahbiColors.amber,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        m.verification == Verification.confirmed
-                            ? l.sourcesConfirmed
-                            : l.sourcesUnconfirmed,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: SahbiColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [for (final s in m.sources) _SourceChip(s: s)],
-              ),
-            ],
-          ),
+        SearchSources(
+          sources: m.sources,
+          verification: m.verification,
+          searchUnavailable: m.searchUnavailable,
         ),
       );
     }
@@ -535,39 +486,6 @@ class _Bubble extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SourceChip extends StatelessWidget {
-  const _SourceChip({required this.s});
-  final SourceRef s;
-
-  @override
-  Widget build(BuildContext context) {
-    final data = s.kind == 'data';
-    return ActionChip(
-      visualDensity: VisualDensity.compact,
-      avatar: CircleAvatar(
-        radius: 9,
-        backgroundColor: data ? SahbiColors.green : SahbiColors.turquoise,
-        child: Text(
-          '${s.id}',
-          style: const TextStyle(fontSize: 10, color: SahbiColors.background),
-        ),
-      ),
-      label: Text(
-        '${s.domain}${s.date != null ? ' · ${s.date}' : ''}',
-        style: const TextStyle(fontSize: 12),
-        overflow: TextOverflow.ellipsis,
-      ),
-      tooltip: s.title.isEmpty ? s.url : s.title,
-      onPressed: s.url.startsWith('http')
-          ? () => launchUrl(
-              Uri.parse(s.url),
-              mode: LaunchMode.externalApplication,
-            )
-          : null,
     );
   }
 }
