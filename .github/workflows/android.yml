@@ -15,6 +15,8 @@ concurrency:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # publish the phone-download release
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -72,8 +74,18 @@ jobs:
             echo "signed=debug" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Release APK
-        run: flutter build apk --release
+      # Optional repo variable SAHBI_BACKEND_URL (Settings → Secrets and
+      # variables → Actions → Variables). Empty = set the URL later in the app.
+      - name: Release APK (universal)
+        run: |
+          flutter build apk --release --dart-define=SAHBI_BACKEND_URL=${{ vars.SAHBI_BACKEND_URL }}
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/sahbi-universal.apk"
+
+      - name: Release APK (arm64 only, smaller, for most phones)
+        run: |
+          flutter build apk --release --split-per-abi --target-platform android-arm64 --dart-define=SAHBI_BACKEND_URL=${{ vars.SAHBI_BACKEND_URL }}
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$RUNNER_TEMP/sahbi-arm64.apk"
+          ls -la "$RUNNER_TEMP"/sahbi-*.apk
 
       - name: Remove key.properties
         if: always()
@@ -87,7 +99,27 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: sahbi-release-apk-${{ steps.keystore.outputs.signed == 'store' && 'signed' || 'DEBUG-SIGNED-not-for-stores' }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: ${{ runner.temp }}/sahbi-*.apk
+
+      # Artifacts are zips that need a GitHub login; a release asset is a plain
+      # .apk that a phone browser can download and install directly:
+      #   https://github.com/<owner>/<repo>/releases/latest/download/sahbi-arm64.apk
+      - name: Publish "latest" release (direct phone download)
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.keystore.outputs.signed }}
+        run: |
+          cd "$RUNNER_TEMP"
+          note="Automatic build of ${GITHUB_SHA::7}."
+          if [ "$SIGNED" != "store" ]; then
+            note="$note DEBUG-SIGNED: fine for installing on your own phone, not for app stores."
+          fi
+          note="$note sahbi-arm64.apk = most phones (smaller). sahbi-universal.apk = any phone."
+          gh release delete latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create latest sahbi-arm64.apk sahbi-universal.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "SAHBI – latest build" --notes "$note" --latest
 
       - name: Upload golden failures
         if: failure()
