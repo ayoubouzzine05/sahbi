@@ -1568,6 +1568,42 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Keep the screen on for the face'**
   String get keepScreenOn;
+
+  /// No description provided for @photoModeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Live video isn’t available right now. Point the camera at something and tap 📸 — I’ll explain it.'**
+  String get photoModeHint;
+
+  /// No description provided for @photoSnap.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo and explain'**
+  String get photoSnap;
+
+  /// No description provided for @photoQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What is this? Explain what you see in this photo.'**
+  String get photoQuestion;
+
+  /// No description provided for @photoThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking…'**
+  String get photoThinking;
+
+  /// No description provided for @photoError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t explain the photo right now. Try again later.'**
+  String get photoError;
+
+  /// No description provided for @photoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · photo'**
+  String get photoLabel;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

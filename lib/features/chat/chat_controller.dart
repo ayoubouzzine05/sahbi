@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -236,6 +237,28 @@ class ChatController extends ChangeNotifier {
     await _askBrain(text);
   }
 
+  /// Camera "photo mode": ask the AI about one picture. Used when the live
+  /// video session is unavailable. Returns the index of the user message so
+  /// the camera screen can show the reply that follows it.
+  Future<int> sendPhoto(Uint8List jpeg, String question) async {
+    companion.interact();
+    await voice.interrupt();
+    _abandonBrain();
+    final at = messages.length;
+    messages.add(
+      ChatMessage(
+        id: _nextId(),
+        role: ChatRole.user,
+        text: '📷 $question',
+        language: isArabicScript(question) ? 'ar' : 'latin',
+        kind: ChatKind.ai,
+      ),
+    );
+    notifyListeners();
+    await _askBrain(question, image: jpeg);
+    return at;
+  }
+
   /// Speak an earlier Sahbi message again.
   Future<void> replay(ChatMessage m) async {
     if (m.role != ChatRole.sahbi || m.text.isEmpty) return;
@@ -303,11 +326,13 @@ class ChatController extends ChangeNotifier {
     return _offlineReason() ?? '';
   }
 
-  Map<String, dynamic> _request(String text) {
+  Map<String, dynamic> _request(String text, {Uint8List? image}) {
     final s = settings();
     final now = _clock();
     return {
       'message': text,
+      if (image != null)
+        'image': {'mime': 'image/jpeg', 'data': base64Encode(image)},
       'history': [for (final t in context.turns) t.toJson()],
       'summary': ?context.summary,
       'settings': {
@@ -329,7 +354,7 @@ class ChatController extends ChangeNotifier {
     };
   }
 
-  Future<void> _askBrain(String text) async {
+  Future<void> _askBrain(String text, {Uint8List? image}) async {
     var reason = _offlineReason();
     if (reason == 'server_unreachable' && hooks.wakeBackend != null) {
       final woke = await _wakeBackend();
@@ -363,7 +388,7 @@ class ChatController extends ChangeNotifier {
     _brainMsg = m;
     BrainReply? reply;
     _brainSub = backend
-        .chat(_request(text))
+        .chat(_request(text, image: image))
         .listen(
           (e) {
             switch (e) {
@@ -390,7 +415,7 @@ class ChatController extends ChangeNotifier {
               ..streaming = false
               ..kind = ChatKind.error
               ..errorCode = code.name
-              ..retryText = text
+              ..retryText = image == null ? text : null
               ..text = '';
             if (!done.isCompleted) done.complete();
           },
@@ -413,7 +438,7 @@ class ChatController extends ChangeNotifier {
           ..streaming = false
           ..kind = ChatKind.error
           ..errorCode = BackendErrorCode.server.name
-          ..retryText = text
+          ..retryText = image == null ? text : null
           ..text = '';
       }
       voice.setError(m.errorCode ?? 'server');
@@ -433,7 +458,7 @@ class ChatController extends ChangeNotifier {
     final emo = detector.fromLlm(r.emotion.name, r.intensity);
     companion.show(emo);
     context
-      ..add('user', text)
+      ..add('user', image == null ? text : '[photo] $text')
       ..add('assistant', r.displayText);
     unawaited(memory.addChat('user', text));
     unawaited(memory.addChat('assistant', r.displayText));

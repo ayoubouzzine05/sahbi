@@ -777,4 +777,25 @@ class L10nFr extends L10n {
 
   @override
   String get keepScreenOn => 'Garder l’écran allumé sur le visage';
+
+  @override
+  String get photoModeHint =>
+      'Je ne peux pas lancer la vidéo en direct maintenant. Vise quelque chose et appuie sur 📸, je t’explique.';
+
+  @override
+  String get photoSnap => 'Photo et explication';
+
+  @override
+  String get photoQuestion =>
+      'Qu’est-ce que c’est ? Explique-moi ce que tu vois sur cette photo.';
+
+  @override
+  String get photoThinking => 'Je regarde…';
+
+  @override
+  String get photoError =>
+      'Je n’ai pas pu expliquer la photo. Réessaie plus tard.';
+
+  @override
+  String get photoLabel => 'IA · photo';
 }

@@ -774,4 +774,25 @@ class L10nEn extends L10n {
 
   @override
   String get keepScreenOn => 'Keep the screen on for the face';
+
+  @override
+  String get photoModeHint =>
+      'Live video isn’t available right now. Point the camera at something and tap 📸 — I’ll explain it.';
+
+  @override
+  String get photoSnap => 'Take photo and explain';
+
+  @override
+  String get photoQuestion =>
+      'What is this? Explain what you see in this photo.';
+
+  @override
+  String get photoThinking => 'Looking…';
+
+  @override
+  String get photoError =>
+      'Couldn’t explain the photo right now. Try again later.';
+
+  @override
+  String get photoLabel => 'AI · photo';
 }

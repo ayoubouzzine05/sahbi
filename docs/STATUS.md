@@ -9,7 +9,9 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | `flutter pub get`, `flutter gen-l10n` | OK |
 | `dart format --set-exit-if-changed lib test integration_test` | clean |
 | `flutter analyze` | **No issues found** |
-| `flutter test` (unit + widget + golden) | **258 passed, 0 failed** (full run with `--concurrency=1`; default concurrency can stall this 2-CPU sandbox while loading, but each folder passes) |
+| Follow-up 3 (local, this sandbox) | `flutter analyze` clean, format clean, unit **251/251** (before photo mode), `chat_controller_test` 30/30 (with photo mode), robot_face + search_sources 10/10, golden 13/13. `app_shell_test`: the Dart compiler crashed (out of RAM) locally; it **passed in GitHub Actions** (Android run 44418906637, "Unit, widget and golden tests" step). A later full unit run stalled here and was stopped at 20 min; CI is the reference |
+| Backend follow-up 3 | `npm run lint`, `npm run typecheck`, `npm run build` OK, **87/87** tests |
+| `flutter test` (unit + widget + golden), M0–M8 | **258 passed, 0 failed** (full run with `--concurrency=1`; default concurrency can stall this 2-CPU sandbox while loading, but each folder passes) |
 | Note | One full `flutter test` run stalled while *loading* test files (stuck at `loading robot_face_test.dart`) and was stopped at 900 s. Each file then passed on its own, and the next full run passed in 19 s. Not reproduced; recorded for transparency |
 | `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **73 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
 | CI smoke step from `backend.yml`, replayed locally | `grep '"llm":{"configured":false'` matches the real health JSON; unauthenticated `/v1/chat` → 401. OK |
@@ -93,11 +95,22 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | # | Item | Status | Evidence |
 |---|---|---|---|
 | F3.1 | Stronger Moroccan Darija: prompt v1.1.0 with explicit Darija vocabulary/grammar rules, banned Egyptian/Levantine/Gulf/fus7a markers, bad→good examples; `tts_text` stays Darija in Arabic script | DONE (prompt) / **NOT VERIFIED** on real replies | backend test checks the rules are in the prompt; quality depends on the model |
-| F3.2 | Live camera ("7el camera", "chouf hadi", camera button): camera ≈1 JPEG/s + mic PCM 16 kHz → Gemini Live (`gemini-3.8-live`), voice answer 24 kHz PCM, captions, barge-in, goAway/session resumption, 10-min free-quota guard | DONE (code + unit tests) / **NOT VERIFIED** on a phone or against Google | `/v1/live/token` (single-use ephemeral token, locked model/prompt/voice, `fieldMask` as in google-genai's SDK), LiveSession protocol tests with a fake socket, 3 backend tests |
+| F3.2 | Live camera ("7el camera", "chouf hadi", camera button): camera ≈1 JPEG/s + mic PCM 16 kHz → Gemini Live (`gemini-3.8-live`), voice answer 24 kHz PCM, captions, barge-in, goAway/session resumption, 10-min free-quota guard. **Fallback photo mode**: if Google refuses the live session, the same screen keeps the camera and a 📸 button sends one JPEG with the normal chat (`/v1/chat` `image`, Gemini `inlineData`); the answer is shown and spoken | DONE (code + unit tests) / **NOT VERIFIED** on a phone. Against Google: `/v1/live/token` returned **401 UNAUTHENTICATED** with the user's AI Studio `AQ.` key (seen 2026-11-18), so live video does **not** work with that key; photo mode is untested live because the key then stopped working for chat too (see below) | `/v1/live/token` (single-use ephemeral token, locked model/prompt/voice, `fieldMask` as in google-genai's SDK), LiveSession protocol tests with a fake socket, 3 backend tests |
 | F3.3 | Dashboard = full-screen face (eyes, brows, mouth only), controls fade after 6 s and stay tappable, no tab bar on home, keep-screen-on setting | DONE (host) | 3 new goldens `face_full_*.png` (reviewed), app_shell_test |
-| F3.4 | Male voice by default: cloud TTS via Gemini TTS (`Puck`, female `Aoede`) or Azure Jamal/Mouna; live voice male; device TTS picks a voice named "male" or lowers pitch ×0.8; Settings male/female picker | DONE (code) / **NOT VERIFIED** (Gemini TTS not called live from here; device voices vary by phone) | GeminiTtsProvider tests (documented `/v1beta/interactions` shape), pickGenderVoice test |
+| F3.4 | Male voice by default: cloud TTS via Gemini TTS (`Puck`, female `Aoede`) or Azure Jamal/Mouna; live voice male; device TTS picks a voice named "male" or lowers pitch ×0.8; Settings male/female picker | DONE (code) / **NOT VERIFIED** | The Interactions TTS endpoint answered 401 to the `AQ.` key, so TTS now uses `generateContent` with `responseModalities:["AUDIO"]` (PCM → WAV). That call also got 401, at a moment when **chat with the same key failed with 401 too**, so the key itself was rejected. Never heard a Gemini voice from here. pickGenderVoice test, 2 GeminiTtsProvider tests |
 | F3.5 | Custom robot name: Settings field, persisted, sent as `robot_name` to chat and live prompts, used in UI and offline "who are you" | DONE | AppSettings tests, widget test (name shown + persisted), backend prompt test |
 | F3.6 | Wake by name while the app is open: on-device recogniser in short sessions, Arabic/Latin phonetic matching ("Zizou" = "زيزو"), "name" → opens mic, "name + question" → sends it; pauses while talking, in background and in live camera | DONE (logic + tests) / **NOT VERIFIED** on a phone | 12 matcher/controller tests. Known limits: some phones beep each time listening restarts; uses battery; needs the mic permission |
+
+### Google key status (2026-11-18, observed through the deployed backend)
+
+| Call | Result |
+|---|---|
+| `POST /v1/live/token` (Google `auth_tokens`) | 502 ← Google **401 UNAUTHENTICATED "API key not valid"** |
+| `POST /v1/tts` via Interactions API | 502 ← Google 401 |
+| `POST /v1/tts` via `generateContent` (commit `8703e00`) | 502 ← Google 401 |
+| `POST /v1/chat` (worked earlier the same day) | SSE `error` "LLM returned HTTP 401" |
+
+So the `AQ.` key stopped being accepted for everything. Google's forum has many reports of `AQ.` keys returning 401 `ACCESS_TOKEN_TYPE_UNSUPPORTED` (one says it happens after renaming a key; a fresh key that is never renamed works). Fix for the user: create a new key in AI Studio, do not rename it, put it in Vercel → Settings → Environment Variables → `LLM_API_KEY`, then redeploy. Nothing in the app has to change.
 
 ## Bugs found and fixed by testing in this pass
 

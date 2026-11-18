@@ -217,6 +217,13 @@ Line resultLine(ActionResult r) {
       'Impossible d’ouvrir le micro.',
       'Could not open the microphone.',
     ),
+    'camera unavailable': (
+      'ما قدرتش نحل الكاميرا دابا.',
+      'Ma9dertch n7el camera daba.',
+      'لم أستطع فتح الكاميرا الآن.',
+      'Impossible d’ouvrir la caméra maintenant.',
+      'Could not open the camera right now.',
+    ),
   };
   final f = fails[code];
   if (f != null) {

@@ -507,5 +507,17 @@
     }
   },
   "keepScreenOn": "Keep the screen on for the face",
-  "@keepScreenOn": {}
+  "@keepScreenOn": {},
+  "photoModeHint": "Live video isn’t available right now. Point the camera at something and tap 📸 — I’ll explain it.",
+  "@photoModeHint": {},
+  "photoSnap": "Take photo and explain",
+  "@photoSnap": {},
+  "photoQuestion": "What is this? Explain what you see in this photo.",
+  "@photoQuestion": {},
+  "photoThinking": "Looking…",
+  "@photoThinking": {},
+  "photoError": "Couldn’t explain the photo right now. Try again later.",
+  "@photoError": {},
+  "photoLabel": "AI · photo",
+  "@photoLabel": {}
 }

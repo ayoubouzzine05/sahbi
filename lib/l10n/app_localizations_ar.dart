@@ -776,4 +776,24 @@ class L10nAr extends L10n {
 
   @override
   String get keepScreenOn => 'خلي الشاشة شاعلة فوجه الروبو';
+
+  @override
+  String get photoModeHint =>
+      'ما قدرتش نحل الفيديو المباشر دابا. وجّه الكاميرا لشي حاجة وبرّك على 📸 ونشرح ليك.';
+
+  @override
+  String get photoSnap => 'صوّر وشرح ليا';
+
+  @override
+  String get photoQuestion =>
+      'شنو هادا؟ شرح ليا بالدارجة شنو كتشوف فهاد التصويرة.';
+
+  @override
+  String get photoThinking => 'كنشوف…';
+
+  @override
+  String get photoError => 'ما قدرتش نشرح التصويرة دابا. عاود من بعد.';
+
+  @override
+  String get photoLabel => 'AI · تصويرة';
 }

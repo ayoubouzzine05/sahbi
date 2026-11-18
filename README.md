@@ -97,6 +97,8 @@ The manual device checklist is in [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md).
 - Memory is opt-in (separate consent for facts and history), stored encrypted on the device, and can be viewed, edited, exported and deleted.
 - Sending messages to the AI can be switched off.
 - The backend is stateless and does not log message contents.
+- Camera: only on the camera screen, only after you allow it, and never in the background (leaving the app ends the session). Live mode streams about 1 frame per second and the mic directly to Google Gemini Live; photo mode sends one picture per tap through the backend to Gemini. Nothing is saved on the phone or the server. Google's Gemini API terms apply (free-tier data may be used by Google to improve its products).
+- Wake by name listens with the phone's own speech recogniser only while the app is open and in front; it can be turned off in Settings.
 
 ## Licences
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -370,6 +371,34 @@ void main() {
       );
       await chat.send('salam');
       expect(last().errorCode, 'notConfigured');
+    });
+
+    test('a camera photo is sent as base64 JPEG and answered', () async {
+      final jpeg = Uint8List.fromList([0xFF, 0xD8, 0xFF, 1, 2, 3, 0xFF, 0xD9]);
+      final at = await chat.sendPhoto(jpeg, 'chno hada?');
+      expect(at, 0);
+      expect(chat.messages[0].role, ChatRole.user);
+      expect(chat.messages[0].text, contains('chno hada?'));
+      final body = lastBody();
+      expect(body['message'], 'chno hada?');
+      expect(body['image'], {'mime': 'image/jpeg', 'data': base64Encode(jpeg)});
+      expect(last().kind, ChatKind.ai);
+      expect(last().text, 'Salam a sahbi!');
+      expect(tts.spoken, isNotEmpty);
+    });
+
+    test('plain messages never carry an image; failed photos are not '
+        'retried as text', () async {
+      await chat.send('kifach dayr?');
+      expect(lastBody().containsKey('image'), isFalse);
+      respond = (_) =>
+          http.Response('{"error":{"code":"x","message":"y"}}', 500);
+      await chat.sendPhoto(
+        Uint8List.fromList(List.filled(20, 7)),
+        'chno hada?',
+      );
+      expect(last().kind, ChatKind.error);
+      expect(last().retryText, isNull);
     });
 
     test('LLM emotion drives the face', () async {

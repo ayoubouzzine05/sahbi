@@ -244,5 +244,11 @@
   "wakeByNameSubtitle": "Seulement quand l’app est ouverte. Dis « {name} » (ou « {name}, quel temps fait-il ? ») sans appuyer. Consomme un peu de batterie ; certains téléphones bipent à chaque relance.",
   "wakeByNameNoMic": "Autorise le micro pour que j’entende mon nom.",
   "wakeListening": "J’attends mon nom : {name}",
-  "keepScreenOn": "Garder l’écran allumé sur le visage"
+  "keepScreenOn": "Garder l’écran allumé sur le visage",
+  "photoModeHint": "Je ne peux pas lancer la vidéo en direct maintenant. Vise quelque chose et appuie sur 📸, je t’explique.",
+  "photoSnap": "Photo et explication",
+  "photoQuestion": "Qu’est-ce que c’est ? Explique-moi ce que tu vois sur cette photo.",
+  "photoThinking": "Je regarde…",
+  "photoError": "Je n’ai pas pu expliquer la photo. Réessaie plus tard.",
+  "photoLabel": "IA · photo"
 }

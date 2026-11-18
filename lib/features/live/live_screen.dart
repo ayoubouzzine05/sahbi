@@ -14,8 +14,10 @@ import '../../core/backend_client.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../chat/chat_models.dart';
 import '../face/robot_face.dart';
 import '../personality/emotion.dart';
+import '../personality/voice_state.dart';
 import '../voice/wake_name.dart';
 import 'live_session.dart';
 
@@ -30,6 +32,9 @@ enum LivePhase {
   error,
   ended,
   timeLimit,
+
+  /// Live video is unavailable: one photo at a time through /v1/chat.
+  photo,
 }
 
 /// Live camera mode: the camera (≈1 frame/s) and the mic stream to Gemini
@@ -66,6 +71,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   bool _newRobotTurn = true;
   bool _newUserTurn = true;
   final Stopwatch _elapsed = Stopwatch();
+  bool _snapping = false;
+  int? _photoAt;
 
   @override
   void initState() {
@@ -108,6 +115,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       phase = LivePhase.connecting;
       _robotText = '';
       _userText = '';
+      _photoAt = null;
     });
     final net = ref.read(connectivityProvider).value;
     if (!net.hasNetwork) {
@@ -148,15 +156,19 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       ref.read(errorLogProvider).add('live', '${e.code.name}: ${e.message}');
       if (mounted) {
         setState(
-          () => phase = e.code == BackendErrorCode.notConfigured
-              ? LivePhase.notConfigured
-              : LivePhase.error,
+          () => phase = switch (e.code) {
+            BackendErrorCode.notConfigured => LivePhase.notConfigured,
+            BackendErrorCode.noInternet => LivePhase.offline,
+            // Live refused (e.g. the key cannot open live sessions): fall
+            // back to explaining one photo at a time.
+            _ => LivePhase.photo,
+          },
         );
       }
       return;
     } catch (e) {
       ref.read(errorLogProvider).add('live', '$e');
-      if (mounted) setState(() => phase = LivePhase.error);
+      if (mounted) setState(() => phase = LivePhase.photo);
       return;
     }
     if (!mounted) return;
@@ -281,7 +293,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         setState(
           () => phase = (error == null && (code == null || code == 1000))
               ? LivePhase.ended
-              : LivePhase.error,
+              : (_cam != null ? LivePhase.photo : LivePhase.error),
         );
     }
   }
@@ -422,6 +434,46 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     }
   }
 
+  /// Photo mode: one picture → the normal AI chat (which can see images)
+  /// → spoken answer through the usual voice chain.
+  Future<void> _snap() async {
+    final c = _cam;
+    if (_snapping || c == null || !c.value.isInitialized) return;
+    if (c.value.isTakingPicture) return;
+    final question = L10n.of(context).photoQuestion;
+    setState(() => _snapping = true);
+    try {
+      final x = await c.takePicture();
+      final bytes = await x.readAsBytes();
+      try {
+        await File(x.path).delete();
+      } catch (_) {}
+      if (!mounted) return;
+      final chat = ref.read(chatControllerProvider);
+      setState(() => _photoAt = chat.messages.length);
+      await chat.sendPhoto(bytes, question);
+    } catch (e) {
+      ref.read(errorLogProvider).add('live.photo', '$e');
+    } finally {
+      if (mounted) setState(() => _snapping = false);
+    }
+  }
+
+  /// Text of the reply to the last photo, or null while waiting.
+  String? _photoReply(L10n l) {
+    final at = _photoAt;
+    if (at == null) return null;
+    final msgs = ref.watch(chatControllerProvider).messages;
+    for (var i = at; i < msgs.length; i++) {
+      final m = msgs[i];
+      if (m.role != ChatRole.sahbi) continue;
+      if (m.kind == ChatKind.error) return l.photoError;
+      if (m.text.isEmpty) return null;
+      return m.text;
+    }
+    return null;
+  }
+
   Future<void> _switchCamera() async {
     if (_cameras.length < 2) return;
     _camIndex = (_camIndex + 1) % _cameras.length;
@@ -458,10 +510,16 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       LivePhase.error => l.liveError,
       LivePhase.ended => l.liveEnded,
       LivePhase.timeLimit => l.liveTimeLimit,
-      LivePhase.live => null,
+      LivePhase.live || LivePhase.photo => null,
     };
+    final photo = phase == LivePhase.photo;
+    final photoReply = photo ? _photoReply(l) : null;
+    final voiceSpeaking =
+        photo &&
+        ref.watch(voiceControllerProvider).state == VoiceState.speaking;
     final canRetry =
         phase != LivePhase.live &&
+        !photo &&
         phase != LivePhase.connecting &&
         phase != LivePhase.reconnecting;
 
@@ -510,7 +568,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                           ),
                         ),
                         Text(
-                          phase == LivePhase.live
+                          photo
+                              ? l.photoLabel
+                              : phase == LivePhase.live
                               ? '${l.liveAiLabel} · ${_mmss(_elapsed.elapsed)}'
                               : l.liveAiLabel,
                           style: const TextStyle(
@@ -522,6 +582,12 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                       ],
                     ),
                   ),
+                  if (photo)
+                    IconButton.filledTonal(
+                      tooltip: l.liveRetry,
+                      icon: const Icon(Icons.videocam_rounded),
+                      onPressed: _snapping ? null : _restart,
+                    ),
                   if (_cameras.length > 1 && cam != null)
                     IconButton.filledTonal(
                       tooltip: l.liveSwitchCamera,
@@ -593,20 +659,42 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                     if (_userText.isNotEmpty)
                       _Caption(text: _userText, dim: true),
                     if (_robotText.isNotEmpty) _Caption(text: _robotText),
+                    if (photo && _photoAt == null)
+                      _Caption(text: l.photoModeHint, dim: true),
+                    if (photo && _photoAt != null)
+                      _Caption(text: photoReply ?? l.photoThinking),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton.filledTonal(
-                          iconSize: 28,
-                          tooltip: _muted ? l.liveUnmute : l.liveMute,
-                          onPressed: phase == LivePhase.live
-                              ? _toggleMute
-                              : null,
-                          icon: Icon(
-                            _muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                        if (photo)
+                          IconButton.filled(
+                            iconSize: 30,
+                            tooltip: l.photoSnap,
+                            onPressed: _snapping || cam == null ? null : _snap,
+                            icon: _snapping
+                                ? const SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : const Icon(Icons.photo_camera_rounded),
+                          )
+                        else
+                          IconButton.filledTonal(
+                            iconSize: 28,
+                            tooltip: _muted ? l.liveUnmute : l.liveMute,
+                            onPressed: phase == LivePhase.live
+                                ? _toggleMute
+                                : null,
+                            icon: Icon(
+                              _muted
+                                  ? Icons.mic_off_rounded
+                                  : Icons.mic_rounded,
+                            ),
                           ),
-                        ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: SizedBox(
@@ -616,13 +704,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                               fullScreen: true,
                               semanticLabel: name,
                               inputs: FaceInputs(
-                                emotion: phase == LivePhase.live
-                                    ? (_speaking
+                                emotion: phase == LivePhase.live || photo
+                                    ? (_speaking || voiceSpeaking
                                           ? Emotion.happy
                                           : Emotion.curious)
                                     : Emotion.neutral,
                                 intensity: 0.6,
-                                speaking: _speaking,
+                                speaking: _speaking || voiceSpeaking,
                                 listening:
                                     phase == LivePhase.live &&
                                     !_speaking &&

@@ -42,7 +42,22 @@ In the Android **emulator** the app reaches it at `http://10.0.2.2:8080`. Only d
 | POST | `/v1/summarize` | Bearer | compress older turns, so the app keeps context without the server storing anything |
 | GET | `/v1/weather?city=` | Bearer | Open-Meteo geocoding + forecast |
 | POST | `/v1/stt?lang=ar-MA` | Bearer | raw audio body (≤ 2 MB) → `{text}` |
-| POST | `/v1/tts` | Bearer | `{text, language, voice?}` → audio/mpeg |
+| POST | `/v1/tts` | Bearer | `{text, language, gender?: 'male'\|'female', voice?}` → audio (Gemini: WAV 24 kHz via `generateContent` AUDIO; Azure: mp3) |
+| POST | `/v1/live/token` | Bearer | `{robot_name?, user_name?, gender?, reply_language?}` → `{token, model, ws_url, voice, expires_at, new_session_expires_at}`: single-use Gemini Live ephemeral token, model/prompt/voice locked |
+
+`/v1/chat` also accepts one camera photo: `image: {mime: 'image/jpeg'|'image/png', data: <base64>}` (body limit `CHAT_BODY_LIMIT_BYTES`, default 1.5 MB). Gemini sees it as `inlineData`; the OpenAI-compatible adapter is text-only and tells the model it cannot see it. Photos are never logged or stored.
+
+Follow-up 3 environment variables (all optional):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `TTS_PROVIDER` | `gemini` when the LLM is Gemini, else `none` | `gemini`, `azure` or `none` |
+| `GEMINI_TTS_MODEL` | `gemini-3.8-flash-tts` | speech model |
+| `GEMINI_LIVE_MODEL` | `gemini-3.8-live` | live camera model |
+| `LIVE_ENABLED` | `true` | `false` turns off `/v1/live/token` |
+| `CHAT_BODY_LIMIT_BYTES` | `1572864` | max `/v1/chat` body (photo) |
+
+Note: Google answered 401 to AI Studio `AQ.` keys on the Live token and TTS endpoints during testing (see `docs/STATUS.md`).
 
 Error codes (JSON `{error:{code,message}}`): `not_configured` 503, `upstream_timeout` 504, `upstream_error` 502, `invalid_output` 502, `bad_request` 400, `unauthorized` 401, `rate_limited` 429, `server_error` 500.
 
