@@ -77,7 +77,11 @@ export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerato
   const messages: LlmMessage[] = history.map((t) => ({ role: t.role, content: [{ type: 'text', text: t.text }] }));
   // Anthropic requires alternating roles: merge consecutive same-role turns.
   const merged: LlmMessage[] = [];
-  for (const m of [...messages, { role: 'user' as const, content: [{ type: 'text' as const, text: req.message }] }]) {
+  const userContent: Block[] = [
+    ...(req.image ? [{ type: 'image' as const, mime: req.image.mime, data: req.image.data }] : []),
+    { type: 'text' as const, text: req.message },
+  ];
+  for (const m of [...messages, { role: 'user' as const, content: userContent }]) {
     const last = merged[merged.length - 1];
     if (last && last.role === m.role) last.content.push(...m.content);
     else merged.push({ role: m.role, content: [...m.content] });

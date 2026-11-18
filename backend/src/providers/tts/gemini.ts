@@ -1,4 +1,5 @@
 import { expectGoogleOk, fetchWithRetry, type FetchLike } from '../../http.js';
+import { generateContentUrl } from '../llm/gemini.js';
 import { ServiceError } from '../../errors.js';
 import type { TtsProvider, TtsRequest } from './types.js';
 
@@ -26,10 +27,11 @@ export function speechStyle(language: string): string {
 }
 
 /**
- * Gemini TTS via the Interactions API, as documented in
- * https://ai.google.dev/gemini-api/docs/speech-generation (REST example):
- * POST /v1beta/interactions → steps[type=model_output].content[type=audio].data
- * (unary default = complete WAV, 24 kHz mono 16-bit).
+ * Gemini TTS through `generateContent` with `responseModalities: ["AUDIO"]`
+ * (https://ai.google.dev/gemini-api/docs/speech-generation). The Interactions
+ * endpoint rejects AI Studio "AQ." auth keys with 401 (seen live on
+ * 2026-11-18), while generateContent accepts them, so generateContent is used.
+ * Output: inline audio, either WAV or raw 16-bit PCM (`audio/L16;rate=24000`).
  */
 export class GeminiTtsProvider implements TtsProvider {
   readonly name = 'gemini';
@@ -39,30 +41,29 @@ export class GeminiTtsProvider implements TtsProvider {
   ) {}
 
   async synthesize(req: TtsRequest): Promise<{ audio: Buffer; contentType: string }> {
-    const base = this.opts.baseUrl.replace(/\/+$/, '').replace(/\/v1beta(\/openai)?$/i, '');
     const body = {
-      model: this.opts.model,
-      input: [{ type: 'user_input', content: [{ type: 'text', text: req.text, annotations: [{ type: 'speech_metadata', style: speechStyle(req.language) }] }] }],
-      response_format: { type: 'audio' },
-      generation_config: { speech_config: [{ voice: geminiVoiceFor(req) }] },
+      contents: [{ role: 'user', parts: [{ text: req.text }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiVoiceFor(req) } } },
+      },
     };
     const res = await fetchWithRetry(
       this.fetchImpl,
-      `${base}/v1beta/interactions`,
+      generateContentUrl(this.opts.baseUrl, this.opts.model),
       { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
       { timeoutMs: this.opts.timeoutMs, retries: 1 },
     );
     await expectGoogleOk(res, 'TTS');
-    const json = (await res.json()) as { steps?: Array<{ type?: string; content?: Array<{ type?: string; data?: string; mime_type?: string }> }> };
-    const audio = (json.steps ?? [])
-      .filter((s) => s.type === 'model_output')
-      .flatMap((s) => s.content ?? [])
-      .filter((c) => c.type === 'audio' && typeof c.data === 'string')
-      .pop();
-    if (!audio?.data) throw new ServiceError('upstream_error', 'TTS response had no audio', 502);
-    const bytes = Buffer.from(audio.data, 'base64');
-    const isWav = bytes.subarray(0, 4).toString('ascii') === 'RIFF';
-    return { audio: isWav ? bytes : pcmToWav(bytes, 24000), contentType: 'audio/wav' };
+    const json = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> } }>;
+    };
+    const part = (json.candidates?.[0]?.content?.parts ?? []).find((p) => typeof p.inlineData?.data === 'string');
+    if (!part?.inlineData?.data) throw new ServiceError('upstream_error', 'TTS response had no audio', 502);
+    const bytes = Buffer.from(part.inlineData.data, 'base64');
+    if (bytes.subarray(0, 4).toString('ascii') === 'RIFF') return { audio: bytes, contentType: 'audio/wav' };
+    const rate = Number(/rate=(\d+)/i.exec(part.inlineData.mimeType ?? '')?.[1] ?? 24000) || 24000;
+    return { audio: pcmToWav(bytes, rate), contentType: 'audio/wav' };
   }
 }
 

@@ -13,6 +13,7 @@ import type { Block, LlmMessage, LlmProvider, LlmRequest, LlmResponse } from './
  */
 type GPart =
   | { text: string; thought?: boolean; thoughtSignature?: string }
+  | { inlineData: { mimeType: string; data: string } }
   | { functionCall: { name: string; args?: Record<string, unknown>; id?: string }; thoughtSignature?: string }
   | { functionResponse: { name: string; response: Record<string, unknown>; id?: string } };
 interface GContent {
@@ -42,6 +43,8 @@ export function toGeminiContents(messages: LlmMessage[]): GContent[] {
     for (const b of m.content) {
       if (b.type === 'text') {
         if (b.text) parts.push({ text: b.text });
+      } else if (b.type === 'image') {
+        parts.push({ inlineData: { mimeType: b.mime, data: b.data } });
       } else if (b.type === 'tool_use') {
         names.set(b.id, b.name);
         parts.push({ functionCall: { name: b.name, args: b.input, id: b.id }, ...(b.signature ? { thoughtSignature: b.signature } : {}) });

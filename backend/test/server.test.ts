@@ -65,11 +65,13 @@ describe('server', () => {
   });
 
   it('validates request bodies and size limits', async () => {
-    app = buildServer(deps({ config: config({ LLM_PROVIDER: 'openai', LLM_MODEL: 'm', LLM_API_KEY: 'k', JSON_BODY_LIMIT_BYTES: '2048' }) }));
+    app = buildServer(deps({ config: config({ LLM_PROVIDER: 'openai', LLM_MODEL: 'm', LLM_API_KEY: 'k', JSON_BODY_LIMIT_BYTES: '2048', CHAT_BODY_LIMIT_BYTES: '4096' }) }));
     const token = await tokenFor(app);
     const h = { authorization: `Bearer ${token}` };
     expect((await app.inject({ method: 'POST', url: '/v1/chat', headers: h, payload: { message: '' } })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'POST', url: '/v1/chat', headers: h, payload: { message: 'x'.repeat(5000) } })).statusCode).toBe(413);
+    // Chat has its own (photo-sized) limit; other JSON routes keep the small one.
+    expect((await app.inject({ method: 'POST', url: '/v1/chat', headers: h, payload: { message: 'x'.repeat(1900), summary: 'y'.repeat(2900) } })).statusCode).toBe(413);
+    expect((await app.inject({ method: 'POST', url: '/v1/tts', headers: h, payload: { text: 'x'.repeat(1400), pad: 'y'.repeat(1000) } })).statusCode).toBe(413);
   });
 
   it('rate limits per install token', async () => {

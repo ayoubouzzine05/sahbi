@@ -120,7 +120,7 @@ export function buildServer(deps: Deps): FastifyInstance {
       return { token: issueToken(secret, parsed.data.install_id), expires_in: 60 * 60 * 24 * 30 };
     });
 
-    app.post('/v1/chat', { preHandler: requireAuth }, async (req, reply) => {
+    app.post('/v1/chat', { preHandler: requireAuth, bodyLimit: config.chatBodyLimitBytes }, async (req, reply) => {
       const parsed = ChatRequestSchema.safeParse(req.body);
       if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: formatZodError(parsed.error) } });
       if (!deps.llm || !isLlmConfigured(config)) return sendError(reply, notConfigured('AI'));

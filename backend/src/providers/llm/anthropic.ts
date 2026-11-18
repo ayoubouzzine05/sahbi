@@ -18,7 +18,10 @@ export class AnthropicProvider implements LlmProvider {
       model: this.opts.model,
       max_tokens: req.maxTokens,
       system: req.system,
-      messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: req.messages.map((m) => ({
+        role: m.role,
+        content: m.content.map((b) => (b.type === 'image' ? { type: 'image', source: { type: 'base64', media_type: b.mime, data: b.data } } : b)),
+      })),
       ...(req.tools.length ? { tools: req.tools } : {}),
     };
     const res = await fetchWithRetry(

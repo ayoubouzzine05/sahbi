@@ -81,6 +81,13 @@ export const ChatRequestSchema = z.object({
     .default({ reply_language: 'darija', darija_script: 'arabic', humor: 0.6, formality: 'casual' }),
   /** Only sent by the app when the user consented to memory. */
   memory: z.object({ facts: z.array(z.string().max(300)).max(30) }).optional(),
+  /** Optional camera photo (live camera "photo mode"). */
+  image: z
+    .object({
+      mime: z.enum(['image/jpeg', 'image/png']),
+      data: z.string().min(16).max(1_400_000).regex(/^[A-Za-z0-9+/]+={0,2}$/, 'base64 expected'),
+    })
+    .optional(),
   client: z.object({ local_time: z.string().max(60).optional(), app_state: z.string().max(300).optional() }).default({}),
 });
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;

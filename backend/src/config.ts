@@ -11,6 +11,8 @@ export interface Config {
   rateLimitPerMinute: number;
   jsonBodyLimitBytes: number;
   audioBodyLimitBytes: number;
+  /** /v1/chat may carry one camera photo. */
+  chatBodyLimitBytes: number;
   llm: {
     provider: 'anthropic' | 'openai' | 'gemini' | 'none';
     model: string;
@@ -100,6 +102,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     rateLimitPerMinute: int(env, 'RATE_LIMIT_PER_MINUTE', 30),
     jsonBodyLimitBytes: int(env, 'JSON_BODY_LIMIT_BYTES', 64 * 1024),
     audioBodyLimitBytes: int(env, 'AUDIO_BODY_LIMIT_BYTES', 2 * 1024 * 1024),
+    chatBodyLimitBytes: int(env, 'CHAT_BODY_LIMIT_BYTES', 1536 * 1024),
     llm: {
       provider: llmProvider,
       model: str(env, 'LLM_MODEL', gemini ? GEMINI_PRESET.model : ''),

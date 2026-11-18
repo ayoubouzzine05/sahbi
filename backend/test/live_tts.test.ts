@@ -6,6 +6,8 @@ import { isLiveConfigured, isTtsConfigured, loadConfig } from '../src/config.js'
 import { LIVE_WS_URL, createLiveToken, livePrompt } from '../src/live.js';
 import { GeminiTtsProvider, geminiVoiceFor, pcmToWav } from '../src/providers/tts/gemini.js';
 import { PROMPT_TEMPLATE } from '../src/prompt.generated.js';
+import { toGeminiContents } from '../src/providers/llm/gemini.js';
+import { toOpenAiMessages } from '../src/providers/llm/openai.js';
 import { deps } from './helpers.js';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -51,34 +53,73 @@ describe('GeminiTtsProvider', () => {
     expect(geminiVoiceFor({ voice: 'Charon', gender: 'female' })).toBe('Charon');
     expect(geminiVoiceFor({ voice: 'Hacker', gender: 'female' })).toBe('Aoede');
   });
-  it('calls the documented Interactions REST shape and returns WAV', async () => {
+  it('calls generateContent with AUDIO modality and returns WAV', async () => {
     let url = '';
-    let body: Record<string, unknown> = {};
+    let body: Record<string, any> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
     let key = '';
-    const wav = pcmToWav(Buffer.alloc(480), 24000);
     const fake = (async (u: string, init: RequestInit) => {
       url = u;
       body = JSON.parse(init.body as string);
       key = (init.headers as Record<string, string>)['x-goog-api-key']!;
-      return json({ steps: [{ type: 'thought' }, { type: 'model_output', content: [{ type: 'audio', data: wav.toString('base64') }] }] });
+      return json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: Buffer.alloc(480).toString('base64') } }] } }] });
     }) as unknown as typeof fetch;
     const p = new GeminiTtsProvider({ apiKey: 'AQ.k', baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-3.8-flash-tts', timeoutMs: 5000 }, fake);
     const out = await p.synthesize({ text: 'سلام', language: 'ar-MA', gender: 'male' });
-    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/interactions');
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent');
     expect(key).toBe('AQ.k');
-    expect(body).toMatchObject({ model: 'gemini-3.8-flash-tts', response_format: { type: 'audio' }, generation_config: { speech_config: [{ voice: 'Puck' }] } });
-    expect(JSON.stringify(body)).toContain('Moroccan');
+    expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
+    expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Puck');
+    expect(body.contents[0].parts[0].text).toBe('سلام');
     expect(out.contentType).toBe('audio/wav');
     expect(out.audio.subarray(0, 4).toString('ascii')).toBe('RIFF');
-  });
-  it('wraps headerless PCM and rejects empty responses', async () => {
-    const pcm = (async () => json({ steps: [{ type: 'model_output', content: [{ type: 'audio', data: Buffer.alloc(100).toString('base64') }] }] })) as unknown as typeof fetch;
-    const p = new GeminiTtsProvider({ apiKey: 'k', baseUrl: 'https://g', model: 'm', timeoutMs: 5000 }, pcm);
-    const out = await p.synthesize({ text: 'x', language: 'fr-FR' });
-    expect(out.audio.length).toBe(144);
+    expect(out.audio.length).toBe(44 + 480);
     expect(out.audio.readUInt32LE(24)).toBe(24000);
-    const empty = (async () => json({ steps: [] })) as unknown as typeof fetch;
+  });
+  it('passes WAV through, reads the PCM rate, rejects empty responses', async () => {
+    const wav = pcmToWav(Buffer.alloc(10), 24000);
+    const w = (async () => json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/wav', data: wav.toString('base64') } }] } }] })) as unknown as typeof fetch;
+    const p = new GeminiTtsProvider({ apiKey: 'k', baseUrl: 'https://g', model: 'm', timeoutMs: 5000 }, w);
+    expect((await p.synthesize({ text: 'x', language: 'fr-FR' })).audio.equals(wav)).toBe(true);
+    const r16 = (async () => json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;rate=16000', data: Buffer.alloc(100).toString('base64') } }] } }] })) as unknown as typeof fetch;
+    const o16 = await new GeminiTtsProvider({ apiKey: 'k', baseUrl: 'https://g', model: 'm', timeoutMs: 5000 }, r16).synthesize({ text: 'x', language: 'ar-MA' });
+    expect(o16.audio.readUInt32LE(24)).toBe(16000);
+    const empty = (async () => json({ candidates: [] })) as unknown as typeof fetch;
     await expect(new GeminiTtsProvider({ apiKey: 'k', baseUrl: 'https://g', model: 'm', timeoutMs: 5000 }, empty).synthesize({ text: 'x', language: 'ar-MA' })).rejects.toThrow('no audio');
+    const unauth = (async () => json({ error: { status: 'UNAUTHENTICATED', message: 'API key not valid.' } }, 401)) as unknown as typeof fetch;
+    await expect(new GeminiTtsProvider({ apiKey: 'k', baseUrl: 'https://g', model: 'm', timeoutMs: 5000 }, unauth).synthesize({ text: 'x', language: 'ar-MA' })).rejects.toThrow('UNAUTHENTICATED: API key not valid.');
+  });
+});
+
+describe('camera photo in chat', () => {
+  it('schema accepts one base64 JPEG and rejects junk', () => {
+    const ok = ChatRequestSchema.safeParse({ message: 'chno hada?', image: { mime: 'image/jpeg', data: Buffer.alloc(64).toString('base64') } });
+    expect(ok.success).toBe(true);
+    expect(ChatRequestSchema.safeParse({ message: 'x', image: { mime: 'image/gif', data: 'AAAAAAAAAAAAAAAAAAAA' } }).success).toBe(false);
+    expect(ChatRequestSchema.safeParse({ message: 'x', image: { mime: 'image/jpeg', data: 'not base64 !!!!!!!!' } }).success).toBe(false);
+  });
+  it('Gemini receives the photo as inlineData before the text', () => {
+    const c = toGeminiContents([{ role: 'user', content: [{ type: 'image', mime: 'image/jpeg', data: 'QUJD' }, { type: 'text', text: 'chno hada?' }] }]);
+    expect(c[0]!.parts[0]).toEqual({ inlineData: { mimeType: 'image/jpeg', data: 'QUJD' } });
+    expect(c[0]!.parts[1]).toEqual({ text: 'chno hada?' });
+  });
+  it('text-only adapters say they cannot see instead of pretending', () => {
+    const m = toOpenAiMessages('sys', [{ role: 'user', content: [{ type: 'image', mime: 'image/jpeg', data: 'QUJD' }, { type: 'text', text: 'chno hada?' }] }]);
+    expect(JSON.stringify(m)).toContain('cannot see images');
+    expect(JSON.stringify(m)).not.toContain('QUJD');
+  });
+  it('the chat route accepts a photo-sized body and the model gets the image', async () => {
+    const d = deps();
+    const app = buildServer(d);
+    const tok = (await app.inject({ method: 'POST', url: '/v1/auth/anonymous', payload: { install_id: UUID } })).json().token as string;
+    const r = await app.inject({
+      method: 'POST',
+      url: '/v1/chat',
+      headers: { authorization: `Bearer ${tok}` },
+      payload: { message: 'chno hada?', image: { mime: 'image/jpeg', data: Buffer.alloc(300_000).toString('base64') } },
+    });
+    expect(r.statusCode).toBe(200);
+    const sent = d.llm!.requests[0]!.messages.at(-1)!.content;
+    expect(sent[0]!.type).toBe('image');
   });
 });
 

@@ -14,7 +14,12 @@ export function toOpenAiMessages(system: string, messages: LlmMessage[]): OaMess
     if (m.role === 'user') {
       const results = m.content.filter((b): b is Extract<Block, { type: 'tool_result' }> => b.type === 'tool_result');
       for (const r of results) out.push({ role: 'tool', tool_call_id: r.tool_use_id, content: r.content });
-      const text = m.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n');
+      const hasImage = m.content.some((b) => b.type === 'image');
+      const text = [
+        ...m.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text),
+        // Text-only adapter: say so instead of pretending to see the photo.
+        ...(hasImage ? ['(The user attached a camera photo, but this AI setup cannot see images. Say so honestly.)'] : []),
+      ].join('\n');
       if (text) out.push({ role: 'user', content: text });
     } else {
       const text = m.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n');
