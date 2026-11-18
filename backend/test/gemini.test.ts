@@ -78,4 +78,39 @@ describe('GeminiProvider', () => {
     const bad = (async () => json({ error: { message: 'API key not valid. secret user text' } }, 400)) as unknown as typeof fetch;
     await expect(new GeminiProvider(opts, bad).complete({ system: 's', messages: [], tools: [], maxTokens: 1 })).rejects.toThrow('LLM returned HTTP 400');
   });
+
+  it('falls back to the next model on 503/429/timeout and stops on auth errors', async () => {
+    const seen: string[] = [];
+    const statusFor: Record<string, number> = { a: 503, b: 429, c: 200 };
+    const fake = (async (u: string) => {
+      const m = /models\/([^:]+):/.exec(u)![1]!;
+      seen.push(m);
+      return statusFor[m] === 200 ? json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'ok-' + m }] } }] }) : json({}, statusFor[m]);
+    }) as unknown as typeof fetch;
+    const p = new GeminiProvider({ ...opts, model: 'a', fallbackModels: ['b', 'c', 'a'] }, fake);
+    expect(p.models).toEqual(['a', 'b', 'c']);
+    const r = await p.complete({ system: 's', messages: [], tools: [], maxTokens: 1 });
+    expect(seen).toEqual(['a', 'b', 'c']);
+    expect(r.content).toEqual([{ type: 'text', text: 'ok-c' }]);
+
+    const seen2: string[] = [];
+    const auth = (async (u: string) => {
+      seen2.push(u);
+      return json({}, 401);
+    }) as unknown as typeof fetch;
+    await expect(new GeminiProvider({ ...opts, model: 'a', fallbackModels: ['b'] }, auth).complete({ system: 's', messages: [], tools: [], maxTokens: 1 })).rejects.toThrow('HTTP 401');
+    expect(seen2).toHaveLength(1);
+
+    const allBusy = (async () => json({}, 503)) as unknown as typeof fetch;
+    await expect(new GeminiProvider({ ...opts, model: 'a', fallbackModels: ['b'] }, allBusy).complete({ system: 's', messages: [], tools: [], maxTokens: 1 })).rejects.toThrow('HTTP 503');
+
+    let n = 0;
+    const timeoutThenOk = (async () => {
+      n++;
+      if (n === 1) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+      return json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'late' }] } }] });
+    }) as unknown as typeof fetch;
+    const r2 = await new GeminiProvider({ ...opts, model: 'a', fallbackModels: ['b'] }, timeoutThenOk).complete({ system: 's', messages: [], tools: [], maxTokens: 1 });
+    expect(r2.content).toEqual([{ type: 'text', text: 'late' }]);
+  });
 });

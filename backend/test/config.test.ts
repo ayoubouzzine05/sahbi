@@ -11,7 +11,15 @@ describe('Gemini one-key deploy', () => {
     expect(c.llm.model).toBe(GEMINI_PRESET.model);
     expect(c.llm.reasoningEffort).toBe('low');
     expect(c.llm.maxOutputTokens).toBe(4096);
+    expect(c.llm.fallbackModels).toEqual(['gemini-3.5-flash-lite', 'gemini-3.8-flash']);
+    expect(c.llm.timeoutMs).toBe(20000);
     expect(isLlmConfigured(c)).toBe(true);
+  });
+
+  it('LLM_FALLBACK_MODELS overrides or disables the chain', () => {
+    expect(loadConfig({ LLM_API_KEY: 'AQ.x', LLM_FALLBACK_MODELS: 'm1, m2' }).llm.fallbackModels).toEqual(['m1', 'm2']);
+    expect(loadConfig({ LLM_API_KEY: 'AQ.x', LLM_FALLBACK_MODELS: 'none' }).llm.fallbackModels).toEqual([]);
+    expect(loadConfig({ LLM_PROVIDER: 'openai', LLM_API_KEY: 'k', LLM_MODEL: 'm' }).llm.fallbackModels).toEqual([]);
   });
 
   it('new AI Studio auth keys (AQ.…) are recognised too', () => {

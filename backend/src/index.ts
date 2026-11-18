@@ -25,7 +25,7 @@ if (isLlmConfigured(config)) {
     config.llm.provider === 'anthropic'
       ? new AnthropicProvider(opts)
       : config.llm.provider === 'gemini'
-        ? new GeminiProvider({ ...opts, reasoningEffort })
+        ? new GeminiProvider({ ...opts, reasoningEffort, fallbackModels: config.llm.fallbackModels })
         : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 

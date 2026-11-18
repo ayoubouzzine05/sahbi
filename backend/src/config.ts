@@ -17,6 +17,8 @@ export interface Config {
     apiKey: string;
     baseUrl: string;
     timeoutMs: number;
+    /** Gemini only: models tried after `model` (LLM_FALLBACK_MODELS, comma-separated; 'none' disables). */
+    fallbackModels: string[];
     maxOutputTokens: number;
     /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
     reasoningEffort: string;
@@ -44,7 +46,11 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], fallback:
 /** Gemini through its native API (https://ai.google.dev/api/generate-content). */
 export const GEMINI_PRESET = {
   baseUrl: 'https://generativelanguage.googleapis.com',
-  model: 'gemini-3.8-flash', // free tier per https://ai.google.dev/gemini-api/docs/pricing (checked 2026-11-17)
+  // All free-tier models per https://ai.google.dev/gemini-api/docs/pricing (checked 2026-11-18).
+  // gemini-3.8-flash answered 503 repeatedly on the live deploy, hence a chain.
+  model: 'gemini-4-hydrogen',
+  fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+  timeoutMs: 20000, // per model; the app waits ~45 s per request
   reasoningEffort: 'low',
   maxOutputTokens: 4096, // thinking tokens count towards output
 } as const;
@@ -65,6 +71,13 @@ function usesGemini(env: NodeJS.ProcessEnv): boolean {
  *  (serverless instances must agree on it; rotating the key rotates tokens). */
 export function derivedAuthSecret(apiKey: string): string {
   return apiKey ? createHash('sha256').update(`sahbi-auth-v1:${apiKey}`).digest('hex') : '';
+}
+
+function fallbackModels(env: NodeJS.ProcessEnv, gemini: boolean): string[] {
+  const raw = str(env, 'LLM_FALLBACK_MODELS');
+  if (raw.toLowerCase() === 'none') return [];
+  if (raw) return raw.split(',').map((m) => m.trim()).filter(Boolean);
+  return gemini ? [...GEMINI_PRESET.fallbackModels] : [];
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -89,7 +102,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       model: str(env, 'LLM_MODEL', gemini ? GEMINI_PRESET.model : ''),
       apiKey: str(env, 'LLM_API_KEY'),
       baseUrl: str(env, 'LLM_BASE_URL', defaultBase),
-      timeoutMs: int(env, 'LLM_TIMEOUT_MS', 30000),
+      timeoutMs: int(env, 'LLM_TIMEOUT_MS', gemini ? GEMINI_PRESET.timeoutMs : 30000),
+      fallbackModels: fallbackModels(env, gemini),
       maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', gemini ? GEMINI_PRESET.maxOutputTokens : 800),
       reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },

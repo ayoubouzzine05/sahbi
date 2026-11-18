@@ -60,9 +60,52 @@ let callSeq = 0;
 export class GeminiProvider implements LlmProvider {
   readonly name = 'gemini';
   constructor(
-    private readonly opts: { apiKey: string; model: string; baseUrl: string; timeoutMs: number; reasoningEffort?: string },
+    private readonly opts: {
+      apiKey: string;
+      model: string;
+      baseUrl: string;
+      timeoutMs: number;
+      reasoningEffort?: string;
+      /** Tried in order when a model is overloaded (429/5xx), times out, or is unknown (404). */
+      fallbackModels?: string[];
+    },
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
+
+  /** Primary model first, then distinct fallbacks. */
+  get models(): string[] {
+    return [...new Set([this.opts.model, ...(this.opts.fallbackModels ?? [])].filter(Boolean))];
+  }
+
+  /**
+   * One attempt per model (no same-model retries): on the free tier a busy
+   * model tends to stay busy for a while, so moving on answers faster.
+   * Auth/request errors (400/401/403) stop immediately — another model won't help.
+   */
+  private async post(body: unknown): Promise<Response> {
+    const models = this.models;
+    let lastErr: unknown;
+    for (const [i, model] of models.entries()) {
+      const last = i === models.length - 1;
+      try {
+        const res = await fetchWithRetry(
+          this.fetchImpl,
+          generateContentUrl(this.opts.baseUrl, model),
+          { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
+          { timeoutMs: this.opts.timeoutMs, retries: 0 },
+        );
+        if (!last && (res.status === 429 || res.status === 404 || res.status >= 500)) {
+          lastErr = new ServiceError('upstream_error', `LLM returned HTTP ${res.status}`, 502);
+          continue;
+        }
+        return res;
+      } catch (err) {
+        lastErr = err;
+        if (last) throw err;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new ServiceError('upstream_error', 'LLM unavailable', 502);
+  }
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
     const level = thinkingLevel(this.opts.reasoningEffort);
@@ -74,12 +117,7 @@ export class GeminiProvider implements LlmProvider {
         : {}),
       generationConfig: { maxOutputTokens: req.maxTokens, ...(level ? { thinkingConfig: { thinkingLevel: level } } : {}) },
     };
-    const res = await fetchWithRetry(
-      this.fetchImpl,
-      generateContentUrl(this.opts.baseUrl, this.opts.model),
-      { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
-      { timeoutMs: this.opts.timeoutMs },
-    );
+    const res = await this.post(body);
     await expectOk(res, 'LLM');
     const json = (await res.json()) as {
       candidates?: Array<{ finishReason?: string; content?: { parts?: Array<Record<string, unknown>> } }>;
