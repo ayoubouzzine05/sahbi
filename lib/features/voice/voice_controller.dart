@@ -35,6 +35,9 @@ class VoiceController extends ChangeNotifier {
   /// Called with the recognised text (same pipeline as typed input).
   void Function(String text)? onFinalText;
 
+  /// Awaited before the mic opens (wake-by-name releases the recogniser).
+  Future<void> Function()? beforeListen;
+
   /// Called with true while Sahbi speaks so music can be ducked.
   void Function(bool duck)? onDuckMusic;
 
@@ -124,6 +127,7 @@ class VoiceController extends ChangeNotifier {
   Future<String> startListening() async {
     if (state == VoiceState.speaking) await interrupt();
     if (state == VoiceState.listening) return activeStt;
+    await beforeListen?.call();
     final which = await resolveStt();
     if (which == 'typed') {
       lastError = 'no_recognizer';

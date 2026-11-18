@@ -16,7 +16,8 @@ Every service is optional. Anything unset is reported as `configured: false` by 
 | `STT_PROVIDER` | cloud speech recognition | `azure`, `openai` or `none` | |
 | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure STT + TTS | Azure portal → create a "Speech" resource → Keys and Endpoint | ar-MA STT and voices `ar-MA-JamalNeural` / `ar-MA-MounaNeural` are listed in Microsoft's language-support docs |
 | `OPENAI_STT_API_KEY`, `OPENAI_STT_MODEL` | OpenAI transcription | platform.openai.com | choose a current transcription model |
-| `TTS_PROVIDER`, `AZURE_TTS_VOICE` | cloud TTS | | default voice `ar-MA-JamalNeural` |
+| `TTS_PROVIDER`, `AZURE_TTS_VOICE`, `GEMINI_TTS_MODEL` | cloud TTS | | With a Gemini LLM key, TTS defaults to **Gemini** (`gemini-3.8-flash-tts`, free tier) with a **male** voice (`Puck`; female `Aoede`, chosen in app Settings). `TTS_PROVIDER=azure` uses Azure (`ar-MA-JamalNeural` male / `ar-MA-MounaNeural` female); `none` turns cloud TTS off. Moroccan Darija is not in Google's TTS language table, so the accent is best-effort |
+| `GEMINI_LIVE_MODEL`, `LIVE_ENABLED` | live camera mode | (same Gemini key) | `/v1/live/token` mints single-use ephemeral tokens for `gemini-3.8-live` (free tier). Model, prompt and voice are locked in the token; the key never reaches the phone. `LIVE_ENABLED=false` disables it |
 
 ## Free AI without a card: Google Gemini + Vercel (phone-only setup)
 

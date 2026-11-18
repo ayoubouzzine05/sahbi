@@ -17,6 +17,7 @@ import '../features/voice/device_tts.dart';
 import '../features/voice/mic_permission.dart';
 import '../features/voice/voice_controller.dart';
 import '../features/voice/voice_types.dart';
+import '../features/voice/wake_name.dart';
 import 'backend_client.dart';
 import 'connectivity.dart';
 import 'error_log.dart';
@@ -99,6 +100,7 @@ final cloudSttProvider = Provider<SttProvider>(
 final deviceTtsProvider = Provider<TtsProvider>(
   (ref) => DeviceTts(
     voiceName: () => ref.read(settingsProvider).deviceVoiceName,
+    gender: () => ref.read(settingsProvider).voiceGender,
     rate: () => ref.read(settingsProvider).speechRate,
     pitch: () => ref.read(settingsProvider).pitch,
   ),
@@ -108,6 +110,7 @@ final cloudTtsProvider = Provider<TtsProvider>(
     ref.read(backendClientProvider),
     isConfigured: () => ref.read(connectivityProvider).value.cloudTtsConfigured,
     voice: () => ref.read(settingsProvider).cloudVoice,
+    gender: () => ref.read(settingsProvider).voiceGender,
     rate: () => ref.read(settingsProvider).speechRate,
     pitch: () => ref.read(settingsProvider).pitch,
   ),
@@ -162,6 +165,41 @@ final chatControllerProvider = ChangeNotifierProvider<ChatController>((ref) {
   );
   ref.read(voiceControllerProvider).onFinalText = chat.send;
   return chat;
+});
+
+/// Wake-by-name: listens for the robot's name while the app is open.
+final wakeNameProvider = ChangeNotifierProvider<WakeNameController>((ref) {
+  final voice = ref.read(voiceControllerProvider);
+  final stt = ref.read(deviceSttProvider);
+  final w = WakeNameController(
+    listen: (locale) => stt is DeviceStt
+        ? stt.listenForWake(localeId: locale)
+        : stt.listen(localeId: locale),
+    cancel: stt.cancel,
+    settings: () => ref.read(settingsProvider),
+    voiceState: () => voice.state,
+    micGranted: () async =>
+        await ref.read(micPermissionProvider).status() == MicStatus.granted,
+    onWake: () async {
+      ref.read(companionProvider).interact();
+      await voice.startListening();
+    },
+    onCommand: (text) => ref.read(chatControllerProvider).send(text),
+    localeFor: (lang) async =>
+        pickLocale(await stt.supportedLocales(), lang) ?? 'ar-MA',
+    log: ref.read(errorLogProvider),
+  );
+  voice.beforeListen = w.yieldMic;
+  void onVoice() => w.refresh();
+  voice.addListener(onVoice);
+  ref.listen(settingsProvider, (a, b) {
+    if (a?.wakeByName != b.wakeByName || a?.robotName != b.robotName) {
+      w.refresh();
+    }
+  });
+  ref.onDispose(() => voice.removeListener(onVoice));
+  w.refresh();
+  return w;
 });
 
 final robotLinkProvider = ChangeNotifierProvider<RobotLinkController>(

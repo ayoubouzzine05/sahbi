@@ -28,12 +28,16 @@ class ChatHooks {
     required this.updateSettings,
     this.openSettings,
     this.openMusic,
+    this.openCamera,
     this.requestListen,
     this.wakeBackend,
   });
   final void Function(AppSettings Function(AppSettings) update) updateSettings;
   final VoidCallback? openSettings;
   final VoidCallback? openMusic;
+
+  /// Opens the live camera screen ("7el camera", "chouf hadi").
+  final VoidCallback? openCamera;
 
   /// Starts the mic flow (permission rationale etc.). Returns true if listening.
   final Future<bool> Function()? requestListen;
@@ -261,7 +265,7 @@ class ChatController extends ChangeNotifier {
   Future<void> _offline(String text, String reason) async {
     final intent = responses.detectIntent(text);
     final line = intent != null
-        ? responses.forIntent(intent, _clock())
+        ? responses.forIntent(intent, _clock(), robotName: settings().robotName)
         : responses.offlineFallback();
     final m = _sahbi(line, ChatKind.offline)..errorCode = reason;
     voice.setThinking(false);
@@ -312,6 +316,7 @@ class ChatController extends ChangeNotifier {
         'humor': s.humor,
         'formality': s.formality,
         if (s.userName.trim().isNotEmpty) 'user_name': s.userName.trim(),
+        if (s.robotName.isNotEmpty) 'robot_name': s.robotName,
       },
       if (memory.consentFacts && memory.facts.isNotEmpty)
         'memory': {'facts': memory.factsForBrain()},
@@ -586,6 +591,12 @@ class ChatController extends ChangeNotifier {
         case CommandType.openMusic:
           hooks.openMusic?.call();
           return const ActionResult.ok('Opened music');
+        case CommandType.openCamera:
+          if (hooks.openCamera == null) {
+            return const ActionResult.fail('camera unavailable');
+          }
+          hooks.openCamera!.call();
+          return const ActionResult.ok('Opened camera');
       }
     } catch (e) {
       log.add('action', '${c.type.name}: $e');

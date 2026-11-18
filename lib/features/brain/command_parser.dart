@@ -21,6 +21,9 @@ enum CommandType {
   setDarijaScript,
   openSettings,
   openMusic,
+
+  /// Live camera: "7el camera", "chouf hadi", "شوف هادي".
+  openCamera,
 }
 
 enum MusicSource { any, local, spotify, youtubeMusic }
@@ -153,6 +156,17 @@ class CommandParser {
     r'(?:7el|hel|7al|open|ouvre|ouvrir|حل|افتح|فتح)',
   );
 
+  static final _camera = RegExp(
+    r'(?:^|\s)(?:l?camera|l?kamera|kamira|camira|كاميرا|الكاميرا|كاميرة|الكاميره|كاميره)(?:\s|$)',
+  );
+  static final _cameraVerb = RegExp(
+    r'(?:7el|hel|7al|7ell|open|ouvre|ouvrir|allume|cha3el|ch3el|chaal|حل|افتح|فتح|شعل)',
+  );
+  // "chouf hadi / chno hada / شوف هادي / شنو هادا" — show-and-explain.
+  static final _lookAtThis = RegExp(
+    r'^(?:(?:a|ya)\s+\S+\s+)?(?:chouf|chof|shouf|regarde|lo+k at|شوف)\s+(?:hadi|hada|hado|had chi|hadchi|this|ca|هادي|هادا|هاد|هادشي|هدا|هدي)(?:\s|$)',
+  );
+
   // ---- API ----------------------------------------------------------------
   Command? parse(String raw) {
     final t = normalizeText(raw);
@@ -217,6 +231,11 @@ class CommandParser {
       }
     }
 
+    if ((_camera.hasMatch(t) &&
+            (_cameraVerb.hasMatch(t) || t.split(' ').length <= 2)) ||
+        _lookAtThis.hasMatch(t)) {
+      return const Command(CommandType.openCamera);
+    }
     if (_settings.hasMatch(t) &&
         (_openSettingsVerb.hasMatch(t) || t.split(' ').length <= 2)) {
       return const Command(CommandType.openSettings);

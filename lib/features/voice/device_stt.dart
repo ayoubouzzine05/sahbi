@@ -46,7 +46,24 @@ class DeviceStt implements SttProvider {
   }
 
   @override
-  Stream<SttEvent> listen({required String localeId}) {
+  Stream<SttEvent> listen({required String localeId}) => _listen(
+    localeId,
+    listenFor: const Duration(seconds: 30),
+    pauseFor: const Duration(seconds: 3),
+  );
+
+  /// Longer, quieter session used while waiting for the robot's name.
+  Stream<SttEvent> listenForWake({required String localeId}) => _listen(
+    localeId,
+    listenFor: const Duration(seconds: 60),
+    pauseFor: const Duration(seconds: 10),
+  );
+
+  Stream<SttEvent> _listen(
+    String localeId, {
+    required Duration listenFor,
+    required Duration pauseFor,
+  }) {
     _ctrl?.close();
     final ctrl = StreamController<SttEvent>();
     _ctrl = ctrl;
@@ -83,8 +100,8 @@ class DeviceStt implements SttProvider {
           localeId: localeId,
           partialResults: true,
           cancelOnError: true,
-          listenFor: const Duration(seconds: 30),
-          pauseFor: const Duration(seconds: 3),
+          listenFor: listenFor,
+          pauseFor: pauseFor,
           listenMode: ListenMode.dictation,
         ),
       );

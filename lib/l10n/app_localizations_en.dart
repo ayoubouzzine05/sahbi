@@ -664,4 +664,114 @@ class L10nEn extends L10n {
 
   @override
   String get listeningHint => 'Speak now…';
+
+  @override
+  String get liveTitle => 'Live camera';
+
+  @override
+  String get liveConnecting => 'Connecting…';
+
+  @override
+  String get liveHint => 'Show me something and ask about it';
+
+  @override
+  String get liveReconnecting => 'Reconnecting…';
+
+  @override
+  String get liveNotConfigured =>
+      'Live camera is not configured on the server (needs a Gemini key).';
+
+  @override
+  String get liveError => 'Could not start the live camera.';
+
+  @override
+  String get liveEnded => 'Session ended.';
+
+  @override
+  String get liveTimeLimit =>
+      'Session stopped after 10 minutes to save the free quota. Start again if you like.';
+
+  @override
+  String get liveRetry => 'Retry';
+
+  @override
+  String get liveMute => 'Mute mic';
+
+  @override
+  String get liveUnmute => 'Unmute mic';
+
+  @override
+  String get liveSwitchCamera => 'Switch camera';
+
+  @override
+  String get liveEnd => 'End';
+
+  @override
+  String get liveNoCamera => 'No camera found on this phone.';
+
+  @override
+  String get liveNeedsInternet => 'Live camera needs the internet.';
+
+  @override
+  String get liveAiLabel => 'AI · Gemini Live';
+
+  @override
+  String get cameraRationaleTitle => 'Shall I look with you?';
+
+  @override
+  String get cameraRationaleBody =>
+      'To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.';
+
+  @override
+  String get cameraDenied =>
+      'Without camera and mic I can’t see. You can allow them in Settings.';
+
+  @override
+  String get openCamera => 'Camera';
+
+  @override
+  String get robotNameTitle => 'Robot name';
+
+  @override
+  String get robotNameHint => 'e.g. Zizou, Bobo… (empty = Sahbi)';
+
+  @override
+  String get robotNameDialogTitle => 'What do you want to call me?';
+
+  @override
+  String robotNameSaved(String name) {
+    return 'Got it, my name is $name!';
+  }
+
+  @override
+  String get voiceGenderTitle => 'Robot voice';
+
+  @override
+  String get voiceMale => 'Male';
+
+  @override
+  String get voiceFemale => 'Female';
+
+  @override
+  String get voiceGenderNote =>
+      'The server voice (Gemini) changes right away. The phone voice depends on installed voices: if none is male, the pitch is lowered a little.';
+
+  @override
+  String get wakeByNameTitle => 'Answer when called by name';
+
+  @override
+  String wakeByNameSubtitle(String name) {
+    return 'Only while the app is open. Say “$name” (or “$name, what’s the weather?”) without tapping. Uses some battery; some phones beep each time listening restarts.';
+  }
+
+  @override
+  String get wakeByNameNoMic => 'Allow the microphone so I can hear my name.';
+
+  @override
+  String wakeListening(String name) {
+    return 'Waiting for my name: $name';
+  }
+
+  @override
+  String get keepScreenOn => 'Keep the screen on for the face';
 }

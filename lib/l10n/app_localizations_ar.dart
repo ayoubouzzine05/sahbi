@@ -666,4 +666,114 @@ class L10nAr extends L10n {
 
   @override
   String get listeningHint => 'هضر دابا…';
+
+  @override
+  String get liveTitle => 'شوف معايا';
+
+  @override
+  String get liveConnecting => 'كنتكونيكطا…';
+
+  @override
+  String get liveHint => 'وريني شي حاجة وسولني عليها بالصوت';
+
+  @override
+  String get liveReconnecting => 'كنعاود نتكونيكطا…';
+
+  @override
+  String get liveNotConfigured =>
+      'الكاميرا المباشرة ما مفعلاش فالسيرفر (خاص مفتاح Gemini).';
+
+  @override
+  String get liveError => 'ما قدرتش نتكونيكطا مع الكاميرا المباشرة.';
+
+  @override
+  String get liveEnded => 'سالات الجلسة.';
+
+  @override
+  String get liveTimeLimit =>
+      'وقفت الجلسة بعد 10 دقايق باش نحافظو على الكوطا المجانية. عاود إلا بغيتي.';
+
+  @override
+  String get liveRetry => 'عاود';
+
+  @override
+  String get liveMute => 'سكت الميكرو';
+
+  @override
+  String get liveUnmute => 'حل الميكرو';
+
+  @override
+  String get liveSwitchCamera => 'بدل الكاميرا';
+
+  @override
+  String get liveEnd => 'سالي';
+
+  @override
+  String get liveNoCamera => 'ما لقيتش كاميرا فهاد التيليفون.';
+
+  @override
+  String get liveNeedsInternet => 'الكاميرا المباشرة خاصها الأنترنيت.';
+
+  @override
+  String get liveAiLabel => 'AI · Gemini Live';
+
+  @override
+  String get cameraRationaleTitle => 'نشوف معاك؟';
+
+  @override
+  String get cameraRationaleBody =>
+      'باش نشوف آش كتوريني ونفهمك، خاصني الكاميرا والميكرو. الصور (تقريبا وحدة فالثانية) والصوت كيمشيو مباشرة لـ Google Gemini غير وقت الجلسة. التطبيق ما كيخزن والو.';
+
+  @override
+  String get cameraDenied =>
+      'بلا الكاميرا والميكرو ما نقدرش نشوف. تقدر تعطيهم من الإعدادات.';
+
+  @override
+  String get openCamera => 'الكاميرا';
+
+  @override
+  String get robotNameTitle => 'سمية الروبو';
+
+  @override
+  String get robotNameHint => 'مثلا: زيزو، Bobo… (خليها خاوية = صاحبي)';
+
+  @override
+  String get robotNameDialogTitle => 'شنو بغيتي تسميني؟';
+
+  @override
+  String robotNameSaved(String name) {
+    return 'صافي، دابا سميتي $name!';
+  }
+
+  @override
+  String get voiceGenderTitle => 'الصوت ديال الروبو';
+
+  @override
+  String get voiceMale => 'راجل';
+
+  @override
+  String get voiceFemale => 'مرا';
+
+  @override
+  String get voiceGenderNote =>
+      'صوت السيرفر (Gemini) كيتبدل مباشرة. صوت التيليفون كيتبع الأصوات اللي فالجهاز: إلا ما كانش صوت ديال راجل كنهبطو الطون شوية.';
+
+  @override
+  String get wakeByNameTitle => 'جاوب ملي نعيط عليك بسميتك';
+
+  @override
+  String wakeByNameSubtitle(String name) {
+    return 'غير ملي التطبيق محلول. قول «$name» (ولا «$name، شنو الجو اليوم؟») بلا ما تضغط. كيصرف شوية ديال البطارية، وبعض التيليفونات كيديرو بيب ملي كيعاود يسمع.';
+  }
+
+  @override
+  String get wakeByNameNoMic => 'خاص الإذن ديال الميكرو باش نسمع سميتي.';
+
+  @override
+  String wakeListening(String name) {
+    return 'كنتسنا تعيط عليا: $name';
+  }
+
+  @override
+  String get keepScreenOn => 'خلي الشاشة شاعلة فوجه الروبو';
 }

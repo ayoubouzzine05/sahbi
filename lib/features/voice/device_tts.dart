@@ -10,12 +10,18 @@ class DeviceTts implements TtsProvider {
   DeviceTts({
     FlutterTts? tts,
     required this.voiceName,
+    this.gender,
     required this.rate,
     required this.pitch,
   }) : _tts = tts ?? FlutterTts();
 
   final FlutterTts _tts;
   final String? Function() voiceName;
+
+  /// 'male' | 'female'. Android does not report voice gender, so with no
+  /// explicit voice chosen we look for a voice whose name says "male" and,
+  /// failing that, lower the pitch a little for "male".
+  final String Function()? gender;
   final double Function() rate;
   final double Function() pitch;
   StreamController<TtsEvent>? _ctrl;
@@ -97,6 +103,7 @@ class DeviceTts implements TtsProvider {
         }
         await _tts.setLanguage(locale);
         final vn = voiceName();
+        var pitchFactor = 1.0;
         if (vn != null) {
           final all = await voices();
           final match = all.where((v) => v.name == vn).toList();
@@ -106,9 +113,17 @@ class DeviceTts implements TtsProvider {
               'locale': match.first.locale,
             });
           }
+        } else if (gender != null) {
+          final g = gender!();
+          final pick = pickGenderVoice(await voices(), locale, g);
+          if (pick != null) {
+            await _tts.setVoice({'name': pick.name, 'locale': pick.locale});
+          } else if (g == 'male') {
+            pitchFactor = maleFallbackPitch;
+          }
         }
         await _tts.setSpeechRate(rate());
-        await _tts.setPitch(pitch());
+        await _tts.setPitch((pitch() * pitchFactor).clamp(0.5, 2.0));
         await _tts.awaitSpeakCompletion(false);
         final r = await _tts.speak(text);
         if (r != 1 && r != null) {
@@ -126,4 +141,23 @@ class DeviceTts implements TtsProvider {
     await _tts.stop();
     _finish(const TtsDone(interrupted: true));
   }
+}
+
+/// Pitch multiplier used for "male" when no voice says it is male.
+const maleFallbackPitch = 0.8;
+
+/// A voice for [locale] whose name explicitly says [gender] (some engines,
+/// e.g. Samsung, name voices "...-male-..."). Null when none does.
+TtsVoice? pickGenderVoice(List<TtsVoice> voices, String locale, String gender) {
+  final lang = locale.toLowerCase().split(RegExp('[-_]')).first;
+  final want = RegExp(gender == 'male' ? r'(^|[^a-z])male' : 'female');
+  for (final v in voices) {
+    final n = v.name.toLowerCase();
+    final l = v.locale.toLowerCase();
+    if (!l.startsWith(lang)) continue;
+    if (want.hasMatch(n) && !(gender == 'male' && n.contains('female'))) {
+      return v;
+    }
+  }
+  return null;
 }

@@ -34,4 +34,26 @@ void main() {
       );
     });
   }
+
+  // Dashboard mode: only eyes, brows and mouth over the whole screen.
+  for (final e in [Emotion.neutral, Emotion.happy, Emotion.sad]) {
+    testWidgets('full-screen face ${e.name}', (t) async {
+      await t.binding.setSurfaceSize(const Size(200, 400));
+      addTearDown(() => t.binding.setSurfaceSize(null));
+      await t.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: RobotFace(
+            animate: false,
+            fullScreen: true,
+            inputs: FaceInputs(emotion: e, intensity: 1),
+          ),
+        ),
+      );
+      await expectLater(
+        find.byType(RobotFace),
+        matchesGoldenFile('goldens/face_full_${e.name}.png'),
+      );
+    });
+  }
 }

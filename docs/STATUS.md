@@ -1,4 +1,4 @@
-# Status (2026-11-17)
+# Status (2026-11-18)
 
 DONE = implemented and verified by commands run here. PARTIAL = part done. NOT DONE = missing. NOT VERIFIED = written but could not be run here; the reason is given.
 
@@ -88,7 +88,22 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 49 | README, backend/README, API_KEYS, FEATURES, STATUS, ENVIRONMENT, ASSETS_LICENSES (§17) | DONE | files present |
 | 50 | Screenshots from a real run (§17) | NOT DONE | no device run; golden PNGs are test renders, not screenshots |
 
+## Follow-up 3 (2026-11-18): Darija, live camera, face dashboard, male voice, custom name, wake by name
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| F3.1 | Stronger Moroccan Darija: prompt v1.1.0 with explicit Darija vocabulary/grammar rules, banned Egyptian/Levantine/Gulf/fus7a markers, bad→good examples; `tts_text` stays Darija in Arabic script | DONE (prompt) / **NOT VERIFIED** on real replies | backend test checks the rules are in the prompt; quality depends on the model |
+| F3.2 | Live camera ("7el camera", "chouf hadi", camera button): camera ≈1 JPEG/s + mic PCM 16 kHz → Gemini Live (`gemini-3.8-live`), voice answer 24 kHz PCM, captions, barge-in, goAway/session resumption, 10-min free-quota guard | DONE (code + unit tests) / **NOT VERIFIED** on a phone or against Google | `/v1/live/token` (single-use ephemeral token, locked model/prompt/voice, `fieldMask` as in google-genai's SDK), LiveSession protocol tests with a fake socket, 3 backend tests |
+| F3.3 | Dashboard = full-screen face (eyes, brows, mouth only), controls fade after 6 s and stay tappable, no tab bar on home, keep-screen-on setting | DONE (host) | 3 new goldens `face_full_*.png` (reviewed), app_shell_test |
+| F3.4 | Male voice by default: cloud TTS via Gemini TTS (`Puck`, female `Aoede`) or Azure Jamal/Mouna; live voice male; device TTS picks a voice named "male" or lowers pitch ×0.8; Settings male/female picker | DONE (code) / **NOT VERIFIED** (Gemini TTS not called live from here; device voices vary by phone) | GeminiTtsProvider tests (documented `/v1beta/interactions` shape), pickGenderVoice test |
+| F3.5 | Custom robot name: Settings field, persisted, sent as `robot_name` to chat and live prompts, used in UI and offline "who are you" | DONE | AppSettings tests, widget test (name shown + persisted), backend prompt test |
+| F3.6 | Wake by name while the app is open: on-device recogniser in short sessions, Arabic/Latin phonetic matching ("Zizou" = "زيزو"), "name" → opens mic, "name + question" → sends it; pauses while talking, in background and in live camera | DONE (logic + tests) / **NOT VERIFIED** on a phone | 12 matcher/controller tests. Known limits: some phones beep each time listening restarts; uses battery; needs the mic permission |
+
 ## Bugs found and fixed by testing in this pass
+
+- Follow-up 3: the phonetic matcher collapsed "Zizou" to one consonant (repeats separated by a vowel were merged) and "look" became "lok" after normalisation, so the English camera phrase was missed; a refused Live connection reported "closed" twice. All three were caught by the new tests and fixed.
+- Follow-up 3: in the big full-screen face the eye glow showed hard clip edges (seen in the golden). It is now blurred from the visible eye shape.
+- Follow-up 3: an ephemeral token with a locked setup and **no** `fieldMask` makes Google ignore the app's whole setup message, which would have broken session resumption. A `fieldMask` is now sent.
 
 - **Arabic (default) and French UI threw "No MaterialLocalizations found"** in the navigation bar. Cause: the generated `L10n.localizationsDelegates` serves the legacy material type. Fixed by using material_ui's delegates.
 - TTS `interrupt()` left `speak()` pending forever. An interrupted cloud utterance then fell back to device TTS and started talking again. `interrupt` could also block on a busy engine.

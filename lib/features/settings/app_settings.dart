@@ -31,6 +31,11 @@ class AppSettings {
     this.robotExperimental = false,
     this.debugUnlocked = false,
     this.micRationaleSeen = false,
+    this.robotName = '',
+    this.voiceGender = 'male',
+    this.wakeByName = false,
+    this.cameraRationaleSeen = false,
+    this.keepScreenOn = true,
   });
 
   final String uiLocale; // ar | fr | en
@@ -64,6 +69,26 @@ class AppSettings {
   final bool debugUnlocked;
   final bool micRationaleSeen;
 
+  /// Name the user gave the robot ('' = default صاحبي / Sahbi). Max 30 chars.
+  final String robotName;
+
+  /// 'male' | 'female' — voice preference for cloud, live and device TTS.
+  final String voiceGender;
+
+  /// Listen for [robotName] while the app is open (on-device recogniser),
+  /// then answer without pressing the mic.
+  final bool wakeByName;
+  final bool cameraRationaleSeen;
+
+  /// Keep the screen awake while the face dashboard is visible.
+  final bool keepScreenOn;
+
+  static const maxRobotNameLength = 30;
+
+  /// Name shown in the UI and used for wake-by-name.
+  String displayRobotName(String fallback) =>
+      robotName.trim().isEmpty ? fallback : robotName.trim();
+
   bool get latinDarija => darijaScript == 'latin';
 
   AppSettings copyWith({
@@ -89,6 +114,11 @@ class AppSettings {
     bool? robotExperimental,
     bool? debugUnlocked,
     bool? micRationaleSeen,
+    String? robotName,
+    String? voiceGender,
+    bool? wakeByName,
+    bool? cameraRationaleSeen,
+    bool? keepScreenOn,
     bool clearDeviceVoice = false,
   }) {
     return AppSettings(
@@ -118,6 +148,11 @@ class AppSettings {
       robotExperimental: robotExperimental ?? this.robotExperimental,
       debugUnlocked: debugUnlocked ?? this.debugUnlocked,
       micRationaleSeen: micRationaleSeen ?? this.micRationaleSeen,
+      robotName: robotName == null ? this.robotName : cleanRobotName(robotName),
+      voiceGender: voiceGender ?? this.voiceGender,
+      wakeByName: wakeByName ?? this.wakeByName,
+      cameraRationaleSeen: cameraRationaleSeen ?? this.cameraRationaleSeen,
+      keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     );
   }
 
@@ -144,7 +179,24 @@ class AppSettings {
     'robotExperimental': robotExperimental,
     'debugUnlocked': debugUnlocked,
     'micRationaleSeen': micRationaleSeen,
+    'robotName': robotName,
+    'voiceGender': voiceGender,
+    'wakeByName': wakeByName,
+    'cameraRationaleSeen': cameraRationaleSeen,
+    'keepScreenOn': keepScreenOn,
   };
+
+  /// Trims, collapses whitespace, drops control/markup characters, caps length.
+  static String cleanRobotName(String raw) {
+    final t = raw
+        .replaceAll(RegExp(r'[\u0000-\u001F"{}<>\[\]\\]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final runes = t.runes.toList();
+    return runes.length > maxRobotNameLength
+        ? String.fromCharCodes(runes.take(maxRobotNameLength)).trim()
+        : t;
+  }
 
   static AppSettings fromJson(Map<String, dynamic> j) {
     const d = AppSettings();
@@ -186,6 +238,11 @@ class AppSettings {
       robotExperimental: pick('robotExperimental', d.robotExperimental),
       debugUnlocked: pick('debugUnlocked', d.debugUnlocked),
       micRationaleSeen: pick('micRationaleSeen', d.micRationaleSeen),
+      robotName: cleanRobotName(pick('robotName', d.robotName)),
+      voiceGender: oneOf('voiceGender', ['male', 'female'], d.voiceGender),
+      wakeByName: pick('wakeByName', d.wakeByName),
+      cameraRationaleSeen: pick('cameraRationaleSeen', d.cameraRationaleSeen),
+      keepScreenOn: pick('keepScreenOn', d.keepScreenOn),
     );
   }
 

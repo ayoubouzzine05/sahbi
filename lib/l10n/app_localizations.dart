@@ -1370,6 +1370,204 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Speak now…'**
   String get listeningHint;
+
+  /// No description provided for @liveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live camera'**
+  String get liveTitle;
+
+  /// No description provided for @liveConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get liveConnecting;
+
+  /// No description provided for @liveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show me something and ask about it'**
+  String get liveHint;
+
+  /// No description provided for @liveReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting…'**
+  String get liveReconnecting;
+
+  /// No description provided for @liveNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Live camera is not configured on the server (needs a Gemini key).'**
+  String get liveNotConfigured;
+
+  /// No description provided for @liveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start the live camera.'**
+  String get liveError;
+
+  /// No description provided for @liveEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Session ended.'**
+  String get liveEnded;
+
+  /// No description provided for @liveTimeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Session stopped after 10 minutes to save the free quota. Start again if you like.'**
+  String get liveTimeLimit;
+
+  /// No description provided for @liveRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get liveRetry;
+
+  /// No description provided for @liveMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute mic'**
+  String get liveMute;
+
+  /// No description provided for @liveUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute mic'**
+  String get liveUnmute;
+
+  /// No description provided for @liveSwitchCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch camera'**
+  String get liveSwitchCamera;
+
+  /// No description provided for @liveEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get liveEnd;
+
+  /// No description provided for @liveNoCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'No camera found on this phone.'**
+  String get liveNoCamera;
+
+  /// No description provided for @liveNeedsInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'Live camera needs the internet.'**
+  String get liveNeedsInternet;
+
+  /// No description provided for @liveAiLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · Gemini Live'**
+  String get liveAiLabel;
+
+  /// No description provided for @cameraRationaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shall I look with you?'**
+  String get cameraRationaleTitle;
+
+  /// No description provided for @cameraRationaleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.'**
+  String get cameraRationaleBody;
+
+  /// No description provided for @cameraDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Without camera and mic I can’t see. You can allow them in Settings.'**
+  String get cameraDenied;
+
+  /// No description provided for @openCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get openCamera;
+
+  /// No description provided for @robotNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Robot name'**
+  String get robotNameTitle;
+
+  /// No description provided for @robotNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Zizou, Bobo… (empty = Sahbi)'**
+  String get robotNameHint;
+
+  /// No description provided for @robotNameDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to call me?'**
+  String get robotNameDialogTitle;
+
+  /// No description provided for @robotNameSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it, my name is {name}!'**
+  String robotNameSaved(String name);
+
+  /// No description provided for @voiceGenderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Robot voice'**
+  String get voiceGenderTitle;
+
+  /// No description provided for @voiceMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get voiceMale;
+
+  /// No description provided for @voiceFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get voiceFemale;
+
+  /// No description provided for @voiceGenderNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The server voice (Gemini) changes right away. The phone voice depends on installed voices: if none is male, the pitch is lowered a little.'**
+  String get voiceGenderNote;
+
+  /// No description provided for @wakeByNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer when called by name'**
+  String get wakeByNameTitle;
+
+  /// No description provided for @wakeByNameSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only while the app is open. Say “{name}” (or “{name}, what’s the weather?”) without tapping. Uses some battery; some phones beep each time listening restarts.'**
+  String wakeByNameSubtitle(String name);
+
+  /// No description provided for @wakeByNameNoMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the microphone so I can hear my name.'**
+  String get wakeByNameNoMic;
+
+  /// No description provided for @wakeListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for my name: {name}'**
+  String wakeListening(String name);
+
+  /// No description provided for @keepScreenOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the screen on for the face'**
+  String get keepScreenOn;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

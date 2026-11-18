@@ -25,6 +25,10 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 | shared_preferences | 2.5.6 | BSD-3-Clause | settings, music library index |
 | cryptography | 2.9.0 | Apache-2.0 | AES-256-GCM for the memory store |
 | path_provider | 2.1.6 | BSD-3-Clause | app documents dir for the encrypted memory blob |
+| camera | 0.12.2 | BSD-3-Clause | live camera mode: preview + ~1 JPEG/s sent to Gemini Live |
+| web_socket_channel | 3.0.3 | BSD-3-Clause | Gemini Live WebSocket (ephemeral token, BidiGenerateContentConstrained) |
+| flutter_pcm_sound | 3.3.3 | Unlicense (public domain) | plays the 24 kHz PCM voice that Gemini Live streams back |
+| wakelock_plus | 1.8.2 | BSD-3-Clause | keeps the screen on while the face dashboard / live camera is visible |
 
 ## Flutter app (dev)
 
@@ -32,6 +36,7 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 |---|---|---|
 | flutter_test, integration_test | SDK | BSD-3-Clause |
 | flutter_lints | 6.0.0 | BSD-3-Clause |
+| stream_channel | 2.1.4 | BSD-3-Clause | fake WebSocket in LiveSession tests |
 
 ## Deliberately not used
 

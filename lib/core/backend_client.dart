@@ -359,6 +359,7 @@ class BackendClient {
     required String text,
     required String language,
     String? voice,
+    String? gender,
     double? rate,
     double? pitch,
   }) async {
@@ -371,6 +372,7 @@ class BackendClient {
               'text': text,
               'language': language,
               'voice': ?voice,
+              'gender': ?gender,
               'rate': ?rate,
               'pitch': ?pitch,
             }),
@@ -378,5 +380,57 @@ class BackendClient {
           .timeout(timeout),
     );
     return res.bodyBytes;
+  }
+
+  /// Single-use Gemini Live token (camera mode). The backend locks model,
+  /// prompt and voice into the token; the API key never reaches the app.
+  Future<LiveTokenInfo> liveToken({
+    String? robotName,
+    String? userName,
+    required String gender,
+    required String replyLanguage,
+  }) async {
+    final res = await _authed(
+      (h) => _http
+          .post(
+            _uri('/v1/live/token'),
+            headers: {...h, 'content-type': 'application/json'},
+            body: jsonEncode({
+              'robot_name': ?robotName,
+              'user_name': ?userName,
+              'gender': gender,
+              'reply_language': replyLanguage,
+            }),
+          )
+          .timeout(timeout),
+    );
+    return LiveTokenInfo.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+}
+
+class LiveTokenInfo {
+  const LiveTokenInfo({
+    required this.token,
+    required this.wsUrl,
+    required this.model,
+    required this.voice,
+  });
+  final String token;
+  final String wsUrl;
+  final String model;
+  final String voice;
+
+  static LiveTokenInfo fromJson(Map<String, dynamic> j) {
+    final token = j['token'];
+    final ws = j['ws_url'];
+    if (token is! String || ws is! String || !ws.startsWith('wss://')) {
+      throw const FormatException('bad live token response');
+    }
+    return LiveTokenInfo(
+      token: token,
+      wsUrl: ws,
+      model: '${j['model'] ?? ''}',
+      voice: '${j['voice'] ?? ''}',
+    );
   }
 }

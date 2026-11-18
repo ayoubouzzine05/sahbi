@@ -44,6 +44,7 @@ class RobotFace extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.animate = true,
+    this.fullScreen = false,
     this.semanticLabel,
   });
 
@@ -54,6 +55,9 @@ class RobotFace extends StatefulWidget {
 
   /// false = static frame (golden tests).
   final bool animate;
+
+  /// Dashboard mode: draw only eyes/brows/mouth over the whole area.
+  final bool fullScreen;
   final String? semanticLabel;
 
   @override
@@ -281,6 +285,7 @@ class _RobotFaceState extends State<RobotFace>
                       listenLevel: widget.inputs.listenLevel,
                       musicNotes:
                           widget.inputs.music && !widget.inputs.speaking,
+                      fullScreen: widget.fullScreen,
                     ),
                   ),
                 ),

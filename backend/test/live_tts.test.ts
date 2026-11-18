@@ -103,6 +103,10 @@ describe('Live ephemeral tokens', () => {
     expect(setup.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Aoede');
     expect(setup.systemInstruction.parts[0].text).toContain('"Zizou"');
     expect(setup.contextWindowCompression).toEqual({ slidingWindow: {} });
+    expect(setup.sessionResumption).toBeUndefined();
+    expect(body.fieldMask).toBe(
+      'model,generationConfig.responseModalities,generationConfig.speechConfig,systemInstruction.parts,inputAudioTranscription,outputAudioTranscription,contextWindowCompression.slidingWindow',
+    );
     expect(t).toMatchObject({ token: 'auth_tokens/abc123', ws_url: LIVE_WS_URL, voice: 'Aoede', model: 'gemini-3.8-live' });
     expect(JSON.stringify(t)).not.toContain('AQ.k');
   });

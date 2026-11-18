@@ -7,6 +7,9 @@
 
     <!-- Microphone: push-to-talk only. Requested at runtime after a rationale screen. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Live camera mode (show-and-explain). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- speech_to_text README: recognizer may route through Bluetooth headsets. -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

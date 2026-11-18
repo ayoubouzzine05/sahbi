@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../core/zellige.dart';
 import '../../l10n/app_localizations.dart';
+import '../voice/mic_permission.dart';
 import '../voice/voice_types.dart';
 import 'app_settings.dart';
 
@@ -23,6 +24,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   );
   late final TextEditingController _name = TextEditingController(
     text: ref.read(settingsProvider).userName,
+  );
+  late final TextEditingController _robot = TextEditingController(
+    text: ref.read(settingsProvider).robotName,
   );
   List<TtsVoice>? _voices;
   int _versionTaps = 0;
@@ -45,11 +49,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _url.dispose();
     _name.dispose();
+    _robot.dispose();
     super.dispose();
   }
 
   void _set(AppSettings Function(AppSettings) f) =>
       ref.read(settingsProvider.notifier).update(f);
+
+  /// Wake-by-name needs the mic permission; ask before switching it on.
+  Future<void> _setWakeByName(bool on) async {
+    if (!on) {
+      _set((x) => x.copyWith(wakeByName: false));
+      return;
+    }
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final perm = ref.read(micPermissionProvider);
+    var st = await perm.status();
+    if (st != MicStatus.granted && st != MicStatus.permanentlyDenied) {
+      st = await perm.request();
+    }
+    if (st == MicStatus.granted) {
+      _set((x) => x.copyWith(wakeByName: true));
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text(l.wakeByNameNoMic)));
+    }
+  }
 
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
@@ -269,22 +294,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(l.cloudVoice),
-                  DropdownButton<String>(
-                    isExpanded: true,
-                    value: s.cloudVoice,
-                    items: const [
-                      // Verified in Azure Speech language-support docs (ar-MA).
-                      DropdownMenuItem(
-                        value: 'ar-MA-JamalNeural',
-                        child: Text('ar-MA · Jamal (Azure)'),
+                  Text(l.voiceGenderTitle),
+                  const SizedBox(height: 6),
+                  _seg(
+                    [('male', l.voiceMale), ('female', l.voiceFemale)],
+                    s.voiceGender,
+                    (v) => _set((x) => x.copyWith(voiceGender: v)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 4),
+                    child: Text(
+                      l.voiceGenderNote,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: SahbiColors.textSecondary,
                       ),
-                      DropdownMenuItem(
-                        value: 'ar-MA-MounaNeural',
-                        child: Text('ar-MA · Mouna (Azure)'),
-                      ),
-                    ],
-                    onChanged: (v) => _set((x) => x.copyWith(cloudVoice: v)),
+                    ),
                   ),
                   Row(
                     children: [
@@ -335,15 +360,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onChanged: (v) => _set((x) => x.copyWith(tapFaceToTalk: v)),
                   ),
                   SwitchListTile(
+                    key: const Key('wake_by_name'),
                     contentPadding: EdgeInsets.zero,
-                    title: Text(l.wakeWord),
-                    subtitle: AppConfig.wakeWordAvailable
-                        ? null
-                        : Text(l.wakeWordUnavailable),
-                    value: AppConfig.wakeWordAvailable && s.wakeWordEnabled,
-                    onChanged: AppConfig.wakeWordAvailable
-                        ? (v) => _set((x) => x.copyWith(wakeWordEnabled: v))
-                        : null,
+                    title: Text(l.wakeByNameTitle),
+                    subtitle: Text(
+                      l.wakeByNameSubtitle(s.displayRobotName(l.appTitle)),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: s.wakeByName,
+                    onChanged: _setWakeByName,
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.keepScreenOn),
+                    value: s.keepScreenOn,
+                    onChanged: (v) => _set((x) => x.copyWith(keepScreenOn: v)),
                   ),
                   Text(
                     l.darijaQualityNote,
@@ -498,6 +529,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  TextField(
+                    key: const Key('robot_name'),
+                    controller: _robot,
+                    maxLength: AppSettings.maxRobotNameLength,
+                    decoration: InputDecoration(
+                      labelText: l.robotNameTitle,
+                      hintText: l.robotNameHint,
+                      prefixIcon: const Icon(Icons.smart_toy_outlined),
+                    ),
+                    onChanged: (v) => _set((x) => x.copyWith(robotName: v)),
+                  ),
+                  const SizedBox(height: 4),
                   TextField(
                     controller: _name,
                     decoration: InputDecoration(labelText: l.userName),

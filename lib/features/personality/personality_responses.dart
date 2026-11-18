@@ -67,8 +67,8 @@ class PersonalityResponses {
 
   static const _morning = [
     Line(
-      darijaAr: 'صباح الخير أ صاحبي! نتا واجد لنهار زوين؟',
-      darijaLatin: 'Sba7 lkhir a sahbi! Nta wajed l nhar zwin?',
+      darijaAr: 'صباح الخير أ صاحبي! واجد لواحد النهار زوين؟',
+      darijaLatin: 'Sba7 lkhir a sahbi! Wajed l wa7ed nhar zwin?',
       msa: 'صباح الخير يا صديقي! هل أنت مستعد ليوم جميل؟',
       fr: 'Bonjour mon pote ! Prêt pour une belle journée ?',
       en: 'Good morning, buddy! Ready for a great day?',
@@ -143,15 +143,31 @@ class PersonalityResponses {
     return null;
   }
 
-  Line forIntent(OfflineIntent intent, DateTime now) => switch (intent) {
-    OfflineIntent.greeting => greetingFor(now),
-    OfflineIntent.howAreYou => pick(_howAreYou),
-    OfflineIntent.whoAreYou => pick(_whoAreYou),
-    OfflineIntent.thanks => pick(_thanks),
-    OfflineIntent.joke => pick(_jokes),
-    OfflineIntent.bye => pick(_bye),
-    OfflineIntent.love => pick(_love),
-  };
+  Line forIntent(OfflineIntent intent, DateTime now, {String robotName = ''}) =>
+      switch (intent) {
+        OfflineIntent.greeting => greetingFor(now),
+        OfflineIntent.howAreYou => pick(_howAreYou),
+        OfflineIntent.whoAreYou =>
+          robotName.trim().isEmpty
+              ? pick(_whoAreYou)
+              : whoAreYouNamed(robotName),
+        OfflineIntent.thanks => pick(_thanks),
+        OfflineIntent.joke => pick(_jokes),
+        OfflineIntent.bye => pick(_bye),
+        OfflineIntent.love => pick(_love),
+      };
+
+  /// "Who are you?" with the name the user chose.
+  static Line whoAreYouNamed(String name) {
+    final n = name.trim();
+    return Line(
+      darijaAr: 'أنا $n، الروبو الصغير ديالك اللي ساكن فالتيليفون.',
+      darijaLatin: 'Ana $n, rrobot sghir dyalk li saken f tilifoun.',
+      msa: 'أنا $n، روبوتك الصغير الذي يسكن في هاتفك.',
+      fr: 'Je suis $n, ton petit robot qui vit dans ton téléphone.',
+      en: 'I am $n, your little robot buddy living in your phone.',
+    );
+  }
 
   static const _howAreYou = [
     Line(

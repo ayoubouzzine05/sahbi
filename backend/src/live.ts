@@ -73,17 +73,34 @@ export async function createLiveToken(
       outputAudioTranscription: {},
       // Audio+video sessions are limited to ~2 min without compression.
       contextWindowCompression: { slidingWindow: {} },
-      sessionResumption: {},
     },
   };
+  // Lock exactly these fields; the rest (sessionResumption handle,
+  // realtimeInputConfig) comes from the app's setup message so a dropped
+  // connection can be resumed. Same mask format as Google's SDK.
+  const tokenBody = { ...body, fieldMask: fieldMaskFor(body.bidiGenerateContentSetup) };
   const res = await fetchWithRetry(
     fetchImpl,
     `${base}/v1beta/auth_tokens`,
-    { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': opts.apiKey }, body: JSON.stringify(body) },
+    { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': opts.apiKey }, body: JSON.stringify(tokenBody) },
     { timeoutMs: opts.timeoutMs, retries: 1 },
   );
   await expectOk(res, 'Live token');
   const json = (await res.json()) as { name?: string };
   if (!json.name) throw new ServiceError('upstream_error', 'Live token response had no token', 502);
   return { token: json.name, model: opts.model, ws_url: LIVE_WS_URL, voice, expires_at: expire, new_session_expires_at: newSession };
+}
+
+/**
+ * Field mask over the locked setup, two levels deep, as built by
+ * google-genai's tokens._get_field_masks (e.g. "generationConfig.speechConfig").
+ */
+export function fieldMaskFor(setup: Record<string, unknown>): string {
+  const out: string[] = [];
+  for (const [k, v] of Object.entries(setup)) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length) {
+      for (const kk of Object.keys(v)) out.push(`${k}.${kk}`);
+    } else out.push(k);
+  }
+  return out.join(',');
 }

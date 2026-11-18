@@ -8,6 +8,7 @@ import 'features/chat/chat_controller.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/debug/debug_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/live/live_screen.dart';
 import 'features/memory/memory_screen.dart';
 import 'features/music/music_screen.dart';
 import 'features/robot_link/robot_link_screen.dart';
@@ -22,6 +23,12 @@ GoRouter buildRouter() => GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
+    // Full-screen live camera, above the tab shell.
+    GoRoute(
+      path: '/live',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (_, _) => const LiveScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => _Shell(shell: shell),
       branches: [
@@ -82,10 +89,12 @@ class SahbiApp extends ConsumerStatefulWidget {
   ConsumerState<SahbiApp> createState() => _SahbiAppState();
 }
 
-class _SahbiAppState extends ConsumerState<SahbiApp> {
+class _SahbiAppState extends ConsumerState<SahbiApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final router = ref.read(routerProvider);
     // Commands like "7el settings" / voice listen requests need navigation
     // and the mic-permission flow, which live in the UI layer.
@@ -93,6 +102,7 @@ class _SahbiAppState extends ConsumerState<SahbiApp> {
       updateSettings: ref.read(settingsProvider.notifier).update,
       openSettings: () => router.go('/settings'),
       openMusic: () => router.go('/music'),
+      openCamera: () => router.push('/live'),
       requestListen: () async {
         final ctx = rootNavigatorKey.currentContext;
         if (ctx == null || !ctx.mounted) return false;
@@ -104,6 +114,21 @@ class _SahbiAppState extends ConsumerState<SahbiApp> {
     ref.read(companionProvider).start();
     ref.read(memoryStoreProvider);
     ref.read(robotLinkProvider);
+    // Wake-by-name only runs while the app is in the foreground.
+    ref.read(wakeNameProvider);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    ref
+        .read(wakeNameProvider)
+        .setForeground(state == AppLifecycleState.resumed);
   }
 
   @override
@@ -139,42 +164,46 @@ class _Shell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = L10n.of(context);
     final playing = ref.watch(musicControllerProvider.select((m) => m.playing));
+    // The home tab is the full-screen face: no tab bar there (its own
+    // buttons navigate); every other tab shows the bar to come back.
     return Scaffold(
       body: shell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        backgroundColor: SahbiColors.surface,
-        indicatorColor: SahbiColors.turquoise.withValues(alpha: 0.18),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.face_retouching_natural_outlined),
-            selectedIcon: const Icon(Icons.face_retouching_natural),
-            label: l.tabHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.chat_bubble_outline_rounded),
-            selectedIcon: const Icon(Icons.chat_bubble_rounded),
-            label: l.tabChat,
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: playing,
-              smallSize: 8,
-              backgroundColor: SahbiColors.green,
-              child: const Icon(Icons.music_note_outlined),
+      bottomNavigationBar: shell.currentIndex == 0
+          ? null
+          : NavigationBar(
+              selectedIndex: shell.currentIndex,
+              onDestinationSelected: (i) =>
+                  shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              backgroundColor: SahbiColors.surface,
+              indicatorColor: SahbiColors.turquoise.withValues(alpha: 0.18),
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.face_retouching_natural_outlined),
+                  selectedIcon: const Icon(Icons.face_retouching_natural),
+                  label: l.tabHome,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.chat_bubble_outline_rounded),
+                  selectedIcon: const Icon(Icons.chat_bubble_rounded),
+                  label: l.tabChat,
+                ),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: playing,
+                    smallSize: 8,
+                    backgroundColor: SahbiColors.green,
+                    child: const Icon(Icons.music_note_outlined),
+                  ),
+                  selectedIcon: const Icon(Icons.music_note_rounded),
+                  label: l.tabMusic,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.tune_outlined),
+                  selectedIcon: const Icon(Icons.tune_rounded),
+                  label: l.tabSettings,
+                ),
+              ],
             ),
-            selectedIcon: const Icon(Icons.music_note_rounded),
-            label: l.tabMusic,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.tune_outlined),
-            selectedIcon: const Icon(Icons.tune_rounded),
-            label: l.tabSettings,
-          ),
-        ],
-      ),
     );
   }
 }

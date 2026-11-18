@@ -10,6 +10,7 @@ import 'package:sahbi/features/face/robot_face.dart';
 import 'package:sahbi/features/music/music_screen.dart';
 import 'package:sahbi/features/memory/memory_store.dart';
 import 'package:sahbi/features/settings/app_settings.dart';
+import 'package:sahbi/features/settings/settings_screen.dart';
 import 'package:sahbi/features/voice/mic_permission.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -76,10 +77,13 @@ void main() {
     await pumpApp(t);
     expect(find.byType(RobotFace), findsWidgets);
     expect(
-      Directionality.of(t.element(find.byType(NavigationBar))),
+      Directionality.of(t.element(find.byType(RobotFace).first)),
       TextDirection.rtl,
     );
-    expect(find.text('الإعدادات'), findsOneWidget);
+    // Dashboard = full-screen face: no tab bar, buttons navigate instead.
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byTooltip('الإعدادات'), findsOneWidget);
+    expect(find.text('صاحبي'), findsWidgets, reason: 'default robot name');
     // No backend URL configured → honest banner, not a fake AI.
     expect(
       find.text('السيرفر ما مضبوطش. زيد العنوان فالإعدادات.'),
@@ -91,12 +95,13 @@ void main() {
   testWidgets('English UI is left-to-right; tabs navigate', (t) async {
     await pumpApp(t, settings: const AppSettings(uiLocale: 'en'));
     expect(
-      Directionality.of(t.element(find.byType(NavigationBar))),
+      Directionality.of(t.element(find.byType(RobotFace).first)),
       TextDirection.ltr,
     );
 
-    await t.tap(find.text('Chat'));
+    await t.tap(find.byTooltip('Message Sahbi…'));
     await frames(t);
+    expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byKey(const Key('chat_input')), findsOneWidget);
     expect(find.byKey(const Key('chat_send')), findsOneWidget);
 
@@ -131,7 +136,7 @@ void main() {
         t,
         settings: const AppSettings(uiLocale: 'en', cloudVoiceEnabled: false),
       );
-      await t.tap(find.text('Chat'));
+      await t.tap(find.byTooltip('Message Sahbi…'));
       await frames(t);
       await t.enterText(find.byKey(const Key('chat_input')), 'chno smitek?');
       await t.pump(); // send button enables on the next frame
@@ -155,10 +160,42 @@ void main() {
   testWidgets('French UI loads', (t) async {
     await pumpApp(t, settings: const AppSettings(uiLocale: 'fr'));
     expect(
-      Directionality.of(t.element(find.byType(NavigationBar))),
+      Directionality.of(t.element(find.byType(RobotFace).first)),
       TextDirection.ltr,
     );
     expect(find.byType(RobotFace), findsWidgets);
+    await unmount(t);
+  });
+
+  testWidgets('custom robot name is shown and remembered', (t) async {
+    await pumpApp(
+      t,
+      settings: const AppSettings(uiLocale: 'en', robotName: 'Zizou'),
+    );
+    expect(find.text('Zizou'), findsWidgets);
+    final c = ProviderScope.containerOf(t.element(find.byType(SahbiApp)));
+    c.read(routerProvider).go('/settings');
+    await frames(t);
+    await t.scrollUntilVisible(
+      find.byKey(const Key('robot_name')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SettingsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await frames(t, 2);
+    await t.enterText(find.byKey(const Key('robot_name')), '  Bobo  ');
+    await frames(t, 2);
+    expect(c.read(settingsProvider).robotName, 'Bobo');
+    final prefs = c.read(sharedPrefsProvider);
+    expect(
+      AppSettings.decode(prefs.getString('settings_v1')).robotName,
+      'Bobo',
+      reason: 'persisted',
+    );
     await unmount(t);
   });
 

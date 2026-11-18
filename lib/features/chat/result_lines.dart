@@ -102,6 +102,13 @@ Line resultLine(ActionResult r) {
         'Réglages ouverts',
         'Opened settings',
       ),
+      'Opened camera': (
+        'حليت الكاميرا، وريني آش بغيتي نشوف',
+        '7elit camera, werrini ach bghiti nchouf',
+        'فتحت الكاميرا، أرني ما تريد',
+        'Caméra ouverte, montre-moi',
+        'Camera open, show me',
+      ),
       'Opened music': (
         'حليت ليك الموسيقى',
         '7elit lik lmusic',

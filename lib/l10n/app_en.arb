@@ -423,5 +423,89 @@
   "emptyChat": "Say something!",
   "@emptyChat": {},
   "listeningHint": "Speak now…",
-  "@listeningHint": {}
+  "@listeningHint": {},
+  "liveTitle": "Live camera",
+  "@liveTitle": {},
+  "liveConnecting": "Connecting…",
+  "@liveConnecting": {},
+  "liveHint": "Show me something and ask about it",
+  "@liveHint": {},
+  "liveReconnecting": "Reconnecting…",
+  "@liveReconnecting": {},
+  "liveNotConfigured": "Live camera is not configured on the server (needs a Gemini key).",
+  "@liveNotConfigured": {},
+  "liveError": "Could not start the live camera.",
+  "@liveError": {},
+  "liveEnded": "Session ended.",
+  "@liveEnded": {},
+  "liveTimeLimit": "Session stopped after 10 minutes to save the free quota. Start again if you like.",
+  "@liveTimeLimit": {},
+  "liveRetry": "Retry",
+  "@liveRetry": {},
+  "liveMute": "Mute mic",
+  "@liveMute": {},
+  "liveUnmute": "Unmute mic",
+  "@liveUnmute": {},
+  "liveSwitchCamera": "Switch camera",
+  "@liveSwitchCamera": {},
+  "liveEnd": "End",
+  "@liveEnd": {},
+  "liveNoCamera": "No camera found on this phone.",
+  "@liveNoCamera": {},
+  "liveNeedsInternet": "Live camera needs the internet.",
+  "@liveNeedsInternet": {},
+  "liveAiLabel": "AI · Gemini Live",
+  "@liveAiLabel": {},
+  "cameraRationaleTitle": "Shall I look with you?",
+  "@cameraRationaleTitle": {},
+  "cameraRationaleBody": "To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.",
+  "@cameraRationaleBody": {},
+  "cameraDenied": "Without camera and mic I can’t see. You can allow them in Settings.",
+  "@cameraDenied": {},
+  "openCamera": "Camera",
+  "@openCamera": {},
+  "robotNameTitle": "Robot name",
+  "@robotNameTitle": {},
+  "robotNameHint": "e.g. Zizou, Bobo… (empty = Sahbi)",
+  "@robotNameHint": {},
+  "robotNameDialogTitle": "What do you want to call me?",
+  "@robotNameDialogTitle": {},
+  "robotNameSaved": "Got it, my name is {name}!",
+  "@robotNameSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceGenderTitle": "Robot voice",
+  "@voiceGenderTitle": {},
+  "voiceMale": "Male",
+  "@voiceMale": {},
+  "voiceFemale": "Female",
+  "@voiceFemale": {},
+  "voiceGenderNote": "The server voice (Gemini) changes right away. The phone voice depends on installed voices: if none is male, the pitch is lowered a little.",
+  "@voiceGenderNote": {},
+  "wakeByNameTitle": "Answer when called by name",
+  "@wakeByNameTitle": {},
+  "wakeByNameSubtitle": "Only while the app is open. Say “{name}” (or “{name}, what’s the weather?”) without tapping. Uses some battery; some phones beep each time listening restarts.",
+  "@wakeByNameSubtitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeByNameNoMic": "Allow the microphone so I can hear my name.",
+  "@wakeByNameNoMic": {},
+  "wakeListening": "Waiting for my name: {name}",
+  "@wakeListening": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keepScreenOn": "Keep the screen on for the face",
+  "@keepScreenOn": {}
 }

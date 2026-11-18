@@ -16,6 +16,7 @@ class FaceFrame {
     this.listening = false,
     this.listenLevel = 0,
     this.musicNotes = false,
+    this.fullScreen = false,
   });
 
   final FaceParams params;
@@ -31,6 +32,10 @@ class FaceFrame {
   final bool listening;
   final double listenLevel;
   final bool musicNotes;
+
+  /// Dashboard mode: the whole canvas is the face (no white body, ear pods or
+  /// visor frame) — just big glowing eyes, brows and mouth on near-black.
+  final bool fullScreen;
 }
 
 /// Draws SAHBI: a white rounded body, a dark glossy visor and glowing eyes.
@@ -42,6 +47,10 @@ class FacePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = frame.params;
+    if (frame.fullScreen) {
+      _paintFullScreen(canvas, size, p);
+      return;
+    }
     final s = math.min(size.width, size.height / 1.05);
     final center = Offset(size.width / 2, size.height / 2);
     final breathScale = 1 + 0.012 * frame.breath;
@@ -134,6 +143,43 @@ class FacePainter extends CustomPainter {
     ).paint(canvas, visorRect.size);
     canvas.restore();
 
+    _features(canvas, visorRect, p, s);
+
+    // ---- listening ring / music notes -------------------------------------------
+    if (frame.musicNotes) _notes(canvas, visorRect, p, s);
+    // glossy reflection
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          visorRect.left + s * 0.04,
+          visorRect.top + s * 0.03,
+          visorRect.width * 0.5,
+          s * 0.05,
+        ),
+        Radius.circular(s * 0.03),
+      ),
+      Paint()..color = const Color(0x12FFFFFF),
+    );
+    canvas.restore(); // visor clip
+
+    if (frame.listening) {
+      final r = visor.inflate(s * (0.012 + 0.02 * frame.listenLevel));
+      canvas.drawRRect(
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = s * 0.01
+          ..color = SahbiColors.green.withValues(
+            alpha: 0.35 + 0.5 * frame.listenLevel,
+          ),
+      );
+    }
+    canvas.restore();
+  }
+
+  /// Eyes, brows, cheeks and mouth, laid out around [area]'s centre.
+  void _features(Canvas canvas, Rect area, FaceParams p, double s) {
+    final visorRect = area;
     // ---- eyes -----------------------------------------------------------------
     final eyeW = s * 0.15 * p.eyeScale;
     final eyeH = s * 0.2 * p.eyeScale;
@@ -192,37 +238,56 @@ class FacePainter extends CustomPainter {
       p,
       s,
     );
+  }
 
-    // ---- listening ring / music notes -------------------------------------------
-    if (frame.musicNotes) _notes(canvas, visorRect, p, s);
-    // glossy reflection
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          visorRect.left + s * 0.04,
-          visorRect.top + s * 0.03,
-          visorRect.width * 0.5,
-          s * 0.05,
-        ),
-        Radius.circular(s * 0.03),
-      ),
-      Paint()..color = const Color(0x12FFFFFF),
+  void _paintFullScreen(Canvas canvas, Size size, FaceParams p) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(rect, Paint()..color = SahbiColors.visor);
+    // Soft accent glow behind the face, following the emotion colour.
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader =
+            RadialGradient(
+              colors: [
+                p.accent.withValues(alpha: 0.10 + 0.06 * p.glow),
+                p.accent.withValues(alpha: 0),
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: rect.center,
+                radius: size.shortestSide * 0.75,
+              ),
+            ),
     );
-    canvas.restore(); // visor clip
-
+    // Scale so the eye pair spans most of the short side.
+    final s = math.min(size.width / 0.62, size.height / 0.75);
+    final breath = 1 + 0.015 * frame.breath;
+    canvas.save();
+    canvas.translate(rect.center.dx, rect.center.dy);
+    canvas.rotate(p.tilt * 0.6);
+    canvas.scale(breath, breath);
+    canvas.translate(-rect.center.dx, -rect.center.dy);
+    final area = Rect.fromCenter(
+      center: rect.center.translate(0, -s * 0.02),
+      width: size.width,
+      height: size.height,
+    );
+    _features(canvas, area, p, s);
+    if (frame.musicNotes) _notes(canvas, area, p, s);
+    canvas.restore();
     if (frame.listening) {
-      final r = visor.inflate(s * (0.012 + 0.02 * frame.listenLevel));
+      final w = s * (0.012 + 0.02 * frame.listenLevel);
       canvas.drawRRect(
-        r,
+        RRect.fromRectAndRadius(rect.deflate(w), Radius.circular(s * 0.08)),
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = s * 0.01
+          ..strokeWidth = w
           ..color = SahbiColors.green.withValues(
             alpha: 0.35 + 0.5 * frame.listenLevel,
           ),
       );
     }
-    canvas.restore();
   }
 
   void _eye(
@@ -256,15 +321,30 @@ class FacePainter extends CustomPainter {
     // Glow: clipped by the lids but with room for the blur, so it never
     // shows up as a hard-edged box.
     final glowM = s * 0.07;
-    canvas.save();
-    canvas.clipPath(lidPath(glowM));
-    canvas.drawRRect(
-      rr.inflate(s * 0.012),
-      Paint()
-        ..color = p.accent.withValues(alpha: 0.35 * p.glow)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.03),
-    );
-    canvas.restore();
+    if (frame.fullScreen) {
+      // Big face: blur the visible eye shape itself, so no clip edge shows.
+      final visible = Path.combine(
+        PathOperation.intersect,
+        Path()..addRRect(rr.inflate(s * 0.012)),
+        lidPath(0),
+      );
+      canvas.drawPath(
+        visible,
+        Paint()
+          ..color = p.accent.withValues(alpha: 0.35 * p.glow)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.03),
+      );
+    } else {
+      canvas.save();
+      canvas.clipPath(lidPath(glowM));
+      canvas.drawRRect(
+        rr.inflate(s * 0.012),
+        Paint()
+          ..color = p.accent.withValues(alpha: 0.35 * p.glow)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.03),
+      );
+      canvas.restore();
+    }
     canvas.clipPath(lidPath(2));
     canvas.drawRRect(
       rr,
