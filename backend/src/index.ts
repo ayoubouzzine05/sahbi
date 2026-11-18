@@ -29,7 +29,7 @@ if (isLlmConfigured(config)) {
         : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 
-const app: FastifyInstance = await buildServer({
+const app: FastifyInstance = buildServer({
   config,
   llm,
   search: isSearchConfigured(config) ? new BraveSearchProvider(config.search.apiKey) : null,
@@ -43,9 +43,9 @@ const app: FastifyInstance = await buildServer({
   promptTemplate,
 });
 
-try {
-  await app.listen({ port: config.port, host: config.host });
-} catch (err) {
+// No top-level await here: Vercel's launcher hangs (60 s, then 500) when the
+// module awaits anything before calling listen().
+app.listen({ port: config.port, host: config.host }).catch((err: unknown) => {
   console.error(err);
   process.exit(1);
-}
+});

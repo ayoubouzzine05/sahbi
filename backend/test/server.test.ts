@@ -18,7 +18,7 @@ async function tokenFor(a: FastifyInstance): Promise<string> {
 
 describe('server', () => {
   it('health reports exactly what is configured', async () => {
-    app = await buildServer(deps({ config: config(), llm: null }));
+    app = buildServer(deps({ config: config(), llm: null }));
     const h = (await app.inject({ method: 'GET', url: '/v1/health' })).json() as { services: Record<string, { configured: boolean }> };
     expect(h.services.llm!.configured).toBe(false);
     expect(h.services.search!.configured).toBe(false);
@@ -28,7 +28,7 @@ describe('server', () => {
   });
 
   it('auth: rejects bad install ids and missing tokens', async () => {
-    app = await buildServer(deps());
+    app = buildServer(deps());
     expect((await app.inject({ method: 'POST', url: '/v1/auth/anonymous', payload: { install_id: 'x' } })).statusCode).toBe(400);
     const r = await app.inject({ method: 'POST', url: '/v1/chat', payload: { message: 'salam' } });
     expect(r.statusCode).toBe(401);
@@ -36,7 +36,7 @@ describe('server', () => {
   });
 
   it('chat streams status, deltas and a final reply over SSE', async () => {
-    app = await buildServer(deps({ script: [replyCall(goodReply)] }));
+    app = buildServer(deps({ script: [replyCall(goodReply)] }));
     const token = await tokenFor(app);
     const r = await app.inject({ method: 'POST', url: '/v1/chat', headers: { authorization: `Bearer ${token}` }, payload: { message: 'salam' } });
     expect(r.statusCode).toBe(200);
@@ -49,7 +49,7 @@ describe('server', () => {
   });
 
   it('chat with no LLM configured → 503 not_configured (no fake answer)', async () => {
-    app = await buildServer(deps({ config: config(), llm: null }));
+    app = buildServer(deps({ config: config(), llm: null }));
     const token = await tokenFor(app);
     const r = await app.inject({ method: 'POST', url: '/v1/chat', headers: { authorization: `Bearer ${token}` }, payload: { message: 'salam' } });
     expect(r.statusCode).toBe(503);
@@ -57,7 +57,7 @@ describe('server', () => {
   });
 
   it('invalid model output twice → SSE error event invalid_output', async () => {
-    app = await buildServer(deps({ script: [replyCall({ ...goodReply, intensity: 9 }), replyCall({ ...goodReply, intensity: 9 })] }));
+    app = buildServer(deps({ script: [replyCall({ ...goodReply, intensity: 9 }), replyCall({ ...goodReply, intensity: 9 })] }));
     const token = await tokenFor(app);
     const r = await app.inject({ method: 'POST', url: '/v1/chat', headers: { authorization: `Bearer ${token}` }, payload: { message: 'salam' } });
     const events = parseSse(r.body);
@@ -65,7 +65,7 @@ describe('server', () => {
   });
 
   it('validates request bodies and size limits', async () => {
-    app = await buildServer(deps({ config: config({ LLM_PROVIDER: 'openai', LLM_MODEL: 'm', LLM_API_KEY: 'k', JSON_BODY_LIMIT_BYTES: '2048' }) }));
+    app = buildServer(deps({ config: config({ LLM_PROVIDER: 'openai', LLM_MODEL: 'm', LLM_API_KEY: 'k', JSON_BODY_LIMIT_BYTES: '2048' }) }));
     const token = await tokenFor(app);
     const h = { authorization: `Bearer ${token}` };
     expect((await app.inject({ method: 'POST', url: '/v1/chat', headers: h, payload: { message: '' } })).statusCode).toBe(400);
@@ -73,7 +73,7 @@ describe('server', () => {
   });
 
   it('rate limits per install token', async () => {
-    app = await buildServer(deps({ config: config({ RATE_LIMIT_PER_MINUTE: '3' }), llm: null }));
+    app = buildServer(deps({ config: config({ RATE_LIMIT_PER_MINUTE: '3' }), llm: null }));
     const token = await tokenFor(app);
     const codes: number[] = [];
     for (let i = 0; i < 5; i++) {
@@ -83,7 +83,7 @@ describe('server', () => {
   });
 
   it('weather route works without any key', async () => {
-    app = await buildServer(deps({ config: config(), llm: null }));
+    app = buildServer(deps({ config: config(), llm: null }));
     const token = await tokenFor(app);
     const r = await app.inject({ method: 'GET', url: '/v1/weather?city=Casa', headers: { authorization: `Bearer ${token}` } });
     expect(r.statusCode).toBe(200);
@@ -91,7 +91,7 @@ describe('server', () => {
   });
 
   it('stt/tts not configured → 503', async () => {
-    app = await buildServer(deps({ config: config(), llm: null }));
+    app = buildServer(deps({ config: config(), llm: null }));
     const token = await tokenFor(app);
     const h = { authorization: `Bearer ${token}` };
     expect((await app.inject({ method: 'POST', url: '/v1/tts', headers: h, payload: { text: 'salam' } })).statusCode).toBe(503);
@@ -99,7 +99,7 @@ describe('server', () => {
   });
 
   it('CORS is closed unless origins are configured', async () => {
-    app = await buildServer(deps({ config: config(), llm: null }));
+    app = buildServer(deps({ config: config(), llm: null }));
     const r = await app.inject({ method: 'GET', url: '/v1/health', headers: { origin: 'https://evil.example' } });
     expect(r.headers['access-control-allow-origin']).toBeUndefined();
   });
