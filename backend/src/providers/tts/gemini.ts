@@ -1,4 +1,4 @@
-import { expectOk, fetchWithRetry, type FetchLike } from '../../http.js';
+import { expectGoogleOk, fetchWithRetry, type FetchLike } from '../../http.js';
 import { ServiceError } from '../../errors.js';
 import type { TtsProvider, TtsRequest } from './types.js';
 
@@ -52,7 +52,7 @@ export class GeminiTtsProvider implements TtsProvider {
       { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
       { timeoutMs: this.opts.timeoutMs, retries: 1 },
     );
-    await expectOk(res, 'TTS');
+    await expectGoogleOk(res, 'TTS');
     const json = (await res.json()) as { steps?: Array<{ type?: string; content?: Array<{ type?: string; data?: string; mime_type?: string }> }> };
     const audio = (json.steps ?? [])
       .filter((s) => s.type === 'model_output')

@@ -1,4 +1,4 @@
-import { expectOk, fetchWithRetry, type FetchLike } from './http.js';
+import { expectGoogleOk, fetchWithRetry, type FetchLike } from './http.js';
 import { ServiceError } from './errors.js';
 import { robotNameForPrompt } from './brain/context.js';
 import { DEFAULT_GEMINI_VOICE } from './providers/tts/gemini.js';
@@ -85,7 +85,7 @@ export async function createLiveToken(
     { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': opts.apiKey }, body: JSON.stringify(tokenBody) },
     { timeoutMs: opts.timeoutMs, retries: 1 },
   );
-  await expectOk(res, 'Live token');
+  await expectGoogleOk(res, 'Live token');
   const json = (await res.json()) as { name?: string };
   if (!json.name) throw new ServiceError('upstream_error', 'Live token response had no token', 502);
   return { token: json.name, model: opts.model, ws_url: LIVE_WS_URL, voice, expires_at: expire, new_session_expires_at: newSession };

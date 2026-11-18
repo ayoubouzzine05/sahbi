@@ -52,3 +52,22 @@ export async function expectOk(res: Response, what: string): Promise<Response> {
   }
   return res;
 }
+
+/**
+ * Like expectOk for Google APIs: on 401/403 the error status and message
+ * are kept (they describe the credential, never user content) so a wrong
+ * key type shows up as e.g. "UNAUTHENTICATED: API keys are not supported".
+ */
+export async function expectGoogleOk(res: Response, what: string): Promise<Response> {
+  if (res.ok) return res;
+  let detail = '';
+  if (res.status === 401 || res.status === 403) {
+    try {
+      const j = (await res.json()) as { error?: { status?: string; message?: string } };
+      detail = [j.error?.status, j.error?.message?.slice(0, 200)].filter(Boolean).join(': ');
+    } catch {
+      /* not JSON */
+    }
+  }
+  throw new ServiceError('upstream_error', `${what} returned HTTP ${res.status}${detail ? ` (${detail})` : ''}`, 502);
+}
