@@ -62,7 +62,15 @@ Error codes (JSON `{error:{code,message}}`): `not_configured` 503, `upstream_tim
 - CORS is closed unless `CORS_ORIGINS` is set (the Android app doesn't need CORS).
 - Upstream calls have timeouts and one retry on 5xx/network errors.
 
-## Deploy on Render (free)
+## Deploy on Vercel (free Hobby, no card)
+
+Import the repo at https://vercel.com/new and set:
+- Root Directory: `backend`
+- Environment variable: `LLM_API_KEY` = a Gemini key
+
+Vercel's zero-config Fastify support uses `src/index.ts`. The prompt is embedded in `src/prompt.generated.ts` (regenerate it with `npm run gen:prompt`; a test catches drift), so nothing is read from disk at runtime. `AUTH_SECRET` falls back to a value derived from `LLM_API_KEY`.
+
+## Deploy on Render (free plan; sign-up may ask for a card)
 
 Use [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi), which reads the root `render.yaml` (Gemini via its OpenAI-compatible API). See `docs/API_KEYS.md`.
 

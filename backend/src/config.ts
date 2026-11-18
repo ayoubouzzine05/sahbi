@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 /**
  * Runtime configuration. Every value comes from environment variables
  * (see ../.env.example). Secrets are never logged and never returned by any route.
@@ -40,15 +41,40 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], fallback:
   return (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
+/** Gemini through its OpenAI-compatible API (https://ai.google.dev/gemini-api/docs/openai). */
+export const GEMINI_PRESET = {
+  baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  model: 'gemini-3.8-flash', // free tier per https://ai.google.dev/gemini-api/docs/pricing (checked 2026-11-17)
+  reasoningEffort: 'low',
+  maxOutputTokens: 4096, // thinking tokens count towards output
+} as const;
+
+/**
+ * Gemini is selected by LLM_PROVIDER=gemini, or automatically when no provider
+ * is set and the key looks like a Google API key ("AIza…"), so a one-field
+ * deploy (just LLM_API_KEY) works. Explicit LLM_* values always win.
+ */
+function usesGemini(env: NodeJS.ProcessEnv): boolean {
+  const p = str(env, 'LLM_PROVIDER').toLowerCase();
+  return p === 'gemini' || (p === '' && str(env, 'LLM_API_KEY').startsWith('AIza'));
+}
+
+/** Stable per-deployment secret derived from the LLM key when AUTH_SECRET is unset
+ *  (serverless instances must agree on it; rotating the key rotates tokens). */
+export function derivedAuthSecret(apiKey: string): string {
+  return apiKey ? createHash('sha256').update(`sahbi-auth-v1:${apiKey}`).digest('hex') : '';
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const llmProvider = oneOf(str(env, 'LLM_PROVIDER', 'none'), ['anthropic', 'openai', 'none'] as const, 'none');
-  const defaultBase = llmProvider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com';
+  const gemini = usesGemini(env);
+  const llmProvider = gemini ? 'openai' : oneOf(str(env, 'LLM_PROVIDER', 'none'), ['anthropic', 'openai', 'none'] as const, 'none');
+  const defaultBase = gemini ? GEMINI_PRESET.baseUrl : llmProvider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com';
   const azureRegion = str(env, 'AZURE_SPEECH_REGION');
   const azureKey = str(env, 'AZURE_SPEECH_KEY');
   return {
     port: int(env, 'PORT', 8080),
     host: str(env, 'HOST', '0.0.0.0'),
-    authSecret: str(env, 'AUTH_SECRET'),
+    authSecret: str(env, 'AUTH_SECRET') || derivedAuthSecret(str(env, 'LLM_API_KEY')),
     corsOrigins: str(env, 'CORS_ORIGINS')
       .split(',')
       .map((s) => s.trim())
@@ -58,12 +84,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     audioBodyLimitBytes: int(env, 'AUDIO_BODY_LIMIT_BYTES', 2 * 1024 * 1024),
     llm: {
       provider: llmProvider,
-      model: str(env, 'LLM_MODEL'),
+      model: str(env, 'LLM_MODEL', gemini ? GEMINI_PRESET.model : ''),
       apiKey: str(env, 'LLM_API_KEY'),
       baseUrl: str(env, 'LLM_BASE_URL', defaultBase),
       timeoutMs: int(env, 'LLM_TIMEOUT_MS', 30000),
-      maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', 800),
-      reasoningEffort: str(env, 'LLM_REASONING_EFFORT'),
+      maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', gemini ? GEMINI_PRESET.maxOutputTokens : 800),
+      reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },
     search: {
       provider: oneOf(str(env, 'SEARCH_PROVIDER', 'none'), ['brave', 'none'] as const, 'none'),

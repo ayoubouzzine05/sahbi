@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured, loadConfig } from './config.js';
 import { AnthropicProvider } from './providers/llm/anthropic.js';
 import { OpenAiProvider } from './providers/llm/openai.js';
@@ -9,12 +6,12 @@ import { BraveSearchProvider } from './providers/search/brave.js';
 import { AzureSttProvider } from './providers/stt/azure.js';
 import { OpenAiSttProvider } from './providers/stt/openai.js';
 import { AzureTtsProvider } from './providers/tts/azure.js';
+import { PROMPT_TEMPLATE } from './prompt.generated.js';
 import { buildServer } from './server.js';
 import { getWeather } from './tools/weather.js';
 
 const config = loadConfig();
-const here = dirname(fileURLToPath(import.meta.url));
-const promptTemplate = readFileSync(join(here, '..', 'prompts', 'sahbi.md'), 'utf8');
+const promptTemplate = PROMPT_TEMPLATE;
 
 let llm: LlmProvider | null = null;
 if (isLlmConfigured(config)) {

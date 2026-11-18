@@ -18,24 +18,23 @@ Every service is optional. Anything unset is reported as `configured: false` by 
 | `OPENAI_STT_API_KEY`, `OPENAI_STT_MODEL` | OpenAI transcription | platform.openai.com | choose a current transcription model |
 | `TTS_PROVIDER`, `AZURE_TTS_VOICE` | cloud TTS | | default voice `ar-MA-JamalNeural` |
 
-## Free AI: Google Gemini + Render (phone-only setup)
+## Free AI without a card: Google Gemini + Vercel (phone-only setup)
 
-1. **Gemini key:** open https://aistudio.google.com/apikey, sign in with Google and create an API key. The free tier needs no card. On the free tier, Google may use prompts and answers to improve its products; a paid key opts out.
-2. **Deploy:** open https://render.com/deploy?repo=https://github.com/ayoubouzzine05/sahbi and sign in (for example with GitHub). Render reads `render.yaml`, asks for `LLM_API_KEY` (paste the Gemini key), and deploys `backend/` on the **free** plan in Frankfurt.
-3. **App:** in Settings → AI, set the backend URL to the service URL Render shows (`https://<name>.onrender.com`).
-4. **Free plan behaviour:** the server sleeps after 15 min idle and wakes in about 1 min. The app shows "waking the server…" and waits up to 90 s before answering offline.
+1. **Gemini key:** open https://aistudio.google.com/apikey, sign in with Google and create an API key. No card needed, and Morocco is a supported region. On the free tier, Google may use prompts and answers to improve its products.
+2. **Vercel (Hobby plan, free):**
+   1. Open https://vercel.com/signup and choose "Continue with GitHub".
+   2. Open https://vercel.com/new and import `sahbi`.
+   3. Set **Root Directory** to `backend`.
+   4. Add one environment variable, `LLM_API_KEY` = the Gemini key, and deploy.
 
-`render.yaml` sets these values:
+   Vercel detects Fastify from `src/index.ts`. Hobby has no billing cycle: if you exceed the limits, features pause instead of charging.
+3. **App:** in Settings → AI, set the backend URL to the project's **production domain** (`https://<project>.vercel.app`), not a deployment-specific preview URL. Preview URLs are behind Vercel Authentication.
 
-| Key | Value |
-|---|---|
-| `LLM_PROVIDER` | `openai` |
-| `LLM_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` |
-| `LLM_MODEL` | `gemini-3.8-flash` |
-| `LLM_REASONING_EFFORT` | `low` |
-| `LLM_MAX_OUTPUT_TOKENS` | `4096` |
+That one key is enough:
+- An `AIza…` key without `LLM_PROVIDER` selects the Gemini preset (`backend/src/config.ts`): OpenAI-compatible base URL, `gemini-3.8-flash`, `reasoning_effort=low`, 4096 output tokens. Any explicit `LLM_*` variable overrides it.
+- When `AUTH_SECRET` is unset, it is derived from the key, so all serverless instances accept the same install tokens.
 
-Change the model in Render → Environment. Free-tier rate limits are per project and shown in AI Studio.
+**Render (`render.yaml`)** also works, but its sign-up asked for a card, so it is not the default.
 
 ## Production storage
 
