@@ -25,7 +25,8 @@ export interface Config {
   };
   search: { provider: 'brave' | 'none'; apiKey: string };
   stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
-  tts: { provider: 'azure' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string };
+  tts: { provider: 'azure' | 'gemini' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string; geminiModel: string };
+  live: { model: string; enabled: boolean };
   contextTokenBudget: number;
 }
 
@@ -52,6 +53,8 @@ export const GEMINI_PRESET = {
   fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
   timeoutMs: 20000, // per model; the app waits ~45 s per request
   reasoningEffort: 'low',
+  ttsModel: 'gemini-3.8-flash-tts', // free tier (pricing page, 2026-11-18)
+  liveModel: 'gemini-3.8-live', // free tier (pricing page, 2026-11-18)
   maxOutputTokens: 4096, // thinking tokens count towards output
 } as const;
 
@@ -119,10 +122,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       openaiModel: str(env, 'OPENAI_STT_MODEL'),
     },
     tts: {
-      provider: oneOf(str(env, 'TTS_PROVIDER', 'none'), ['azure', 'none'] as const, 'none'),
+      // Gemini TTS is used automatically with a Gemini LLM key unless TTS_PROVIDER says otherwise.
+      provider: oneOf(str(env, 'TTS_PROVIDER', gemini ? 'gemini' : 'none'), ['azure', 'gemini', 'none'] as const, 'none'),
       azureKey,
       azureRegion,
       defaultVoice: str(env, 'AZURE_TTS_VOICE', 'ar-MA-JamalNeural'),
+      geminiModel: str(env, 'GEMINI_TTS_MODEL', GEMINI_PRESET.ttsModel),
+    },
+    live: {
+      // Live camera/voice mode (Gemini Live API through ephemeral tokens). Gemini only.
+      model: str(env, 'GEMINI_LIVE_MODEL', GEMINI_PRESET.liveModel),
+      enabled: gemini && str(env, 'LIVE_ENABLED', 'true') !== 'false',
     },
     contextTokenBudget: int(env, 'CONTEXT_TOKEN_BUDGET', 3000),
   };
@@ -140,5 +150,10 @@ export function isSttConfigured(c: Config): boolean {
   return false;
 }
 export function isTtsConfigured(c: Config): boolean {
+  if (c.tts.provider === 'gemini') return c.llm.provider === 'gemini' && c.llm.apiKey !== '' && c.tts.geminiModel !== '';
   return c.tts.provider === 'azure' && c.tts.azureKey !== '' && c.tts.azureRegion !== '';
+}
+
+export function isLiveConfigured(c: Config): boolean {
+  return c.live.enabled && c.llm.provider === 'gemini' && c.llm.apiKey !== '' && c.live.model !== '';
 }

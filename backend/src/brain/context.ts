@@ -25,6 +25,12 @@ export function trimHistory(history: ChatRequest['history'], budget: number): Ch
   return kept;
 }
 
+/** The user-chosen robot name, sanitised for the prompt (default صاحبي / Sahbi). */
+export function robotNameForPrompt(name: string | undefined): string {
+  const clean = (name ?? '').replace(/[\n\r"{}<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
+  return clean ? `"${clean}"` : '"صاحبي" (Sahbi)';
+}
+
 export function fillPrompt(template: string, req: ChatRequest): string {
   const s = req.settings;
   const replyLang = { darija: 'darija (Moroccan Arabic)', ar: 'ar (Modern Standard Arabic)', fr: 'fr (French)', en: 'en (English)' }[s.reply_language];
@@ -35,6 +41,7 @@ export function fillPrompt(template: string, req: ChatRequest): string {
   const summary = req.summary ? `- Summary of earlier conversation: ${req.summary.replace(/\n/g, ' ')}` : '';
   return template
     .replace(/<!--[\s\S]*?-->\n?/, '')
+    .replace('{{ROBOT_NAME}}', robotNameForPrompt(s.robot_name))
     .replace('{{HUMOR}}', s.humor.toFixed(1))
     .replace('{{FORMALITY}}', s.formality)
     .replace('{{USER_NAME}}', s.user_name ? `"${s.user_name}"` : '"sahbi" / "صاحبي" (no name given)')

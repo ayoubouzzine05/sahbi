@@ -76,6 +76,7 @@ export const ChatRequestSchema = z.object({
       humor: z.number().min(0).max(1).default(0.6),
       formality: z.enum(['casual', 'polite']).default('casual'),
       user_name: z.string().max(40).optional(),
+      robot_name: z.string().max(30).optional(),
     })
     .default({ reply_language: 'darija', darija_script: 'arabic', humor: 0.6, formality: 'casual' }),
   /** Only sent by the app when the user consented to memory. */

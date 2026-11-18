@@ -1,3 +1,4 @@
+import type { LiveOptions, LiveToken } from './live.js';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -20,6 +21,8 @@ export interface Deps {
   search: SearchProvider | null;
   stt: SttProvider | null;
   tts: TtsProvider | null;
+  /** Mints a Gemini Live ephemeral token; null when live mode is not configured. */
+  live?: ((o: LiveOptions) => Promise<LiveToken>) | null;
   weather: (city: string) => Promise<WeatherReport>;
   promptTemplate: string;
   logger?: boolean;
@@ -104,6 +107,7 @@ export function buildServer(deps: Deps): FastifyInstance {
         weather: { configured: true, provider: 'open-meteo' },
         stt: { configured: isSttConfigured(config) && !!deps.stt, provider: config.stt.provider },
         tts: { configured: isTtsConfigured(config) && !!deps.tts, provider: config.tts.provider },
+        live: { configured: !!deps.live, provider: deps.live ? 'gemini-live' : 'none' },
       },
       time: new Date().toISOString(),
     }));
@@ -198,7 +202,9 @@ export function buildServer(deps: Deps): FastifyInstance {
         .object({
           text: z.string().trim().min(1).max(1500),
           language: z.string().regex(/^[a-z]{2}-[A-Z]{2}$/).default('ar-MA'),
-          voice: z.string().regex(/^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$/).optional(),
+          // Azure neural voice id or a Gemini prebuilt voice name.
+          voice: z.string().regex(/^([a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural|[A-Z][a-z]{2,15})$/).optional(),
+          gender: z.enum(['male', 'female']).optional(),
           rate: z.number().min(0.5).max(2).optional(),
           pitch: z.number().min(0.5).max(2).optional(),
         })
@@ -207,6 +213,26 @@ export function buildServer(deps: Deps): FastifyInstance {
       try {
         const out = await deps.tts.synthesize(parsed.data);
         return reply.header('content-type', out.contentType).header('cache-control', 'no-store').send(out.audio);
+      } catch (err) {
+        return sendError(reply, err);
+      }
+    });
+
+    app.post('/v1/live/token', { preHandler: requireAuth, config: { rateLimit: { max: 6, timeWindow: '1 minute' } } }, async (req, reply) => {
+      if (!deps.live) return sendError(reply, notConfigured('Live camera'));
+      const parsed = z
+        .object({
+          robot_name: z.string().max(30).optional(),
+          user_name: z.string().max(40).optional(),
+          gender: z.enum(['male', 'female']).default('male'),
+          reply_language: z.enum(['darija', 'ar', 'fr', 'en']).default('darija'),
+        })
+        .safeParse(req.body ?? {});
+      if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: formatZodError(parsed.error) } });
+      try {
+        const d = parsed.data;
+        const t = await deps.live({ robotName: d.robot_name, userName: d.user_name, gender: d.gender, replyLanguage: d.reply_language });
+        return reply.header('cache-control', 'no-store').send(t);
       } catch (err) {
         return sendError(reply, err);
       }

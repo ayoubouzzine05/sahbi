@@ -1,6 +1,8 @@
 export interface TtsRequest {
   text: string;
   voice?: string;
+  /** Preferred voice gender when no explicit voice is given. */
+  gender?: 'male' | 'female';
   language: string;
   /** relative rate, 0.5 .. 2.0 */
   rate?: number;

@@ -1,7 +1,9 @@
 // Entrypoint for `node dist/index.js` (Docker/Render) and for Vercel's zero-config
 // Fastify support, which needs the entrypoint to import fastify itself.
 import type { FastifyInstance } from 'fastify';
-import { isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured, loadConfig } from './config.js';
+import { isLiveConfigured, isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured, loadConfig } from './config.js';
+import { createLiveToken } from './live.js';
+import { GeminiTtsProvider } from './providers/tts/gemini.js';
 import { AnthropicProvider } from './providers/llm/anthropic.js';
 import { GeminiProvider } from './providers/llm/gemini.js';
 import { OpenAiProvider } from './providers/llm/openai.js';
@@ -38,7 +40,14 @@ const app: FastifyInstance = buildServer({
       ? new AzureSttProvider(config.stt.azureKey, config.stt.azureRegion)
       : new OpenAiSttProvider(config.stt.openaiKey, config.stt.openaiModel)
     : null,
-  tts: isTtsConfigured(config) ? new AzureTtsProvider(config.tts.azureKey, config.tts.azureRegion, config.tts.defaultVoice) : null,
+  tts: !isTtsConfigured(config)
+    ? null
+    : config.tts.provider === 'gemini'
+      ? new GeminiTtsProvider({ apiKey: config.llm.apiKey, baseUrl: config.llm.baseUrl, model: config.tts.geminiModel, timeoutMs: 20000 })
+      : new AzureTtsProvider(config.tts.azureKey, config.tts.azureRegion, config.tts.defaultVoice),
+  live: isLiveConfigured(config)
+    ? (o) => createLiveToken({ apiKey: config.llm.apiKey, baseUrl: config.llm.baseUrl, model: config.live.model, timeoutMs: 15000 }, o)
+    : null,
   weather: (city) => getWeather(city),
   promptTemplate,
 });

@@ -29,7 +29,7 @@ export class AzureTtsProvider implements TtsProvider {
   ) {}
 
   async synthesize(req: TtsRequest): Promise<{ audio: Buffer; contentType: string }> {
-    const voice = req.voice || this.defaultVoice;
+    const voice = req.voice || (req.gender === 'female' ? 'ar-MA-MounaNeural' : req.gender === 'male' ? 'ar-MA-JamalNeural' : this.defaultVoice);
     const res = await fetchWithRetry(this.fetchImpl, `https://${this.region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
       method: 'POST',
       headers: {
