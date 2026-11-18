@@ -12,7 +12,7 @@ export interface Config {
   jsonBodyLimitBytes: number;
   audioBodyLimitBytes: number;
   llm: {
-    provider: 'anthropic' | 'openai' | 'none';
+    provider: 'anthropic' | 'openai' | 'gemini' | 'none';
     model: string;
     apiKey: string;
     baseUrl: string;
@@ -41,9 +41,9 @@ function oneOf<T extends string>(value: string, allowed: readonly T[], fallback:
   return (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
-/** Gemini through its OpenAI-compatible API (https://ai.google.dev/gemini-api/docs/openai). */
+/** Gemini through its native API (https://ai.google.dev/api/generate-content). */
 export const GEMINI_PRESET = {
-  baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  baseUrl: 'https://generativelanguage.googleapis.com',
   model: 'gemini-3.8-flash', // free tier per https://ai.google.dev/gemini-api/docs/pricing (checked 2026-11-17)
   reasoningEffort: 'low',
   maxOutputTokens: 4096, // thinking tokens count towards output
@@ -51,12 +51,14 @@ export const GEMINI_PRESET = {
 
 /**
  * Gemini is selected by LLM_PROVIDER=gemini, or automatically when no provider
- * is set and the key looks like a Google API key ("AIza…"), so a one-field
+ * is set and the key looks like a Google key (standard "AIza…" or the auth keys
+ * "AQ.…" that AI Studio issues since 2026-05-28), so a one-field
  * deploy (just LLM_API_KEY) works. Explicit LLM_* values always win.
  */
 function usesGemini(env: NodeJS.ProcessEnv): boolean {
   const p = str(env, 'LLM_PROVIDER').toLowerCase();
-  return p === 'gemini' || (p === '' && str(env, 'LLM_API_KEY').startsWith('AIza'));
+  const key = str(env, 'LLM_API_KEY');
+  return p === 'gemini' || (p === '' && (key.startsWith('AIza') || key.startsWith('AQ.')));
 }
 
 /** Stable per-deployment secret derived from the LLM key when AUTH_SECRET is unset
@@ -67,7 +69,7 @@ export function derivedAuthSecret(apiKey: string): string {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const gemini = usesGemini(env);
-  const llmProvider = gemini ? 'openai' : oneOf(str(env, 'LLM_PROVIDER', 'none'), ['anthropic', 'openai', 'none'] as const, 'none');
+  const llmProvider = gemini ? 'gemini' : oneOf(str(env, 'LLM_PROVIDER', 'none'), ['anthropic', 'openai', 'none'] as const, 'none');
   const defaultBase = gemini ? GEMINI_PRESET.baseUrl : llmProvider === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com';
   const azureRegion = str(env, 'AZURE_SPEECH_REGION');
   const azureKey = str(env, 'AZURE_SPEECH_KEY');

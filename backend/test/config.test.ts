@@ -6,11 +6,17 @@ import { PROMPT_TEMPLATE } from '../src/prompt.generated.js';
 describe('Gemini one-key deploy', () => {
   it('an AIza… key alone configures Gemini', () => {
     const c = loadConfig({ LLM_API_KEY: 'AIzaTEST' });
-    expect(c.llm.provider).toBe('openai');
+    expect(c.llm.provider).toBe('gemini');
     expect(c.llm.baseUrl).toBe(GEMINI_PRESET.baseUrl);
     expect(c.llm.model).toBe(GEMINI_PRESET.model);
     expect(c.llm.reasoningEffort).toBe('low');
     expect(c.llm.maxOutputTokens).toBe(4096);
+    expect(isLlmConfigured(c)).toBe(true);
+  });
+
+  it('new AI Studio auth keys (AQ.…) are recognised too', () => {
+    const c = loadConfig({ LLM_API_KEY: 'AQ.AbTEST' });
+    expect(c.llm.provider).toBe('gemini');
     expect(isLlmConfigured(c)).toBe(true);
   });
 

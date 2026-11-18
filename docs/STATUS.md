@@ -11,7 +11,7 @@ DONE = implemented and verified by commands run here. PARTIAL = part done. NOT D
 | `flutter analyze` | **No issues found** |
 | `flutter test` (unit + widget + golden) | **258 passed, 0 failed** (full run with `--concurrency=1`; default concurrency can stall this 2-CPU sandbox while loading, but each folder passes) |
 | Note | One full `flutter test` run stalled while *loading* test files (stuck at `loading robot_face_test.dart`) and was stopped at 900 s. Each file then passed on its own, and the next full run passed in 19 s. Not reproduced; recorded for transparency |
-| `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **64 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
+| `cd backend && npm ci && npm run lint && npm test && npm run build` | OK. **71 tests passed**, eslint + tsc (src and tests) clean, `npm audit --omit=dev`: 0 vulnerabilities |
 | CI smoke step from `backend.yml`, replayed locally | `grep '"llm":{"configured":false'` matches the real health JSON; unauthenticated `/v1/chat` → 401. OK |
 | Backend runtime smoke (`node dist/index.js`, no keys) | `GET /v1/health` 200 with every service `configured:false` except weather; `POST /v1/auth/anonymous` returned a 94-char token; `POST /v1/chat` → **503 not_configured**; without a token → **401** |
 | Live weather through the backend | `/v1/weather?city=Casa` → 502 `upstream_error`. Geocoding answered 200, but `api.open-meteo.com` timed out from the sandbox (curl also timed out). **NOT VERIFIED** live |
@@ -57,7 +57,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 18 | Mic rationale and denied handling (§5) | NOT VERIFIED | `lib/features/voice/mic_flow.dart`; TEST_PLAN items 1–3 |
 | 19 | LLM reply schema, validate, retry once (§6) | DONE | backend schema.test, brain.test |
 | 20 | Backend proxy: SSE, provider env, token, rate limit, size limits, CORS, health, no bodies in logs (§6) | DONE | server.test (10), providers.test; runtime smoke |
-| 21 | Real LLM answers (§6) | NOT VERIFIED (pending) | Gemini preset + Vercel deploy prepared. Local smoke with a fake `AIza…` key: health shows llm configured, the token is issued with the derived secret, and `/v1/chat` reaches Gemini's `/v1beta/openai/chat/completions` (HTTP 400 = invalid key, so the path is correct) and streams an honest `upstream_error`. **No real answer yet (no real key)** |
+| 21 | Real LLM answers (§6) | NOT VERIFIED (pending) | Gemini preset + Vercel deploy prepared. Native Gemini provider (`x-goog-api-key`, works with the new `AQ.` auth keys). Local smoke with a fake `AQ.` key: health shows llm provider gemini, the token is issued with the derived secret, and `/v1/chat` reaches `/v1beta/models/gemini-3.8-flash:generateContent` (Google answers 401 for the fake key, so the path is correct) and streams an honest `upstream_error`. **No real answer yet (no real key)** |
 | 22 | Search with sources, citations, verification (§7) | DONE (mocked) / NOT VERIFIED live | brain.test, search_sources_test; Brave only (Tavily/SerpAPI NOT DONE) |
 | 23 | Weather via Open-Meteo (§7) | DONE (mocked) / NOT VERIFIED live | providers.test; live forecast host unreachable here |
 | 24 | Translate (§7) | DONE | schema action plus translation card |
@@ -75,7 +75,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 36 | Robot link: Local, Simulated, BLE/Wi-Fi skeletons, ROBOT_PROTOCOL.md (§13) | DONE | robot_protocol_test (25), docs/ROBOT_PROTOCOL.md |
 | 37 | BLE permissions requested only in Robot settings (§13) | NOT DONE (deferred) | BLUETOOTH_SCAN not declared because nothing scans yet; documented |
 | 38 | Settings screen, all §14 sections plus hidden debug screen (§14) | DONE (host) | all sections present; routes render in ar/fr/en |
-| 39 | Unit tests (§15) | DONE | 258 Flutter tests, 64 backend tests |
+| 39 | Unit tests (§15) | DONE | 258 Flutter tests, 71 backend tests |
 | 40 | Widget tests: face, chat, settings, RTL (§15) | DONE | robot_face_test, app_shell_test, search_sources_test |
 | 41 | Golden tests per emotion (§15) | DONE | all 10 emotions, reviewed visually; rendered on Linux |
 | 42 | Backend tests with mocked providers (§15) | DONE | 53 passing |

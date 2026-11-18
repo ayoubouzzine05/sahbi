@@ -30,8 +30,10 @@ Every service is optional. Anything unset is reported as `configured: false` by 
    Vercel detects Fastify from `src/index.ts`. Hobby has no billing cycle: if you exceed the limits, features pause instead of charging.
 3. **App:** in Settings → AI, set the backend URL to the project's **production domain** (`https://<project>.vercel.app`), not a deployment-specific preview URL. Preview URLs are behind Vercel Authentication.
 
+Since 2026-05-28, AI Studio issues **auth keys** that start with `AQ.` (older standard keys start with `AIza`); both are recognised. The backend calls Gemini's **native** `generateContent` endpoint with the `x-goog-api-key` header, because auth keys have been reported to fail on the OpenAI-compatible `/v1beta/openai/` path. You can also set `LLM_PROVIDER=gemini` explicitly.
+
 That one key is enough:
-- An `AIza…` key without `LLM_PROVIDER` selects the Gemini preset (`backend/src/config.ts`): OpenAI-compatible base URL, `gemini-3.8-flash`, `reasoning_effort=low`, 4096 output tokens. Any explicit `LLM_*` variable overrides it.
+- An `AQ.…`/`AIza…` key without `LLM_PROVIDER` selects the Gemini preset (`backend/src/config.ts`): native API, `gemini-3.8-flash`, `reasoning_effort=low`, 4096 output tokens. Any explicit `LLM_*` variable overrides it.
 - When `AUTH_SECRET` is unset, it is derived from the key, so all serverless instances accept the same install tokens.
 
 **Render (`render.yaml`)** also works, but its sign-up asked for a card, so it is not the default.

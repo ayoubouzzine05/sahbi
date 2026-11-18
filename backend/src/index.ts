@@ -1,5 +1,6 @@
 import { isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured, loadConfig } from './config.js';
 import { AnthropicProvider } from './providers/llm/anthropic.js';
+import { GeminiProvider } from './providers/llm/gemini.js';
 import { OpenAiProvider } from './providers/llm/openai.js';
 import type { LlmProvider } from './providers/llm/types.js';
 import { BraveSearchProvider } from './providers/search/brave.js';
@@ -16,7 +17,13 @@ const promptTemplate = PROMPT_TEMPLATE;
 let llm: LlmProvider | null = null;
 if (isLlmConfigured(config)) {
   const opts = { apiKey: config.llm.apiKey, model: config.llm.model, baseUrl: config.llm.baseUrl, timeoutMs: config.llm.timeoutMs };
-  llm = config.llm.provider === 'anthropic' ? new AnthropicProvider(opts) : new OpenAiProvider({ ...opts, reasoningEffort: config.llm.reasoningEffort || undefined });
+  const reasoningEffort = config.llm.reasoningEffort || undefined;
+  llm =
+    config.llm.provider === 'anthropic'
+      ? new AnthropicProvider(opts)
+      : config.llm.provider === 'gemini'
+        ? new GeminiProvider({ ...opts, reasoningEffort })
+        : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 
 const app = await buildServer({

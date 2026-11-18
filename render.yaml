@@ -19,9 +19,9 @@ services:
       #     Get a key at https://aistudio.google.com/apikey
       #     Free tier: Google may use the content to improve its products.
       - key: LLM_PROVIDER
-        value: openai
+        value: gemini
       - key: LLM_BASE_URL
-        value: https://generativelanguage.googleapis.com/v1beta/openai/
+        value: https://generativelanguage.googleapis.com
       - key: LLM_MODEL
         value: gemini-3.8-flash
       - key: LLM_REASONING_EFFORT
