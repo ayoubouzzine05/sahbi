@@ -1,5 +1,5 @@
 import { loadConfig, type Config } from '../src/config.js';
-import type { Deps } from '../src/server.js';
+import type { Deps } from '../src/build-server.js';
 import type { LlmResponse } from '../src/providers/llm/types.js';
 import { ScriptedLlm } from '../src/providers/llm/scripted.js';
 import type { SearchProvider, SearchResult } from '../src/providers/search/types.js';

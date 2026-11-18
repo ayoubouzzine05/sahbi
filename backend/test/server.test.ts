@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildServer } from '../src/server.js';
+import { buildServer } from '../src/build-server.js';
 import { config, deps, goodReply, parseSse, replyCall } from './helpers.js';
 
 const UUID = '123e4567-e89b-42d3-a456-426614174000';

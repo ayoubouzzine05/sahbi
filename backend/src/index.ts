@@ -1,3 +1,6 @@
+// Entrypoint for `node dist/index.js` (Docker/Render) and for Vercel's zero-config
+// Fastify support, which needs the entrypoint to import fastify itself.
+import type { FastifyInstance } from 'fastify';
 import { isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured, loadConfig } from './config.js';
 import { AnthropicProvider } from './providers/llm/anthropic.js';
 import { GeminiProvider } from './providers/llm/gemini.js';
@@ -8,7 +11,7 @@ import { AzureSttProvider } from './providers/stt/azure.js';
 import { OpenAiSttProvider } from './providers/stt/openai.js';
 import { AzureTtsProvider } from './providers/tts/azure.js';
 import { PROMPT_TEMPLATE } from './prompt.generated.js';
-import { buildServer } from './server.js';
+import { buildServer } from './build-server.js';
 import { getWeather } from './tools/weather.js';
 
 const config = loadConfig();
@@ -26,7 +29,7 @@ if (isLlmConfigured(config)) {
         : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 
-const app = await buildServer({
+const app: FastifyInstance = await buildServer({
   config,
   llm,
   search: isSearchConfigured(config) ? new BraveSearchProvider(config.search.apiKey) : null,

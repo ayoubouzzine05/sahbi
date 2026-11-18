@@ -68,7 +68,7 @@ Import the repo at https://vercel.com/new and set:
 - Root Directory: `backend`
 - Environment variable: `LLM_API_KEY` = a Gemini key
 
-Vercel's zero-config Fastify support uses `src/index.ts`. The prompt is embedded in `src/prompt.generated.ts` (regenerate it with `npm run gen:prompt`; a test catches drift), so nothing is read from disk at runtime. `AUTH_SECRET` falls back to a value derived from `LLM_API_KEY`.
+Vercel's zero-config Fastify support uses `src/index.ts`. It must be the only file matching Vercel's entrypoint names (`src/{app,index,server}.ts`) and must import `fastify` itself; that's why the app factory lives in `src/build-server.ts`. Checked locally with `vercel build` (handler = `src/index.js`). The prompt is embedded in `src/prompt.generated.ts` (regenerate it with `npm run gen:prompt`; a test catches drift), so nothing is read from disk at runtime. `AUTH_SECRET` falls back to a value derived from `LLM_API_KEY`.
 
 ## Deploy on Render (free plan; sign-up may ask for a card)
 
