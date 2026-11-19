@@ -87,10 +87,15 @@ describe('YouTube finder for in-app playback', () => {
       ],
     };
     let body: Record<string, any> = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
+    let dataApiCalls = 0;
     const fake = (async (u: string, init?: RequestInit) => {
       if (u.includes(':generateContent')) {
         body = JSON.parse(init!.body as string);
         return json({ candidates: [{ content: { parts: [{ text: JSON.stringify(cands) }] } }] });
+      }
+      if (u.startsWith('https://www.googleapis.com/youtube/v3/')) {
+        dataApiCalls++;
+        return json({ error: { code: 403, message: 'YouTube Data API v3 has not been used in project 1 before or it is disabled.', status: 'PERMISSION_DENIED' } }, 403);
       }
       if (u.startsWith('https://www.youtube.com/oembed')) {
         const id = decodeURIComponent(u).slice(-11);
@@ -106,6 +111,11 @@ describe('YouTube finder for in-app playback', () => {
     expect(body.generationConfig.responseMimeType).toBe('application/json');
     expect(vids.map((v) => v.id)).toEqual([A]);
     expect(vids[0]).toMatchObject({ author: 'Saad Lamjarred', url: `https://www.youtube.com/watch?v=${A}` });
+    // The Data API was tried once with the Gemini key, refused, and then skipped.
+    const again = await f.findWithStats('saad lamjarred lm3allem');
+    expect(dataApiCalls).toBe(1);
+    expect(again.via).toBe('gemini-oembed');
+    expect(again.dataApi).toContain('403');
   });
 
   it('uses the YouTube Data API when YOUTUBE_API_KEY is set', async () => {

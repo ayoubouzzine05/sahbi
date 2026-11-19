@@ -27,6 +27,8 @@ export class YoutubeFinder {
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
 
+  private dataApiRefused = '';
+
   get mode(): 'youtube-data-api' | 'gemini-oembed' | 'none' {
     return this.opts.apiKey ? 'youtube-data-api' : this.opts.gemini ? 'gemini-oembed' : 'none';
   }
@@ -36,12 +38,29 @@ export class YoutubeFinder {
   }
 
   /** Also reports how many links the model suggested and how many were real + embeddable. */
-  async findWithStats(query: string): Promise<{ videos: YoutubeVideo[]; suggested: number; embeddable: number }> {
+  async findWithStats(query: string): Promise<{ videos: YoutubeVideo[]; suggested: number; embeddable: number; via?: string; dataApi?: string }> {
     if (this.opts.apiKey) {
       const videos = await this.dataApi(query, this.opts.apiKey);
       return { videos, suggested: videos.length, embeddable: videos.length };
     }
-    if (this.opts.gemini) return this.fromGemini(query, this.opts.gemini);
+    if (this.opts.gemini) {
+      // The Gemini key also works for the YouTube Data API when that API is
+      // enabled on the same Google Cloud project (no billing needed). Try it
+      // once; remember a refusal so later requests skip straight to Gemini.
+      if (!this.dataApiRefused) {
+        try {
+          const videos = await this.dataApi(query, this.opts.gemini.apiKey);
+          return { videos, suggested: videos.length, embeddable: videos.length, via: 'youtube-data-api' };
+        } catch (err) {
+          if (err instanceof ServiceError && /HTTP (400|401|403|404|429)/.test(err.message)) {
+            this.dataApiRefused = err.message.slice(0, 300);
+          } else {
+            throw err;
+          }
+        }
+      }
+      return { ...(await this.fromGemini(query, this.opts.gemini)), via: 'gemini-oembed', dataApi: this.dataApiRefused };
+    }
     throw new ServiceError('not_configured', 'YouTube search is not configured', 503);
   }
 
