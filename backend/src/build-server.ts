@@ -26,7 +26,7 @@ export interface Deps {
   live?: ((o: LiveOptions) => Promise<LiveToken>) | null;
   weather: (city: string) => Promise<WeatherReport>;
   /** Finds embeddable YouTube videos for in-app playback; null when not configured. */
-  youtube?: ((query: string) => Promise<YoutubeVideo[]>) | null;
+  youtube?: ((query: string) => Promise<YoutubeVideo[] | { videos: YoutubeVideo[]; suggested?: number; embeddable?: number }>) | null;
   youtubeMode?: string;
   promptTemplate: string;
   logger?: boolean;
@@ -192,7 +192,8 @@ export function buildServer(deps: Deps): FastifyInstance {
       const parsed = z.object({ q: z.string().trim().min(1).max(120) }).safeParse(req.query);
       if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: 'q is required' } });
       try {
-        return { videos: await deps.youtube(parsed.data.q) };
+        const r = await deps.youtube(parsed.data.q);
+        return Array.isArray(r) ? { videos: r } : r;
       } catch (err) {
         return sendError(reply, err);
       }

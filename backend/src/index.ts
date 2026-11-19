@@ -51,7 +51,7 @@ const app: FastifyInstance = buildServer({
   config,
   llm,
   search,
-  youtube: youtube.mode === 'none' ? null : (q: string) => youtube.find(q),
+  youtube: youtube.mode === 'none' ? null : (q: string) => youtube.findWithStats(q),
   youtubeMode: youtube.mode,
   stt: isSttConfigured(config)
     ? config.stt.provider === 'azure'

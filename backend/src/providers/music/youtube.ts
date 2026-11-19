@@ -32,7 +32,15 @@ export class YoutubeFinder {
   }
 
   async find(query: string): Promise<YoutubeVideo[]> {
-    if (this.opts.apiKey) return this.dataApi(query, this.opts.apiKey);
+    return (await this.findWithStats(query)).videos;
+  }
+
+  /** Also reports how many links the model suggested and how many were real + embeddable. */
+  async findWithStats(query: string): Promise<{ videos: YoutubeVideo[]; suggested: number; embeddable: number }> {
+    if (this.opts.apiKey) {
+      const videos = await this.dataApi(query, this.opts.apiKey);
+      return { videos, suggested: videos.length, embeddable: videos.length };
+    }
     if (this.opts.gemini) return this.fromGemini(query, this.opts.gemini);
     throw new ServiceError('not_configured', 'YouTube search is not configured', 503);
   }
@@ -55,7 +63,7 @@ export class YoutubeFinder {
       }));
   }
 
-  private async fromGemini(query: string, g: { apiKey: string; baseUrl: string; models: string[] }): Promise<YoutubeVideo[]> {
+  private async fromGemini(query: string, g: { apiKey: string; baseUrl: string; models: string[] }): Promise<{ videos: YoutubeVideo[]; suggested: number; embeddable: number }> {
     const prompt =
       `List up to 8 YouTube videos for this music request: "${query}". ` +
       'The request may be in Moroccan Darija, Arabic, French or English; first work out the artist and song (or the artist\'s best-known songs if only an artist is given). ' +
@@ -92,19 +100,21 @@ export class YoutubeFinder {
     throw lastErr instanceof Error ? lastErr : new ServiceError('upstream_error', 'YouTube search failed', 502);
   }
 
-  private async verify(query: string, cands: Candidate[]): Promise<YoutubeVideo[]> {
+  private async verify(query: string, cands: Candidate[]): Promise<{ videos: YoutubeVideo[]; suggested: number; embeddable: number }> {
     const seen = new Set<string>();
     const unique = cands.filter((c) => !seen.has(c.id) && seen.add(c.id)).slice(0, 8);
+    let embeddable = 0;
     const checked = await Promise.all(
       unique.map(async (c) => {
         const v = await this.oembed(c.id);
         if (!v) return null;
+        embeddable++;
         // The song must be in the real video TITLE (the channel alone is not
         // enough: an invented id may point to another video of the artist).
         return claimMatches(c, v.title, v.author) || matchesQuery(query, v.title, 2) ? v : null;
       }),
     );
-    return checked.filter((v): v is YoutubeVideo => v !== null).slice(0, 5);
+    return { videos: checked.filter((v): v is YoutubeVideo => v !== null).slice(0, 5), suggested: unique.length, embeddable };
   }
 
   /** YouTube oEmbed answers 200 only for public videos that allow embedding. */
