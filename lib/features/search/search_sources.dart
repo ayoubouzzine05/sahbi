@@ -7,7 +7,8 @@ import '../brain/brain_models.dart';
 
 /// Search & tool provenance shown under an AI answer.
 ///
-/// Web search itself runs on the backend (SearchProvider: Brave), so no key
+/// Web search itself runs on the backend (Brave with a key, else free
+/// Wikipedia + GDELT news), so no key
 /// ships in the app. Here we only render what the server *verified*:
 /// numbered source chips (web = turquoise, data such as weather = green),
 /// a confirmed/unconfirmed badge, or an honest "search unavailable" note.

@@ -1098,7 +1098,7 @@ abstract class L10n {
   /// No description provided for @privMusic.
   ///
   /// In en, this message translates to:
-  /// **'Music: your files stay on the phone. Spotify and YouTube Music open in their own apps.'**
+  /// **'Music: your files stay on the phone. When you ask for a song you don\'t have, its name goes to the server to search YouTube, and it plays here in YouTube\'s official player. Spotify opens in its own app.'**
   String get privMusic;
 
   /// No description provided for @memoryTitle.

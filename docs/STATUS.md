@@ -1,4 +1,4 @@
-# Status (2026-11-18)
+# Status (2026-11-19)
 
 DONE = implemented and verified by commands run here. PARTIAL = part done. NOT DONE = missing. NOT VERIFIED = written but could not be run here; the reason is given.
 
@@ -60,7 +60,7 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 | 19 | LLM reply schema, validate, retry once (§6) | DONE | backend schema.test, brain.test |
 | 20 | Backend proxy: SSE, provider env, token, rate limit, size limits, CORS, health, no bodies in logs (§6) | DONE | server.test (10), providers.test; runtime smoke |
 | 21 | Real LLM answers (§6) | **VERIFIED (live, 2026-11-18)** | Deployed on Vercel Hobby at `https://sahbi-sigma.vercel.app` with the user's Gemini auth key (`AQ.`), native API, model chain `gemini-4-hydrogen` → `gemini-3.5-flash-lite` → `gemini-3.8-flash` (3.8-flash returned 503 repeatedly). From the sandbox: `/v1/health` → llm configured (gemini); `/v1/chat` "salam sahbi, kidayr? chno smitek?" streamed Darija deltas + a valid final JSON (emotion happy) in 4.1 s; "kifach l jaw lyoum f Casablanca?" ran the weather tool (Open-Meteo) and answered in Darija in 8.7 s. The APK with this URL built in CI; **not verified on the user's phone yet** |
-| 22 | Search with sources, citations, verification (§7) | DONE (mocked) / NOT VERIFIED live | brain.test, search_sources_test; Brave only (Tavily/SerpAPI NOT DONE) |
+| 22 | Search with sources, citations, verification (§7) | DONE; free provider VERIFIED live | Brave with a key; otherwise free Wikipedia (ar/fr/en) + GDELT news headlines (see Follow-up 4). Tavily/SerpAPI NOT DONE |
 | 23 | Weather via Open-Meteo (§7) | DONE (mocked) / NOT VERIFIED live | providers.test; live forecast host unreachable here |
 | 24 | Translate (§7) | DONE | schema action plus translation card |
 | 25 | Music: SAF local files, just_audio + audio_service, FGS + POST_NOTIFICATIONS (§8) | NOT VERIFIED | music_controller_test (logic); Kotlin not compiled |
@@ -124,6 +124,19 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 | Photo mode: `/v1/chat` with the same JPEG | 200 in 22 s; correct Darija description |
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
+
+## Follow-up 4 (2026-11-19): web search, emotion colours, YouTube inside the app, no "in your phone"
+
+| Item | State | Evidence |
+|---|---|---|
+| Robot never calls itself "in your phone" | DONE | prompt v1.3.0, personality lines; `grep` over lib |
+| Web search when it doesn't know | DONE, VERIFIED live on homy-vert | "chkoun huwa nass el ghiwane?" → `searching`, answer + Wikipedia sources. Default provider `free` = Wikipedia API (no key) + GDELT DOC API for recent news |
+| Limits of free search (honest) | KNOWN | Wikipedia is not live news; GDELT gives headlines only and allows ~1 request / 5 s, so recent scores/news are often missing. Live test "chkon rbe7 f match dyal lmontakhab lkhar?" → the robot said it had no precise result (no invented score). A Brave key (`BRAVE_SEARCH_API_KEY`) gives real web results |
+| Gemini Google Search grounding | NOT USED by default | this account: 2.5 models → 404 "no longer available to new users", 3.5-flash-lite → 429 quota. Still available as `SEARCH_PROVIDER=gemini` |
+| YouTube search | DONE, VERIFIED live | `/v1/music/youtube?q=nass el ghiwane` and `saad lamjarred lm3allem` returned real official videos. Order: YouTube Data API (`YOUTUBE_API_KEY`, needs a classic AIza key; the AQ. Gemini key is refused with 401) → public Piped instance `api.piped.private.coffee` (community-run, can go down) → Gemini suggestions. Every result is checked with YouTube oEmbed (public + embeddable) and Gemini suggestions must match the real title (live: Gemini alone gave 0/8 real ids for Moroccan music, so it is only a last resort) |
+| Play inside the app | DONE in code, NOT VERIFIED on a device | floating WebView card with YouTube's official IFrame player, pauses when the app goes to background |
+| Face colour follows emotion | DONE, golden images updated (13/13) | happy yellow, sad blue, angry red, curious violet, surprised orange, sleepy indigo, listening green, music rainbow (NOT VERIFIED on a device) |
+| Tests | backend 99/99, lint, typecheck, build; app `flutter analyze` clean; command_parser 68/68, music_controller 10/10, chat_controller 30/30, personality 49/49, search_sources 5/5, golden 13/13 (the full suite runs in CI) |
 
 ## Bugs found and fixed by testing in this pass
 

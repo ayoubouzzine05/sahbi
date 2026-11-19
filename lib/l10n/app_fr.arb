@@ -166,7 +166,7 @@
   "privSearch": "Recherche : les requêtes choisies par l’IA vont au moteur (Brave). Météo : le nom de la ville va à Open-Meteo.",
   "privVoice": "Voix : en mode cloud, ton audio et le texte passent par le serveur vers le fournisseur (Azure/OpenAI), sans stockage. En mode appareil, le moteur Android traite (il peut lui-même utiliser le cloud selon l’appareil).",
   "privMemory": "Mémoire : uniquement sur le téléphone, chiffrée. Les faits retenus sont envoyés avec les messages seulement si tu l’as accepté.",
-  "privMusic": "Musique : tes fichiers restent sur le téléphone. Spotify et YouTube Music s’ouvrent dans leurs apps.",
+  "privMusic": "Musique : tes fichiers restent sur le téléphone. Si tu demandes un morceau que tu n’as pas, son titre part au serveur pour chercher sur YouTube, et il se lit ici dans le lecteur officiel YouTube. Spotify s’ouvre dans son app.",
   "memoryTitle": "Mémoire",
   "consentTitle": "Je me souviens de toi ?",
   "consentBody": "La mémoire reste sur ce téléphone, chiffrée. Tu peux tout voir, modifier, supprimer ou exporter à tout moment. Les faits retenus sont envoyés à l’IA avec tes messages pour te connaître.",

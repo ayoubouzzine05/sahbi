@@ -162,11 +162,11 @@ Line resultLine(ActionResult r) {
       'No tracks yet. Add some in the Music tab.',
     ),
     'no_local_match': (
-      'ما لقيتش هاد الأغنية فالتيليفون. نقدر نقلب عليها فسبوتيفاي ولا يوتيوب ميوزيك.',
-      'Ma l9itch had lghnya f tilifoun. N9der n9elleb 3liha f Spotify wla YouTube Music.',
-      'لم أجد هذه الأغنية في الهاتف. يمكنني البحث في سبوتيفاي أو يوتيوب ميوزك.',
-      'Pas trouvé sur le téléphone. Je peux chercher sur Spotify ou YouTube Music.',
-      'Not found on the phone. I can search Spotify or YouTube Music.',
+      'ما لقيتش هاد الأغنية فالموسيقى ديالك. يلا تواصلت بالسيرفر نقلب عليها فيوتيوب.',
+      'Ma l9itch had lghnya f lmusic dyalk. Ila tconnectit b serveur n9elleb 3liha f YouTube.',
+      'لم أجد هذه الأغنية في موسيقاك. عند الاتصال بالخادم أبحث عنها في يوتيوب.',
+      'Pas trouvé dans ta musique. Une fois connecté au serveur, je la cherche sur YouTube.',
+      'Not in your music. Once connected to the server, I can search YouTube.',
     ),
     'not_playing': (
       'ما كاينة حتى موسيقى خدامة.',

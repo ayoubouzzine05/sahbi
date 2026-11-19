@@ -49,7 +49,8 @@ const cases = <Case>[
     'play Saad Lamjarred on youtube music',
     C.musicPlay,
     query: 'saad lamjarred',
-    source: MusicSource.youtubeMusic,
+    // YouTube (Music) requests now play inside the app.
+    source: MusicSource.youtube,
   ),
   // ---- stop / pause / resume / next / previous
   Case('Wqef lmusic', C.musicStop),

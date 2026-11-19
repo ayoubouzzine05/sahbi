@@ -66,3 +66,4 @@ android/.kotlin/
 
 # Public sideload key (see android/app/build.gradle.kts); not a store key.
 !android/app/sahbi-sideload.keystore
+test/golden/failures/

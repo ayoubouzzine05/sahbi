@@ -526,7 +526,7 @@ class L10nFr extends L10n {
 
   @override
   String get privMusic =>
-      'Musique : tes fichiers restent sur le téléphone. Spotify et YouTube Music s’ouvrent dans leurs apps.';
+      'Musique : tes fichiers restent sur le téléphone. Si tu demandes un morceau que tu n’as pas, son titre part au serveur pour chercher sur YouTube, et il se lit ici dans le lecteur officiel YouTube. Spotify s’ouvre dans son app.';
 
   @override
   String get memoryTitle => 'Mémoire';

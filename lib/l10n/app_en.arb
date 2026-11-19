@@ -332,7 +332,7 @@
   "@privVoice": {},
   "privMemory": "Memory: stays on the phone, encrypted. Remembered facts are sent with messages only if you consented.",
   "@privMemory": {},
-  "privMusic": "Music: your files stay on the phone. Spotify and YouTube Music open in their own apps.",
+  "privMusic": "Music: your files stay on the phone. When you ask for a song you don't have, its name goes to the server to search YouTube, and it plays here in YouTube's official player. Spotify opens in its own app.",
   "@privMusic": {},
   "memoryTitle": "Memory",
   "@memoryTitle": {},
