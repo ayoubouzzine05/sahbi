@@ -795,4 +795,18 @@ class L10nEn extends L10n {
 
   @override
   String get photoLabel => 'AI · photo';
+
+  @override
+  String ytSearching(String query) {
+    return 'Searching YouTube for: $query…';
+  }
+
+  @override
+  String get ytError => 'None of these videos can play here. Try another song.';
+
+  @override
+  String get ytNext => 'Next';
+
+  @override
+  String get ytClose => 'Close';
 }

@@ -4,6 +4,8 @@ export interface SearchResult {
   snippet: string;
   /** ISO date or provider "age" string, only when the provider supplies it */
   date?: string;
+  /** 'search' = a Google Search suggestion link (shown, never cited as evidence). */
+  kind?: 'web' | 'search';
 }
 export interface SearchProvider {
   readonly name: string;

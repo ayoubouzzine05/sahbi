@@ -250,5 +250,9 @@
   "photoQuestion": "Qu’est-ce que c’est ? Explique-moi ce que tu vois sur cette photo.",
   "photoThinking": "Je regarde…",
   "photoError": "Je n’ai pas pu expliquer la photo. Réessaie plus tard.",
-  "photoLabel": "IA · photo"
+  "photoLabel": "IA · photo",
+  "ytSearching": "Je cherche sur YouTube : {query}…",
+  "ytError": "Aucune de ces vidéos ne peut être lue ici. Essaie un autre morceau.",
+  "ytNext": "Suivant",
+  "ytClose": "Fermer"
 }

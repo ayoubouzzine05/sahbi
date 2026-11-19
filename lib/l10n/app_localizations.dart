@@ -1604,6 +1604,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'AI · photo'**
   String get photoLabel;
+
+  /// No description provided for @ytSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching YouTube for: {query}…'**
+  String ytSearching(String query);
+
+  /// No description provided for @ytError.
+  ///
+  /// In en, this message translates to:
+  /// **'None of these videos can play here. Try another song.'**
+  String get ytError;
+
+  /// No description provided for @ytNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get ytNext;
+
+  /// No description provided for @ytClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get ytClose;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

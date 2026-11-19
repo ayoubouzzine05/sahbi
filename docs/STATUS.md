@@ -112,7 +112,22 @@ Still **not verified on a real phone**: microphone and voice, SAF file picking, 
 
 So the `AQ.` key stopped being accepted for everything. Google's forum has many reports of `AQ.` keys returning 401 `ACCESS_TOKEN_TYPE_UNSUPPORTED` (one says it happens after renaming a key; a fresh key that is never renamed works). Fix for the user: create a new key in AI Studio, do not rename it, put it in Vercel → Settings → Environment Variables → `LLM_API_KEY`, then redeploy. Nothing in the app has to change.
 
+### With a new key on a new Vercel project (https://homy-vert.vercel.app, 2026-11-19, deployed from `a1c7ccd`)
+
+| Check | Result |
+|---|---|
+| `/v1/health` | prompt 1.2.0; llm, tts (gemini), live (gemini-live) configured |
+| `/v1/chat` with `robot_name: "Zizo"` | 200; Darija reply "Ana Zizo, robot dyalk sghir…", Arabic-script `tts_text` |
+| `/v1/tts` male / female | 200 `audio/wav` 24 kHz (4.1 s). Median pitch measured by autocorrelation: **male 111 Hz, female 186 Hz**, so the voices really are male and female (not listened to by ear) |
+| `/v1/live/token` | 200, single-use `auth_tokens/…`, voice Puck |
+| Gemini Live over WebSocket, same messages as `LiveSession` (Python probe: setup → setupComplete in 0.6 s → one JPEG of a drawn red apple with "POMME 2026" → text question) | turnComplete in 9.2 s, 6.2 s of 24 kHz audio, transcript: "كنشوف رسمة ديال تفاحة حمراء فيها tige صغيرة، ومكتوب لتحت POMME 2026". **Live video works with this key** |
+| Photo mode: `/v1/chat` with the same JPEG | 200 in 22 s; correct Darija description |
+
+Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
+
 ## Bugs found and fixed by testing in this pass
+
+- Follow-up 3: the new APK would not install over the old one ("conflicts with an existing package"). Cause: each GitHub runner signed with its own random debug key. Fix: a fixed, deliberately public sideload key `android/app/sahbi-sideload.keystore` (password `android`, never for stores) plus `versionCode = GITHUB_RUN_NUMBER` in `android/app/build.gradle.kts` so newer APKs always have a higher versionCode. One last uninstall is needed to switch to the fixed key. **NOT VERIFIED** until CI builds it and an update installs on a phone.
 
 - Follow-up 3: the phonetic matcher collapsed "Zizou" to one consonant (repeats separated by a vowel were merged) and "look" became "lok" after normalisation, so the English camera phrase was missed; a refused Live connection reported "closed" twice. All three were caught by the new tests and fixed.
 - Follow-up 3: in the big full-screen face the eye glow showed hard clip edges (seen in the golden). It is now blurred from the visible eye shape.

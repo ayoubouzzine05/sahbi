@@ -217,6 +217,20 @@ Line resultLine(ActionResult r) {
       'Impossible d’ouvrir le micro.',
       'Could not open the microphone.',
     ),
+    'youtube_not_found': (
+      'ما لقيتش هاد الأغنية فيوتيوب. جرب تقول ليا السمية ديال الفنان ولا الأغنية بشكل آخر.',
+      'Ma l9itch had lghnya f YouTube. Jreb t9oul liya smiyt lfannan wla lghnya b chkel akhor.',
+      'لم أجد هذه الأغنية في يوتيوب. جرّب اسم الفنان أو الأغنية بطريقة أخرى.',
+      'Je n’ai pas trouvé ce morceau sur YouTube. Essaie autrement le nom de l’artiste ou du titre.',
+      'Couldn’t find that song on YouTube. Try the artist or title another way.',
+    ),
+    'youtube_unavailable': (
+      'ما قدرتش نقلب فيوتيوب دابا. شوف الأنترنيت ولا السيرفر.',
+      'Ma9dertch n9elleb f YouTube daba. Chouf l internet wla serveur.',
+      'لم أستطع البحث في يوتيوب الآن. تحقق من الإنترنت أو الخادم.',
+      'Impossible de chercher sur YouTube maintenant. Vérifie internet ou le serveur.',
+      'Couldn’t search YouTube right now. Check the internet or the server.',
+    ),
     'camera unavailable': (
       'ما قدرتش نحل الكاميرا دابا.',
       'Ma9dertch n7el camera daba.',

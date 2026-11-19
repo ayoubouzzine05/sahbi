@@ -25,7 +25,7 @@ export interface Config {
     /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
     reasoningEffort: string;
   };
-  search: { provider: 'brave' | 'none'; apiKey: string };
+  search: { provider: 'brave' | 'gemini' | 'none'; apiKey: string; geminiModels: string[] };
   stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
   tts: { provider: 'azure' | 'gemini' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string; geminiModel: string };
   live: { model: string; enabled: boolean };
@@ -57,6 +57,8 @@ export const GEMINI_PRESET = {
   reasoningEffort: 'low',
   ttsModel: 'gemini-3.8-flash-tts', // free tier (pricing page, 2026-11-18)
   liveModel: 'gemini-3.8-live', // free tier (pricing page, 2026-11-18)
+  // Google Search grounding is free (500 RPD shared) only on 2.5 Flash / Flash-Lite (pricing page, 2026-11-19).
+  searchModels: ['gemini-2.5-flash-lite', 'gemini-2.5-flash'],
   maxOutputTokens: 4096, // thinking tokens count towards output
 } as const;
 
@@ -114,8 +116,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },
     search: {
-      provider: oneOf(str(env, 'SEARCH_PROVIDER', 'none'), ['brave', 'none'] as const, 'none'),
+      // Default: Brave when its key exists, else Gemini Google Search grounding with a Gemini key.
+      provider: oneOf(
+        str(env, 'SEARCH_PROVIDER', str(env, 'BRAVE_SEARCH_API_KEY') ? 'brave' : gemini ? 'gemini' : 'none'),
+        ['brave', 'gemini', 'none'] as const,
+        'none',
+      ),
       apiKey: str(env, 'BRAVE_SEARCH_API_KEY'),
+      geminiModels: str(env, 'GEMINI_SEARCH_MODELS', GEMINI_PRESET.searchModels.join(','))
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean),
     },
     stt: {
       provider: oneOf(str(env, 'STT_PROVIDER', 'none'), ['azure', 'openai', 'none'] as const, 'none'),
@@ -145,7 +156,8 @@ export function isLlmConfigured(c: Config): boolean {
   return c.llm.provider !== 'none' && c.llm.apiKey !== '' && c.llm.model !== '';
 }
 export function isSearchConfigured(c: Config): boolean {
-  return c.search.provider === 'brave' && c.search.apiKey !== '';
+  if (c.search.provider === 'brave') return c.search.apiKey !== '';
+  return c.search.provider === 'gemini' && c.llm.provider === 'gemini' && c.llm.apiKey !== '' && c.search.geminiModels.length > 0;
 }
 export function isSttConfigured(c: Config): boolean {
   if (c.stt.provider === 'azure') return c.stt.azureKey !== '' && c.stt.azureRegion !== '';

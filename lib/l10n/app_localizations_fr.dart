@@ -798,4 +798,19 @@ class L10nFr extends L10n {
 
   @override
   String get photoLabel => 'IA · photo';
+
+  @override
+  String ytSearching(String query) {
+    return 'Je cherche sur YouTube : $query…';
+  }
+
+  @override
+  String get ytError =>
+      'Aucune de ces vidéos ne peut être lue ici. Essaie un autre morceau.';
+
+  @override
+  String get ytNext => 'Suivant';
+
+  @override
+  String get ytClose => 'Fermer';
 }

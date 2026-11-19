@@ -796,4 +796,18 @@ class L10nAr extends L10n {
 
   @override
   String get photoLabel => 'AI · تصويرة';
+
+  @override
+  String ytSearching(String query) {
+    return 'كنقلب فيوتيوب على: $query…';
+  }
+
+  @override
+  String get ytError => 'ما قدرتش نقرا حتى فيديو من هادو هنا. جرب أغنية أخرى.';
+
+  @override
+  String get ytNext => 'اللي من بعد';
+
+  @override
+  String get ytClose => 'سد';
 }

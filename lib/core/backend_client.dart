@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../features/brain/brain_models.dart';
+import '../features/music/youtube_controller.dart';
 
 enum BackendErrorCode {
   notConfigured,
@@ -384,6 +385,20 @@ class BackendClient {
 
   /// Single-use Gemini Live token (camera mode). The backend locks model,
   /// prompt and voice into the token; the API key never reaches the app.
+  /// GET /v1/music/youtube: embeddable YouTube videos for a song/artist.
+  Future<List<YoutubeVideo>> youtubeSearch(String query) async {
+    final res = await _authed(
+      (h) => _http
+          .get(_uri('/v1/music/youtube', {'q': query}), headers: h)
+          .timeout(const Duration(seconds: 40)),
+    );
+    final list = (jsonDecode(res.body) as Map)['videos'] as List? ?? const [];
+    return [
+      for (final v in list)
+        if (v is Map<String, dynamic>) YoutubeVideo.fromJson(v),
+    ];
+  }
+
   Future<LiveTokenInfo> liveToken({
     String? robotName,
     String? userName,

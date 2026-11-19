@@ -213,7 +213,19 @@ class _RobotFaceState extends State<RobotFace>
       gazeX: _gaze.dx.clamp(-1, 1),
       gazeY: _gaze.dy.clamp(-1, 1),
     );
-    _frameParams = _current.copyWith(mouthOpen: mouth, tilt: tilt);
+    // Music: the eye colour slowly cycles through the rainbow.
+    final accent = i.music && !i.speaking
+        ? Color.lerp(
+            _current.accent,
+            HSVColor.fromAHSV(1, (_t * 45) % 360, 0.6, 1).toColor(),
+            0.75,
+          )!
+        : _current.accent;
+    _frameParams = _current.copyWith(
+      mouthOpen: mouth,
+      tilt: tilt,
+      accent: accent,
+    );
     _repaint.value++;
   }
 

@@ -39,11 +39,25 @@ android {
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
         // flag during build.
-        versionCode = flutter.versionCode
+        // CI builds get the run number so every new APK installs over the
+        // previous one (Android refuses a lower or equal versionCode on update).
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: flutter.versionCode
         versionName = flutter.versionName
     }
 
     signingConfigs {
+        // Fixed key for debug and sideloaded (no-secrets) builds. Every CI
+        // runner used to create a new random debug key, so each new APK had a
+        // different signature and Android refused to install it over the old
+        // one ("conflicts with an existing package"). This key is public on
+        // purpose (password "android", like Android's own debug key): it only
+        // keeps phone updates working and must never be used for a store.
+        getByName("debug") {
+            storeFile = file("sahbi-sideload.keystore")
+            storePassword = "android"
+            keyAlias = "sahbi"
+            keyPassword = "android"
+        }
         if (hasReleaseKeystore) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String

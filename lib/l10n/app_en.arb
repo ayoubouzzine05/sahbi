@@ -519,5 +519,19 @@
   "photoError": "Couldn’t explain the photo right now. Try again later.",
   "@photoError": {},
   "photoLabel": "AI · photo",
-  "@photoLabel": {}
+  "@photoLabel": {},
+  "ytSearching": "Searching YouTube for: {query}…",
+  "@ytSearching": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "ytError": "None of these videos can play here. Try another song.",
+  "@ytError": {},
+  "ytNext": "Next",
+  "@ytNext": {},
+  "ytClose": "Close",
+  "@ytClose": {}
 }

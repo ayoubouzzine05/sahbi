@@ -4,7 +4,7 @@ export const EMOTIONS = ['neutral', 'happy', 'sad', 'curious', 'surprised', 'sle
 export const LANGUAGES = ['darija', 'ar', 'fr', 'en'] as const;
 
 export const ActionSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('music.play'), query: z.string().max(200).optional(), source: z.enum(['local', 'spotify', 'youtube_music']).optional() }),
+  z.object({ type: z.literal('music.play'), query: z.string().max(200).optional(), source: z.enum(['local', 'spotify', 'youtube', 'youtube_music']).optional() }),
   z.object({ type: z.literal('music.pause') }),
   z.object({ type: z.literal('music.resume') }),
   z.object({ type: z.literal('music.stop') }),
@@ -48,7 +48,7 @@ export const REPLY_TOOL_JSON_SCHEMA = {
         properties: {
           type: { type: 'string', enum: ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language'] },
           query: { type: 'string' },
-          source: { type: 'string', enum: ['local', 'spotify', 'youtube_music'] },
+          source: { type: 'string', enum: ['local', 'spotify', 'youtube', 'youtube_music'] },
           level: { type: 'number', minimum: 0, maximum: 1 },
           delta: { type: 'number', minimum: -1, maximum: 1 },
           source_text: { type: 'string' },

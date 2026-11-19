@@ -13,6 +13,7 @@ import type { LlmProvider } from './providers/llm/types.js';
 import type { SearchProvider } from './providers/search/types.js';
 import type { SttProvider } from './providers/stt/types.js';
 import type { TtsProvider } from './providers/tts/types.js';
+import type { YoutubeVideo } from './providers/search/gemini.js';
 import type { WeatherReport } from './tools/weather.js';
 
 export interface Deps {
@@ -24,6 +25,8 @@ export interface Deps {
   /** Mints a Gemini Live ephemeral token; null when live mode is not configured. */
   live?: ((o: LiveOptions) => Promise<LiveToken>) | null;
   weather: (city: string) => Promise<WeatherReport>;
+  /** Finds embeddable YouTube videos for in-app playback; null when not configured. */
+  youtube?: ((query: string) => Promise<YoutubeVideo[]>) | null;
   promptTemplate: string;
   logger?: boolean;
 }
@@ -104,6 +107,7 @@ export function buildServer(deps: Deps): FastifyInstance {
       services: {
         llm: { configured: isLlmConfigured(config) && !!deps.llm, provider: config.llm.provider },
         search: { configured: isSearchConfigured(config) && !!deps.search, provider: config.search.provider },
+        youtube: { configured: !!deps.youtube, provider: deps.youtube ? 'youtube-embed' : 'none' },
         weather: { configured: true, provider: 'open-meteo' },
         stt: { configured: isSttConfigured(config) && !!deps.stt, provider: config.stt.provider },
         tts: { configured: isTtsConfigured(config) && !!deps.tts, provider: config.tts.provider },
@@ -177,6 +181,17 @@ export function buildServer(deps: Deps): FastifyInstance {
       if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: 'city is required' } });
       try {
         return await deps.weather(parsed.data.city);
+      } catch (err) {
+        return sendError(reply, err);
+      }
+    });
+
+    app.get('/v1/music/youtube', { preHandler: requireAuth }, async (req, reply) => {
+      if (!deps.youtube) return sendError(reply, notConfigured('YouTube search'));
+      const parsed = z.object({ q: z.string().trim().min(1).max(120) }).safeParse(req.query);
+      if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: 'q is required' } });
+      try {
+        return { videos: await deps.youtube(parsed.data.q) };
       } catch (err) {
         return sendError(reply, err);
       }

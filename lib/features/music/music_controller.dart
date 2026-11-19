@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/platform_bridge.dart';
 import 'music_models.dart';
 import 'streaming_links.dart';
+import 'youtube_controller.dart';
 
 /// Demo tracks bundled with the app (original, CC0 — see ASSETS_LICENSES.md).
 const demoTracks = [
@@ -32,8 +33,10 @@ class MusicController extends ChangeNotifier {
     required this.engine,
     required this.bridge,
     this.links = const StreamingLinks(),
+    this.youtube,
     SharedPreferences? prefs,
   }) : _prefs = prefs {
+    youtube?.addListener(notifyListeners);
     _sub = engine.snapshots.listen((s) {
       snapshot = s;
       notifyListeners();
@@ -44,6 +47,10 @@ class MusicController extends ChangeNotifier {
   final MusicEngine engine;
   final PlatformBridge bridge;
   final StreamingLinks links;
+
+  /// In-app YouTube player (null when the backend can't search YouTube).
+  final YoutubeController? youtube;
+  bool get _yt => youtube?.active ?? false;
   final SharedPreferences? _prefs;
   late final StreamSubscription<PlaybackSnapshot> _sub;
 
@@ -54,7 +61,7 @@ class MusicController extends ChangeNotifier {
   bool _ducked = false;
   double _preDuckVolume = 1;
 
-  bool get playing => snapshot.playing;
+  bool get playing => snapshot.playing || (youtube?.playing ?? false);
   List<Track> get allTracks => [...library, ...demoTracks];
 
   void _loadLibrary() {
@@ -115,6 +122,7 @@ class MusicController extends ChangeNotifier {
 
   Future<ActionResult> playTracks(List<Track> tracks, {int start = 0}) async {
     if (tracks.isEmpty) return const ActionResult.fail('no_tracks');
+    if (_yt) await youtube!.stop();
     try {
       await engine.setQueue(tracks, start: start);
       await engine.play();
@@ -124,13 +132,32 @@ class MusicController extends ChangeNotifier {
     }
   }
 
+  /// Searches YouTube and plays the first embeddable result inside the app.
+  Future<ActionResult> playYoutube(String query) async {
+    final yt = youtube;
+    if (yt == null) return const ActionResult.fail('youtube_unavailable');
+    if (snapshot.playing || snapshot.queue.isNotEmpty) await engine.stop();
+    return yt.playSearch(query);
+  }
+
   /// "Ch3el lia chi music [query]": local library first (title/artist match),
-  /// otherwise all local + demo tracks.
+  /// then YouTube inside the app; without a query all local + demo tracks.
   Future<ActionResult> playQuery(String? query) async {
     final all = allTracks;
+    final wanted = query?.trim() ?? '';
+    final hasQuery = wanted.isNotEmpty;
+    if (hasQuery && youtube != null) {
+      final q = wanted.toLowerCase();
+      final local = all.where(
+        (t) =>
+            t.title.toLowerCase().contains(q) ||
+            (t.artist?.toLowerCase().contains(q) ?? false),
+      );
+      if (local.isEmpty) return playYoutube(wanted);
+    }
     if (all.isEmpty) return const ActionResult.fail('no_tracks');
-    if (query != null && query.trim().isNotEmpty) {
-      final q = query.toLowerCase();
+    if (hasQuery) {
+      final q = wanted.toLowerCase();
       final matches = all
           .where(
             (t) =>
@@ -146,18 +173,21 @@ class MusicController extends ChangeNotifier {
   }
 
   Future<ActionResult> pause() async {
+    if (_yt) return youtube!.pause();
     if (!snapshot.playing) return const ActionResult.fail('not_playing');
     await engine.pause();
     return const ActionResult.ok('Paused');
   }
 
   Future<ActionResult> resume() async {
+    if (_yt) return youtube!.resume();
     if (snapshot.queue.isEmpty) return const ActionResult.fail('queue_empty');
     await engine.play();
     return const ActionResult.ok('Resumed');
   }
 
   Future<ActionResult> stop() async {
+    if (_yt) return youtube!.stop();
     if (snapshot.queue.isEmpty && !snapshot.playing) {
       return const ActionResult.fail('not_playing');
     }
@@ -166,6 +196,7 @@ class MusicController extends ChangeNotifier {
   }
 
   Future<ActionResult> next() async {
+    if (_yt) return youtube!.next();
     final i = snapshot.index ?? 0;
     if (i + 1 >= snapshot.queue.length) {
       return const ActionResult.fail('end_of_queue');
@@ -175,6 +206,7 @@ class MusicController extends ChangeNotifier {
   }
 
   Future<ActionResult> previous() async {
+    if (_yt) return youtube!.previous();
     if (snapshot.queue.isEmpty) return const ActionResult.fail('queue_empty');
     await engine.previous();
     return const ActionResult.ok('Previous track');
@@ -232,6 +264,7 @@ class MusicController extends ChangeNotifier {
 
   @override
   void dispose() {
+    youtube?.removeListener(notifyListeners);
     _sub.cancel();
     super.dispose();
   }

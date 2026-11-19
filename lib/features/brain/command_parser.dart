@@ -26,7 +26,8 @@ enum CommandType {
   openCamera,
 }
 
-enum MusicSource { any, local, spotify, youtubeMusic }
+/// `youtube` = played inside the app (embedded YouTube player).
+enum MusicSource { any, local, spotify, youtubeMusic, youtube }
 
 class Command {
   const Command(
@@ -288,7 +289,7 @@ class CommandParser {
       source = MusicSource.spotify;
       r = r.replaceAll(_sourceSpotify, ' ');
     } else if (_sourceYt.hasMatch(r)) {
-      source = MusicSource.youtubeMusic;
+      source = MusicSource.youtube;
       r = r.replaceAll(_sourceYt, ' ');
     } else if (_sourceLocal.hasMatch(r)) {
       source = MusicSource.local;

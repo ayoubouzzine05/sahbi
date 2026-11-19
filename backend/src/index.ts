@@ -9,6 +9,7 @@ import { GeminiProvider } from './providers/llm/gemini.js';
 import { OpenAiProvider } from './providers/llm/openai.js';
 import type { LlmProvider } from './providers/llm/types.js';
 import { BraveSearchProvider } from './providers/search/brave.js';
+import { GeminiGroundedSearchProvider } from './providers/search/gemini.js';
 import { AzureSttProvider } from './providers/stt/azure.js';
 import { OpenAiSttProvider } from './providers/stt/openai.js';
 import { AzureTtsProvider } from './providers/tts/azure.js';
@@ -31,10 +32,17 @@ if (isLlmConfigured(config)) {
         : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 
+// Google Search grounding uses the chat's Gemini key (free on 2.5 Flash/Flash-Lite).
+const grounded =
+  config.llm.provider === 'gemini' && config.llm.apiKey && config.search.geminiModels.length
+    ? new GeminiGroundedSearchProvider({ apiKey: config.llm.apiKey, baseUrl: config.llm.baseUrl, models: config.search.geminiModels, timeoutMs: 25000 })
+    : null;
+
 const app: FastifyInstance = buildServer({
   config,
   llm,
-  search: isSearchConfigured(config) ? new BraveSearchProvider(config.search.apiKey) : null,
+  search: !isSearchConfigured(config) ? null : config.search.provider === 'brave' ? new BraveSearchProvider(config.search.apiKey) : grounded,
+  youtube: grounded ? (q: string) => grounded.youtube(q) : null,
   stt: isSttConfigured(config)
     ? config.stt.provider === 'azure'
       ? new AzureSttProvider(config.stt.azureKey, config.stt.azureRegion)

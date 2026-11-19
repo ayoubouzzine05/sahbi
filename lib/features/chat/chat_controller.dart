@@ -510,7 +510,7 @@ class ChatController extends ChangeNotifier {
       case 'music.play':
         final src = switch (a.args['source']) {
           'spotify' => MusicSource.spotify,
-          'youtube_music' => MusicSource.youtubeMusic,
+          'youtube' || 'youtube_music' => MusicSource.youtube,
           'local' => MusicSource.local,
           _ => MusicSource.any,
         };
@@ -562,8 +562,11 @@ class ChatController extends ChangeNotifier {
           switch (c.source) {
             case MusicSource.spotify:
               return await music.links.openSpotify(c.query);
-            case MusicSource.youtubeMusic:
-              return await music.links.openYouTubeMusic(c.query);
+            case MusicSource.youtubeMusic || MusicSource.youtube:
+              // Played inside the app; the user asked not to leave it.
+              final q = c.query;
+              if (q == null) return await music.playQuery(null);
+              return await music.playYoutube(q);
             case MusicSource.local || MusicSource.any:
               return await music.playQuery(c.query);
           }

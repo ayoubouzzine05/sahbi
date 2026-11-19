@@ -11,7 +11,7 @@ export interface Source {
   title: string;
   url: string;
   date?: string;
-  kind: 'web' | 'data';
+  kind: 'web' | 'data' | 'search';
 }
 
 export type Verification = 'none' | 'data' | 'confirmed' | 'unconfirmed';
@@ -125,7 +125,7 @@ export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerato
         const reply = parsed.data;
         const cited = reply.source_ids.map((id) => sources.get(id)).filter((s): s is Source => !!s);
         // Weather data sources are always shown when weather was used, even if not cited.
-        for (const s of sources.values()) if (s.kind === 'data' && !cited.includes(s)) cited.push(s);
+        for (const s of sources.values()) if ((s.kind === 'data' || s.kind === 'search') && !cited.includes(s)) cited.push(s);
         const final: FinalReply = {
           display_text: reply.display_text,
           tts_text: reply.tts_text,
@@ -174,7 +174,11 @@ export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerato
           const freshness = ['pd', 'pw', 'pm', 'py'].includes(String(call.input.freshness)) ? (call.input.freshness as 'pd') : undefined;
           const country = typeof call.input.country === 'string' && /^[A-Za-z]{2}$/.test(call.input.country) ? call.input.country.toUpperCase() : undefined;
           const found = await deps.search.search(query, { freshness, country });
-          const lines = found.map((r) => {
+          for (const r of found.filter((x) => x.kind === 'search')) {
+            const id = sources.size + 1;
+            sources.set(id, { id, title: r.title, url: r.url, kind: 'search' });
+          }
+          const lines = found.filter((x) => x.kind !== 'search').map((r) => {
             const id = sources.size + 1;
             sources.set(id, { id, title: r.title, url: r.url, ...(r.date ? { date: r.date } : {}), kind: 'web' });
             return JSON.stringify({ id, title: r.title, url: r.url, date: r.date ?? null, snippet: r.snippet });

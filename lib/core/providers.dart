@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../features/chat/chat_controller.dart';
 import '../features/memory/memory_store.dart';
 import '../features/music/music_controller.dart';
+import '../features/music/youtube_controller.dart';
 import '../features/music/music_models.dart';
 import '../features/personality/companion_controller.dart';
 import '../features/personality/voice_state.dart';
@@ -73,8 +74,16 @@ final connectivityProvider = ChangeNotifierProvider<ConnectivityMonitor>((ref) {
   return m;
 });
 
+final youtubeControllerProvider = ChangeNotifierProvider<YoutubeController>((
+  ref,
+) {
+  final backend = ref.read(backendClientProvider);
+  return YoutubeController(search: backend.youtubeSearch);
+});
+
 final musicControllerProvider = ChangeNotifierProvider<MusicController>((ref) {
   return MusicController(
+    youtube: ref.read(youtubeControllerProvider),
     engine: ref.read(musicEngineProvider),
     bridge: ref.read(platformBridgeProvider),
     prefs: ref.read(sharedPrefsProvider),

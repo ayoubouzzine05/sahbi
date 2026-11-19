@@ -161,11 +161,11 @@ class PersonalityResponses {
   static Line whoAreYouNamed(String name) {
     final n = name.trim();
     return Line(
-      darijaAr: 'أنا $n، الروبو الصغير ديالك اللي ساكن فالتيليفون.',
-      darijaLatin: 'Ana $n, rrobot sghir dyalk li saken f tilifoun.',
-      msa: 'أنا $n، روبوتك الصغير الذي يسكن في هاتفك.',
-      fr: 'Je suis $n, ton petit robot qui vit dans ton téléphone.',
-      en: 'I am $n, your little robot buddy living in your phone.',
+      darijaAr: 'أنا $n، الروبو الصغير ديالك وصاحبك.',
+      darijaLatin: 'Ana $n, rrobot sghir dyalk w sa7bek.',
+      msa: 'أنا $n، روبوتك الصغير وصديقك.',
+      fr: 'Je suis $n, ton petit robot et ton pote.',
+      en: 'I am $n, your little robot buddy.',
     );
   }
 
@@ -180,11 +180,11 @@ class PersonalityResponses {
   ];
   static const _whoAreYou = [
     Line(
-      darijaAr: 'أنا صاحبي، الروبو الصغير ديالك اللي ساكن فالتيليفون.',
-      darijaLatin: 'Ana Sahbi, rrobot sghir dyalk li saken f tilifoun.',
-      msa: 'أنا صاحبي، روبوتك الصغير الذي يسكن في هاتفك.',
-      fr: 'Je suis Sahbi, ton petit robot qui vit dans ton téléphone.',
-      en: 'I am Sahbi, your little robot buddy living in your phone.',
+      darijaAr: 'أنا صاحبي، الروبو الصغير ديالك وصاحبك.',
+      darijaLatin: 'Ana Sahbi, rrobot sghir dyalk w sa7bek.',
+      msa: 'أنا صاحبي، روبوتك الصغير وصديقك.',
+      fr: 'Je suis Sahbi, ton petit robot et ton pote.',
+      en: 'I am Sahbi, your little robot buddy.',
       emotion: Emotion.happy,
     ),
   ];

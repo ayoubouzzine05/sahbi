@@ -11,6 +11,7 @@ import 'features/home/home_screen.dart';
 import 'features/live/live_screen.dart';
 import 'features/memory/memory_screen.dart';
 import 'features/music/music_screen.dart';
+import 'features/music/youtube_panel.dart';
 import 'features/robot_link/robot_link_screen.dart';
 import 'features/settings/privacy_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -167,7 +168,13 @@ class _Shell extends ConsumerWidget {
     // The home tab is the full-screen face: no tab bar there (its own
     // buttons navigate); every other tab shows the bar to come back.
     return Scaffold(
-      body: shell,
+      body: Stack(
+        children: [
+          shell,
+          // Songs from YouTube play here, inside the app.
+          const Align(alignment: Alignment.topCenter, child: YoutubePanel()),
+        ],
+      ),
       bottomNavigationBar: shell.currentIndex == 0
           ? null
           : NavigationBar(
