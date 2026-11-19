@@ -30,8 +30,8 @@ void main() {
         reason: 'home shows the robot face',
       );
 
-      // Chat tab.
-      await t.tap(find.byIcon(Icons.chat_bubble_outline_rounded));
+      // Chat: the home face has no tab bar; its keyboard button opens chat.
+      await t.tap(find.byIcon(Icons.keyboard_alt_outlined));
       await frames();
       await t.enterText(find.byKey(const Key('chat_input')), 'chno smitek?');
       await t.pump(); // send button enables on the next frame

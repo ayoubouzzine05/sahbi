@@ -33,8 +33,10 @@ class TalkControls extends ConsumerWidget {
     }
 
     final big = compact ? 64.0 : 84.0;
-    return Row(
+    final row = Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+      spacing: compact ? 4 : 0,
       children: [
         _RoundButton(
           icon: Icons.keyboard_alt_outlined,
@@ -105,6 +107,9 @@ class TalkControls extends ConsumerWidget {
         ),
       ],
     );
+    // On narrow phones the compact bar shares its row with other buttons:
+    // scale the three controls down instead of overflowing.
+    return compact ? FittedBox(fit: BoxFit.scaleDown, child: row) : row;
   }
 }
 

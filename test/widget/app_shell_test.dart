@@ -29,10 +29,11 @@ class FakeMic implements MicPermission {
 Future<void> pumpApp(
   WidgetTester t, {
   AppSettings settings = const AppSettings(),
+  Size size = const Size(412, 915),
 }) async {
   SharedPreferences.setMockInitialValues({'settings_v1': settings.encode()});
   final prefs = await SharedPreferences.getInstance();
-  await t.binding.setSurfaceSize(const Size(412, 915));
+  await t.binding.setSurfaceSize(size);
   await t.pumpWidget(
     ProviderScope(
       overrides: [
@@ -156,6 +157,13 @@ void main() {
       await unmount(t);
     },
   );
+
+  testWidgets('narrow phone: home controls fit without overflow', (t) async {
+    await pumpApp(t, size: const Size(320, 640));
+    expect(t.takeException(), isNull);
+    expect(find.byKey(const Key('ptt')), findsOneWidget);
+    await unmount(t);
+  });
 
   testWidgets('French UI loads', (t) async {
     await pumpApp(t, settings: const AppSettings(uiLocale: 'fr'));
