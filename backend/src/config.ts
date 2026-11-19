@@ -25,7 +25,7 @@ export interface Config {
     /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
     reasoningEffort: string;
   };
-  search: { provider: 'brave' | 'gemini' | 'free' | 'none'; apiKey: string; geminiModels: string[]; youtubeApiKey: string };
+  search: { provider: 'brave' | 'gemini' | 'free' | 'none'; apiKey: string; geminiModels: string[]; youtubeApiKey: string; pipedInstances: string[] };
   stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
   tts: { provider: 'azure' | 'gemini' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string; geminiModel: string };
   live: { model: string; enabled: boolean };
@@ -129,6 +129,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         .map((m) => m.trim())
         .filter(Boolean),
       youtubeApiKey: str(env, 'YOUTUBE_API_KEY'),
+      // Public Piped API instances for keyless YouTube search ('none' disables).
+      pipedInstances:
+        str(env, 'PIPED_INSTANCES', 'https://api.piped.private.coffee') === 'none'
+          ? []
+          : str(env, 'PIPED_INSTANCES', 'https://api.piped.private.coffee')
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => /^https:\/\//.test(s)),
     },
     stt: {
       provider: oneOf(str(env, 'STT_PROVIDER', 'none'), ['azure', 'openai', 'none'] as const, 'none'),

@@ -44,6 +44,7 @@ const search = !isSearchConfigured(config)
       : new FreeWebSearchProvider();
 const youtube = new YoutubeFinder({
   apiKey: config.search.youtubeApiKey || undefined,
+  piped: config.search.pipedInstances,
   gemini: geminiKey ? { apiKey: geminiKey, baseUrl: config.llm.baseUrl, models: [config.llm.model, ...config.llm.fallbackModels] } : undefined,
 });
 

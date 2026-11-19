@@ -118,6 +118,24 @@ describe('YouTube finder for in-app playback', () => {
     expect(again.dataApi).toContain('403');
   });
 
+  it('uses a Piped instance first when it answers, keeping only oEmbed-confirmed videos', async () => {
+    const fake = (async (u: string) => {
+      if (u.startsWith('https://piped.example/search')) {
+        return json({ items: [{ type: 'stream', url: '/watch?v=AAAAAAAAAAA', duration: 200 }, { type: 'channel', url: '/channel/x' }, { type: 'stream', url: '/watch?v=BBBBBBBBBBB', duration: 100 }] });
+      }
+      if (u.startsWith('https://down.example')) throw new Error('ECONNREFUSED');
+      if (u.startsWith('https://www.youtube.com/oembed')) {
+        return decodeURIComponent(u).endsWith('AAAAAAAAAAA') ? json({ title: 'Nass El Ghiwane - Mahmouna', author_name: 'NEG' }) : new Response('', { status: 401 });
+      }
+      return new Response('', { status: 500 });
+    }) as unknown as typeof fetch;
+    const f = new YoutubeFinder({ piped: ['https://down.example', 'https://piped.example'] }, fake);
+    expect(f.mode).toBe('piped');
+    const r = await f.findWithStats('nass el ghiwane');
+    expect(r.via).toBe('piped:piped.example');
+    expect(r.videos.map((v) => v.id)).toEqual(['AAAAAAAAAAA']);
+  });
+
   it('uses the YouTube Data API when YOUTUBE_API_KEY is set', async () => {
     let url = '';
     const fake = (async (u: string) => {

@@ -23,14 +23,16 @@ export interface YoutubeVideo {
  */
 export class YoutubeFinder {
   constructor(
-    private readonly opts: { apiKey?: string; gemini?: { apiKey: string; baseUrl: string; models: string[] } },
+    private readonly opts: { apiKey?: string; gemini?: { apiKey: string; baseUrl: string; models: string[] }; piped?: string[] },
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
 
   private dataApiRefused = '';
 
-  get mode(): 'youtube-data-api' | 'gemini-oembed' | 'none' {
-    return this.opts.apiKey ? 'youtube-data-api' : this.opts.gemini ? 'gemini-oembed' : 'none';
+  get mode(): 'youtube-data-api' | 'piped+gemini' | 'gemini-oembed' | 'piped' | 'none' {
+    if (this.opts.apiKey) return 'youtube-data-api';
+    const p = (this.opts.piped ?? []).length > 0;
+    return p && this.opts.gemini ? 'piped+gemini' : this.opts.gemini ? 'gemini-oembed' : p ? 'piped' : 'none';
   }
 
   async find(query: string): Promise<YoutubeVideo[]> {
@@ -42,6 +44,14 @@ export class YoutubeFinder {
     if (this.opts.apiKey) {
       const videos = await this.dataApi(query, this.opts.apiKey);
       return { videos, suggested: videos.length, embeddable: videos.length };
+    }
+    // Public Piped instances (open-source YouTube front-ends, no key). Best
+    // effort: community-run, often down. Results are oEmbed-checked too.
+    for (const base of this.opts.piped ?? []) {
+      const ids = await this.piped(base, query).catch(() => []);
+      if (!ids.length) continue;
+      const videos = (await Promise.all(ids.slice(0, 6).map((id) => this.oembed(id)))).filter((v): v is YoutubeVideo => v !== null);
+      if (videos.length) return { videos: videos.slice(0, 5), suggested: ids.length, embeddable: videos.length, via: `piped:${new URL(base).hostname}` };
     }
     if (this.opts.gemini) {
       // The Gemini key also works for the YouTube Data API when that API is
@@ -134,6 +144,27 @@ export class YoutubeFinder {
       }),
     );
     return { videos: checked.filter((v): v is YoutubeVideo => v !== null).slice(0, 5), suggested: unique.length, embeddable };
+  }
+
+  private async piped(base: string, query: string): Promise<string[]> {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
+    try {
+      const res = await this.fetchImpl(`${base.replace(/\/$/, '')}/search?q=${encodeURIComponent(query)}&filter=videos`, {
+        headers: { accept: 'application/json' },
+        signal: ctrl.signal,
+      });
+      if (!res.ok) return [];
+      const j = (await res.json()) as { items?: Array<{ url?: string; type?: string; duration?: number }> };
+      return (j.items ?? [])
+        .filter((i) => i.type === 'stream' && (i.duration ?? 1) > 0)
+        .map((i) => youtubeId(`https://www.youtube.com${i.url ?? ''}`))
+        .filter((id): id is string => !!id);
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(t);
+    }
   }
 
   /** YouTube oEmbed answers 200 only for public videos that allow embedding. */
