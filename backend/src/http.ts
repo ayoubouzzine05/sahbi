@@ -61,7 +61,7 @@ export async function expectOk(res: Response, what: string): Promise<Response> {
 export async function expectGoogleOk(res: Response, what: string): Promise<Response> {
   if (res.ok) return res;
   let detail = '';
-  if (res.status === 401 || res.status === 403) {
+  if ([400, 401, 403, 404, 429].includes(res.status)) {
     try {
       const j = (await res.json()) as { error?: { status?: string; message?: string } };
       detail = [j.error?.status, j.error?.message?.slice(0, 200)].filter(Boolean).join(': ');
