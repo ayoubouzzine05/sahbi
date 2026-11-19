@@ -58,7 +58,8 @@ export const GEMINI_PRESET = {
   ttsModel: 'gemini-3.8-flash-tts', // free tier (pricing page, 2026-11-18)
   liveModel: 'gemini-3.8-live', // free tier (pricing page, 2026-11-18)
   // Google Search grounding is free (500 RPD shared) only on 2.5 Flash / Flash-Lite (pricing page, 2026-11-19).
-  searchModels: ['gemini-2.5-flash-lite', 'gemini-2.5-flash'],
+  // 2.5 models are 'no longer available to new users' (Google 404, 2026-11-19); 3.x is tried after them.
+  searchModels: ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.5-flash-lite'],
   maxOutputTokens: 4096, // thinking tokens count towards output
 } as const;
 

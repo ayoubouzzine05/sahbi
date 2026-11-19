@@ -79,7 +79,7 @@ export class GeminiGroundedSearchProvider implements SearchProvider {
       } catch (err) {
         lastErr = err;
         // Try the next model when this one is missing, busy or over quota.
-        if (!(err instanceof ServiceError) || !/HTTP (404|429|500|503|504)|timed out|timeout/i.test(err.message)) throw err;
+        if (!(err instanceof ServiceError) || !/HTTP (400|403|404|429|500|503|504)|timed out|timeout/i.test(err.message)) throw err;
       }
     }
     throw lastErr instanceof Error ? lastErr : new ServiceError('upstream_error', 'Search failed', 502);

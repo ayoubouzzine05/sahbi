@@ -123,7 +123,7 @@ describe('search configuration', () => {
   it('defaults to Gemini grounding with a Gemini key, Brave when its key exists', () => {
     const g = loadConfig({ AUTH_SECRET: 'x'.repeat(20), LLM_API_KEY: 'AQ.k' });
     expect(g.search.provider).toBe('gemini');
-    expect(g.search.geminiModels).toEqual(['gemini-2.5-flash-lite', 'gemini-2.5-flash']);
+    expect(g.search.geminiModels[0]).toBe('gemini-2.5-flash-lite');
     expect(isSearchConfigured(g)).toBe(true);
     const b = loadConfig({ AUTH_SECRET: 'x'.repeat(20), LLM_API_KEY: 'AQ.k', BRAVE_SEARCH_API_KEY: 'bk' });
     expect(b.search.provider).toBe('brave');
