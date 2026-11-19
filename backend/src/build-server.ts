@@ -13,7 +13,7 @@ import type { LlmProvider } from './providers/llm/types.js';
 import type { SearchProvider } from './providers/search/types.js';
 import type { SttProvider } from './providers/stt/types.js';
 import type { TtsProvider } from './providers/tts/types.js';
-import type { YoutubeVideo } from './providers/search/gemini.js';
+import type { YoutubeVideo } from './providers/music/youtube.js';
 import type { WeatherReport } from './tools/weather.js';
 
 export interface Deps {
@@ -27,6 +27,7 @@ export interface Deps {
   weather: (city: string) => Promise<WeatherReport>;
   /** Finds embeddable YouTube videos for in-app playback; null when not configured. */
   youtube?: ((query: string) => Promise<YoutubeVideo[]>) | null;
+  youtubeMode?: string;
   promptTemplate: string;
   logger?: boolean;
 }
@@ -107,7 +108,7 @@ export function buildServer(deps: Deps): FastifyInstance {
       services: {
         llm: { configured: isLlmConfigured(config) && !!deps.llm, provider: config.llm.provider },
         search: { configured: isSearchConfigured(config) && !!deps.search, provider: config.search.provider },
-        youtube: { configured: !!deps.youtube, provider: deps.youtube ? 'youtube-embed' : 'none' },
+        youtube: { configured: !!deps.youtube, provider: deps.youtubeMode ?? (deps.youtube ? 'youtube-embed' : 'none') },
         weather: { configured: true, provider: 'open-meteo' },
         stt: { configured: isSttConfigured(config) && !!deps.stt, provider: config.stt.provider },
         tts: { configured: isTtsConfigured(config) && !!deps.tts, provider: config.tts.provider },

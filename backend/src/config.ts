@@ -25,7 +25,7 @@ export interface Config {
     /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
     reasoningEffort: string;
   };
-  search: { provider: 'brave' | 'gemini' | 'none'; apiKey: string; geminiModels: string[] };
+  search: { provider: 'brave' | 'gemini' | 'free' | 'none'; apiKey: string; geminiModels: string[]; youtubeApiKey: string };
   stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
   tts: { provider: 'azure' | 'gemini' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string; geminiModel: string };
   live: { model: string; enabled: boolean };
@@ -117,10 +117,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },
     search: {
-      // Default: Brave when its key exists, else Gemini Google Search grounding with a Gemini key.
+      // Default: Brave when its key exists, else free Wikipedia + GDELT (no key). 'gemini' = Google Search grounding (not free for new accounts).
       provider: oneOf(
-        str(env, 'SEARCH_PROVIDER', str(env, 'BRAVE_SEARCH_API_KEY') ? 'brave' : gemini ? 'gemini' : 'none'),
-        ['brave', 'gemini', 'none'] as const,
+        str(env, 'SEARCH_PROVIDER', str(env, 'BRAVE_SEARCH_API_KEY') ? 'brave' : 'free'),
+        ['brave', 'gemini', 'free', 'none'] as const,
         'none',
       ),
       apiKey: str(env, 'BRAVE_SEARCH_API_KEY'),
@@ -128,6 +128,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         .split(',')
         .map((m) => m.trim())
         .filter(Boolean),
+      youtubeApiKey: str(env, 'YOUTUBE_API_KEY'),
     },
     stt: {
       provider: oneOf(str(env, 'STT_PROVIDER', 'none'), ['azure', 'openai', 'none'] as const, 'none'),
@@ -158,6 +159,7 @@ export function isLlmConfigured(c: Config): boolean {
 }
 export function isSearchConfigured(c: Config): boolean {
   if (c.search.provider === 'brave') return c.search.apiKey !== '';
+  if (c.search.provider === 'free') return true;
   return c.search.provider === 'gemini' && c.llm.provider === 'gemini' && c.llm.apiKey !== '' && c.search.geminiModels.length > 0;
 }
 export function isSttConfigured(c: Config): boolean {
