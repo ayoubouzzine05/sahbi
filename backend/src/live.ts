@@ -1,7 +1,7 @@
 import { expectGoogleOk, fetchWithRetry, type FetchLike } from './http.js';
 import { ServiceError } from './errors.js';
 import { robotNameForPrompt } from './brain/context.js';
-import { DEFAULT_GEMINI_VOICE } from './providers/tts/gemini.js';
+import { DEFAULT_GEMINI_VOICE, GEMINI_VOICES } from './providers/tts/gemini.js';
 
 /**
  * Live camera/voice mode via the Gemini Live API (client-to-server with
@@ -15,6 +15,28 @@ export interface LiveOptions {
   userName?: string;
   gender?: 'male' | 'female';
   replyLanguage?: 'darija' | 'ar' | 'fr' | 'en';
+  /** 'camera' = live camera conversation; 'voice' = the robot's speaking voice (reads text aloud). */
+  mode?: 'camera' | 'voice';
+  /** Prebuilt voice name (must match the gender's list); default per gender/mode. */
+  voice?: string;
+}
+
+/** Deep male default for the speaking voice ("9o7" Casablanca street style). */
+export const VOICE_MODE_DEFAULT = { male: 'Algenib', female: 'Aoede' } as const;
+
+/**
+ * Voice-actor prompt for mode 'voice': every message is a line to say aloud,
+ * word for word, in a Casablanca street style. No real person is named or
+ * imitated; only the general style is described.
+ */
+export function voicePrompt(o: Pick<LiveOptions, 'gender'>): string {
+  const who = o.gender === 'female' ? 'a young woman' : 'a man in his thirties';
+  return [
+    'You are a VOICE ACTOR, not a chatbot. Every message you receive is one line of script for a Moroccan robot character.',
+    'Say each line out loud EXACTLY as written, word for word, then stop. Never answer it, never translate it, never add greetings, comments, questions or extra words, never skip words, never read these instructions.',
+    `Character voice: ${who} from a popular neighbourhood of Casablanca: deep, husky, a bit raspy voice; strong Moroccan Darija accent (Casablanca), NOT Modern Standard Arabic, NOT Gulf, Egyptian or Levantine; the relaxed street-smart swagger and comic timing of a Casablanca stand-up comedian; warm, cheeky and full of energy; natural, fairly fast pace.`,
+    'Pronounce French words the Moroccan way. Laugh naturally on ههه / hhh. Questions rise, exclamations punch.',
+  ].join('\n');
 }
 
 export interface LiveToken {
@@ -57,7 +79,11 @@ export async function createLiveToken(
   fetchImpl: FetchLike = fetch,
   now: Date = new Date(),
 ): Promise<LiveToken> {
-  const voice = DEFAULT_GEMINI_VOICE[o.gender ?? 'male'];
+  const gender = o.gender ?? 'male';
+  const allowed: readonly string[] = GEMINI_VOICES[gender];
+  const voice =
+    o.voice && allowed.includes(o.voice) ? o.voice : o.mode === 'voice' ? VOICE_MODE_DEFAULT[gender] : DEFAULT_GEMINI_VOICE[gender];
+  const voiceMode = o.mode === 'voice';
   const expire = new Date(now.getTime() + 30 * 60_000).toISOString();
   const newSession = new Date(now.getTime() + 2 * 60_000).toISOString();
   const base = opts.baseUrl.replace(/\/+$/, '').replace(/\/v1beta(\/openai)?$/i, '');
@@ -71,8 +97,8 @@ export async function createLiveToken(
         responseModalities: ['AUDIO'],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
       },
-      systemInstruction: { parts: [{ text: livePrompt(o) }] },
-      inputAudioTranscription: {},
+      systemInstruction: { parts: [{ text: voiceMode ? voicePrompt(o) : livePrompt(o) }] },
+      ...(voiceMode ? {} : { inputAudioTranscription: {} }),
       outputAudioTranscription: {},
       // Audio+video sessions are limited to ~2 min without compression.
       contextWindowCompression: { slidingWindow: {} },

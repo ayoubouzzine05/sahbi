@@ -286,12 +286,14 @@ export function buildServer(deps: Deps): FastifyInstance {
           user_name: z.string().max(40).optional(),
           gender: z.enum(['male', 'female']).default('male'),
           reply_language: z.enum(['darija', 'ar', 'fr', 'en']).default('darija'),
+          mode: z.enum(['camera', 'voice']).default('camera'),
+          voice: z.string().regex(/^[A-Z][a-z]{2,15}$/).optional(),
         })
         .safeParse(req.body ?? {});
       if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: formatZodError(parsed.error) } });
       try {
         const d = parsed.data;
-        const t = await deps.live({ robotName: d.robot_name, userName: d.user_name, gender: d.gender, replyLanguage: d.reply_language });
+        const t = await deps.live({ robotName: d.robot_name, userName: d.user_name, gender: d.gender, replyLanguage: d.reply_language, mode: d.mode, voice: d.voice });
         return reply.header('cache-control', 'no-store').send(t);
       } catch (err) {
         return sendError(reply, err);
