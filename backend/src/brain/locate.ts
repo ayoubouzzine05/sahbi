@@ -24,6 +24,8 @@ export interface LocateResult {
   found: boolean;
   /** Short object name in the requested language (Darija in Arabic script for 'ar'). */
   label?: string;
+  /** English name (more reliable; used to tell the live model what was selected). */
+  name_en?: string;
   /** 0..1 from the top-left: left, top, right, bottom. */
   box?: { left: number; top: number; right: number; bottom: number };
   /** 'tap' or 'pointing' (what selected the object). */
@@ -31,7 +33,7 @@ export interface LocateResult {
 }
 
 const LANG: Record<LocateRequest['language'], string> = {
-  ar: 'Moroccan Darija written in Arabic script (e.g. كاس, تيليفون, ستيلو)',
+  ar: 'the everyday word Moroccans say in Darija, in Arabic script, using common French loanwords when that is what people say (e.g. cup = كاس, phone = تيليفون, pen = ستيلو, keyboard = كلافيي, mouse = سوري, apple = تفاحة, remote = تيليكوموند)',
   fr: 'French',
   en: 'English',
 };
@@ -40,11 +42,12 @@ export function locateSystem(language: LocateRequest['language']): string {
   return [
     'You locate ONE object in a camera photo for a small robot companion.',
     'Reply with ONLY one JSON object and nothing else:',
-    '{"found": true, "label": "<object name, 1-3 words>", "box_2d": [ymin, xmin, ymax, xmax]}',
+    '{"found": true, "name_en": "<object name in English, 1-3 words>", "label": "<the same name translated>", "box_2d": [ymin, xmin, ymax, xmax]}',
+    'Identify the object carefully first (name_en), then translate that exact name for label.',
     'or {"found": false}.',
     'box_2d uses integers normalised to 0-1000 over the whole image, (0,0) = top-left.',
     'Box the whole object tightly. Never box a hand, a finger, a person or the background unless that is clearly what is meant.',
-    `Write the label in ${LANG[language]}.`,
+    `label = ${LANG[language]}.`,
   ].join('\n');
 }
 
@@ -68,7 +71,7 @@ export function parseLocate(text: string, by: LocateResult['by'], tap?: { x: num
   } catch {
     return { found: false, by };
   }
-  const o = raw as { found?: unknown; label?: unknown; box_2d?: unknown };
+  const o = raw as { found?: unknown; label?: unknown; name_en?: unknown; box_2d?: unknown };
   if (o.found !== true || !Array.isArray(o.box_2d) || o.box_2d.length !== 4) return { found: false, by };
   const n = o.box_2d.map((v) => (typeof v === 'number' ? v : Number(v)));
   if (n.some((v) => !Number.isFinite(v))) return { found: false, by };
@@ -85,7 +88,8 @@ export function parseLocate(text: string, by: LocateResult['by'], tap?: { x: num
     if (tap.x < box.left - m || tap.x > box.right + m || tap.y < box.top - m || tap.y > box.bottom + m) return { found: false, by };
   }
   const label = typeof o.label === 'string' ? o.label.trim().slice(0, 40) : '';
-  return { found: true, by, box, ...(label ? { label } : {}) };
+  const nameEn = typeof o.name_en === 'string' ? o.name_en.trim().slice(0, 40) : '';
+  return { found: true, by, box, ...(label ? { label } : {}), ...(nameEn ? { name_en: nameEn } : {}) };
 }
 
 export async function locateObject(llm: LlmProvider, req: LocateRequest): Promise<LocateResult> {

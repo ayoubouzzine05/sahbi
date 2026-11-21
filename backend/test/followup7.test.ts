@@ -13,8 +13,8 @@ const IMG = 'A'.repeat(200);
 
 describe('parseLocate (Gemini box_2d → 0..1 box)', () => {
   it('converts [ymin,xmin,ymax,xmax] 0-1000 to left/top/right/bottom 0..1', () => {
-    const r = parseLocate('```json\n{"found":true,"label":"كاس","box_2d":[100,200,500,600]}\n```', 'pointing');
-    expect(r).toEqual({ found: true, by: 'pointing', label: 'كاس', box: { left: 0.2, top: 0.1, right: 0.6, bottom: 0.5 } });
+    const r = parseLocate('```json\n{"found":true,"name_en":"cup","label":"كاس","box_2d":[100,200,500,600]}\n```', 'pointing');
+    expect(r).toEqual({ found: true, by: 'pointing', label: 'كاس', name_en: 'cup', box: { left: 0.2, top: 0.1, right: 0.6, bottom: 0.5 } });
   });
   it('rejects junk, not-found, tiny and whole-frame boxes', () => {
     expect(parseLocate('no idea', 'pointing').found).toBe(false);
