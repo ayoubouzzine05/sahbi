@@ -27,8 +27,10 @@ export function speechStyle(language: string, gender: 'male' | 'female' = 'male'
 }
 
 /**
- * Prompt sent to the TTS model: a short delivery instruction, then the exact
- * words. Google documents this "style: text" form for controllable speech.
+ * NOT sent to the model: measured live on 2026-11-16 with gemini-3.8-flash-tts,
+ * a "style:\ntext" prompt made the voice read the English instruction aloud
+ * (16.9 s of audio for a 2.5 s sentence). Only the exact words are sent; kept
+ * for reference and tests.
  */
 export function ttsPrompt(text: string, language: string, gender: 'male' | 'female' = 'male'): string {
   return `${speechStyle(language, gender)}:\n${text}`;
@@ -51,7 +53,7 @@ export class GeminiTtsProvider implements TtsProvider {
 
   async synthesize(req: TtsRequest): Promise<{ audio: Buffer; contentType: string }> {
     const body = {
-      contents: [{ role: 'user', parts: [{ text: ttsPrompt(req.text, req.language, req.gender) }] }],
+      contents: [{ role: 'user', parts: [{ text: req.text }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiVoiceFor(req) } } },

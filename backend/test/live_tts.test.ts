@@ -69,7 +69,7 @@ describe('GeminiTtsProvider', () => {
     expect(key).toBe('AQ.k');
     expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
     expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Puck');
-    expect(body.contents[0].parts[0].text.endsWith(':\nسلام')).toBe(true);
+    expect(body.contents[0].parts[0].text).toBe('سلام');
     expect(out.contentType).toBe('audio/wav');
     expect(out.audio.subarray(0, 4).toString('ascii')).toBe('RIFF');
     expect(out.audio.length).toBe(44 + 480);
