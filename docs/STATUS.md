@@ -134,6 +134,8 @@ Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, spe
 | "Gemini Live" showing in the camera | DONE | No "Gemini"/"Google" text is left in the camera screen: the "not configured" message and the permission explanation were reworded (ar/fr/en). The live and chat prompts (1.5.1) tell the robot never to talk about servers, APIs, Gemini, Google or models when it talks about itself. The Privacy screen still names the providers (honest disclosure) |
 | Tests | DONE | Flutter: connectivity, chat_controller, voice_controller, live_voice_tts, search_sources, robot_face pass; `flutter analyze` clean. Backend 128/128 |
 
+Android run 44957437402 (`93cf4e2`): tests, APK and emulator integration test passed; Release `latest` re-uploaded 2026-11-21 22:47 UTC. Backend sahbi-8jkp reports prompt 1.5.1.
+
 ## Follow-up 9 (2026-11-16): one Casablanca male voice, EMO-like personality
 
 | Item | Status | Evidence |
