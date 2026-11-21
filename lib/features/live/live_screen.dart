@@ -21,6 +21,7 @@ import '../personality/voice_state.dart';
 import '../voice/wake_name.dart';
 import 'live_player.dart';
 import 'live_session.dart';
+import 'pointing.dart';
 import 'scene_watcher.dart';
 
 enum LivePhase {
@@ -90,6 +91,22 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   /// A LOOK was sent and the model has not finished its answer yet.
   DateTime? _lookSentAt;
 
+  // Pointing: the object the user tapped or pointed at is outlined in green
+  // on a frozen copy of the frame it was found in (so the box always lines
+  // up), then the robot is told to talk about that object only.
+  Uint8List? _lastJpeg;
+  DateTime? _lastJpegAt;
+  Uint8List? _focusJpeg;
+  UprightFrame? _focusFrame;
+  LocatedObject? _focusObj;
+  Offset? _focusTap;
+  bool _locating = false;
+  DateTime? _lastPointCheck;
+  Timer? _focusTimer;
+  Timer? _pulseTimer;
+  double _pulse = 0;
+  String? _pointNote;
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +120,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _focusTimer?.cancel();
+    _pulseTimer?.cancel();
     unawaited(_teardown());
     unawaited(WakelockPlus.disable().catchError((_) {}));
     // ref is unusable after dispose; resume wake listening via the container.
@@ -281,6 +300,22 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
           _scene
             ..userSpoke()
             ..markDescribed();
+          // "hada / chno hadi / ça": they are probably pointing at something.
+          final said = _newUserTurn ? text : '$_userText$text';
+          final last = _lastPointCheck;
+          final jpeg = _lastJpeg;
+          if (jpeg != null &&
+              mentionsThis(said) &&
+              (last == null ||
+                  DateTime.now().difference(last).inSeconds >= 4)) {
+            unawaited(
+              _checkPointing(
+                jpeg,
+                // Only steer the robot if it has not started answering yet.
+                sendCue: () => _newRobotTurn && !_player.playing,
+              ),
+            );
+          }
         }
         setState(() {
           if (fromUser) {
@@ -397,6 +432,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         await File(x.path).delete();
       } catch (_) {}
       s.sendImage(bytes);
+      _lastJpeg = bytes;
+      _lastJpegAt = DateTime.now();
       await _maybeLook(s, bytes);
     } catch (e) {
       ref.read(errorLogProvider).add('live.frame', '$e');
@@ -409,6 +446,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   /// (the frame was just sent, so the model sees what the user sees).
   Future<void> _maybeLook(LiveSession s, Uint8List jpeg) async {
     if (!ref.read(settingsProvider).liveAutoDescribe || _muted) return;
+    if (_locating || _focusFrame != null) return;
     final sig = await sceneSignature(jpeg);
     if (sig == null || !mounted) return;
     final sent = _lookSentAt;
@@ -416,8 +454,215 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         sent != null && DateTime.now().difference(sent).inSeconds < 10;
     if (_scene.onFrame(sig, robotBusy: _player.playing || waiting)) {
       _lookSentAt = DateTime.now();
-      s.sendText(liveLookCue);
+      // A finger pointing at something wins over "explain the view".
+      unawaited(() async {
+        final pointed = await _checkPointing(jpeg, sendCue: () => true);
+        if (!pointed && mounted && _session == s && s.ready) {
+          s.sendText(liveLookCue);
+        }
+      }());
     }
+  }
+
+  BackendClient get _client => ref.read(backendClientProvider);
+  String get _locateLang =>
+      locateLanguage(ref.read(settingsProvider).replyLanguage);
+
+  /// The newest camera frame: the one just streamed, or a fresh picture.
+  Future<Uint8List?> _grabJpeg() async {
+    final last = _lastJpeg, at = _lastJpegAt;
+    if (last != null &&
+        at != null &&
+        DateTime.now().difference(at) < const Duration(milliseconds: 1500)) {
+      return last;
+    }
+    final c = _cam;
+    if (c == null || !c.value.isInitialized) return null;
+    for (var i = 0; i < 20 && (_capturing || c.value.isTakingPicture); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (_capturing || c.value.isTakingPicture) return _lastJpeg;
+    _capturing = true;
+    try {
+      final x = await c.takePicture();
+      final bytes = await x.readAsBytes();
+      try {
+        await File(x.path).delete();
+      } catch (_) {}
+      _lastJpeg = bytes;
+      _lastJpegAt = DateTime.now();
+      return bytes;
+    } catch (e) {
+      ref.read(errorLogProvider).add('live.point', '$e');
+      return null;
+    } finally {
+      _capturing = false;
+    }
+  }
+
+  void _setPulse(bool on) {
+    if (!on) {
+      _pulseTimer?.cancel();
+      _pulseTimer = null;
+      return;
+    }
+    _pulseTimer ??= Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (mounted) setState(() => _pulse = (_pulse + 0.05) % 1);
+    });
+  }
+
+  void _clearFocus() {
+    _focusTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _focusFrame = null;
+      _focusJpeg = null;
+      _focusObj = null;
+      _focusTap = null;
+      _pointNote = null;
+    });
+  }
+
+  void _holdFocus(Duration d) {
+    _focusTimer?.cancel();
+    _focusTimer = Timer(d, _clearFocus);
+  }
+
+  Duration get _focusHold => phase == LivePhase.photo
+      ? const Duration(seconds: 14)
+      : const Duration(seconds: 7);
+
+  /// Tells the robot which object is meant (live: POINT cue; photo: a chat
+  /// question about that object).
+  void _talkAbout(LocatedObject obj, Uint8List jpeg) {
+    if (phase == LivePhase.live) {
+      final s = _session;
+      if (s == null || !s.ready) return;
+      s.sendImage(jpeg);
+      _scene.markDescribed();
+      _lookSentAt = DateTime.now();
+      s.sendText(obj.liveCue);
+    } else if (phase == LivePhase.photo) {
+      unawaited(_askPhoto(jpeg, obj));
+    }
+  }
+
+  /// Tap on the picture: find the object under the finger.
+  Future<void> _onTap(Offset pos, Size screen) async {
+    if (_locating || _snapping) return;
+    if (phase != LivePhase.live && phase != LivePhase.photo) return;
+    final cam = _cam;
+    if (cam == null || !cam.value.isInitialized) return;
+    final l = L10n.of(context);
+    var frame = _focusFrame;
+    var jpeg = _focusJpeg;
+    final ({double x, double y})? tap;
+    if (frame != null && jpeg != null) {
+      tap = screenToImage(pos, screen, frame.aspect);
+    } else {
+      final ps = cam.value.previewSize;
+      tap = screenToImage(
+        pos,
+        screen,
+        ps == null ? 3 / 4 : ps.height / ps.width,
+        mirror: cam.description.lensDirection == CameraLensDirection.front,
+      );
+    }
+    if (tap == null) return;
+    _focusTimer?.cancel();
+    setState(() {
+      _locating = true;
+      _focusTap = pos;
+      _focusObj = null;
+      _pointNote = l.pointLooking;
+    });
+    _setPulse(true);
+    LocatedObject? obj;
+    try {
+      if (frame == null || jpeg == null) {
+        jpeg = await _grabJpeg();
+        if (jpeg == null) return;
+        frame = await uprightFrame(jpeg);
+        if (frame == null || !mounted) return;
+        final f = frame;
+        setState(() {
+          _focusFrame = f;
+          _focusJpeg = jpeg;
+          // Same spot on the (un-mirrored) frozen frame.
+          _focusTap = imageBoxToScreen(
+            Rect.fromLTWH(tap!.x, tap.y, 0, 0),
+            screen,
+            f.aspect,
+          ).topLeft;
+        });
+      }
+      obj = await locateOn(_client, frame, tap: tap, language: _locateLang);
+    } catch (e) {
+      ref.read(errorLogProvider).add('live.point', '$e');
+    } finally {
+      _locating = false;
+      _setPulse(false);
+    }
+    if (!mounted) return;
+    if (obj == null || jpeg == null) {
+      setState(() => _pointNote = l.pointNotFound);
+      _holdFocus(const Duration(milliseconds: 2200));
+      return;
+    }
+    final found = obj;
+    setState(() {
+      _focusObj = found;
+      _pointNote = null;
+    });
+    _holdFocus(_focusHold);
+    _talkAbout(found, jpeg);
+  }
+
+  /// Is a finger pointing at something in [jpeg]? Highlights it and, when
+  /// [sendCue] says so, tells the robot. True when an object was found.
+  Future<bool> _checkPointing(
+    Uint8List jpeg, {
+    required bool Function() sendCue,
+  }) async {
+    if (_locating || _focusFrame != null || !mounted) return false;
+    _locating = true;
+    _lastPointCheck = DateTime.now();
+    try {
+      final frame = await uprightFrame(jpeg);
+      if (frame == null) return false;
+      final obj = await locateOn(
+        _client,
+        frame,
+        language: _locateLang,
+      ).timeout(const Duration(seconds: 6));
+      if (obj == null || !mounted) return false;
+      setState(() {
+        _focusFrame = frame;
+        _focusJpeg = jpeg;
+        _focusObj = obj;
+        _focusTap = null;
+        _pointNote = null;
+      });
+      _holdFocus(_focusHold);
+      if (sendCue()) _talkAbout(obj, jpeg);
+      return true;
+    } catch (e) {
+      // Busy quota / no network: just carry on without the highlight.
+      return false;
+    } finally {
+      _locating = false;
+    }
+  }
+
+  /// Photo mode: ask the normal chat about the highlighted object.
+  Future<void> _askPhoto(Uint8List jpeg, LocatedObject? obj) async {
+    final l = L10n.of(context);
+    final question = obj == null || obj.display.isEmpty
+        ? l.photoQuestion
+        : l.pointQuestion(obj.display);
+    final chat = ref.read(chatControllerProvider);
+    setState(() => _photoAt = chat.messages.length);
+    await chat.sendPhoto(jpeg, question);
   }
 
   Future<void> _play(Uint8List pcm) async {
@@ -485,7 +730,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     final c = _cam;
     if (_snapping || c == null || !c.value.isInitialized) return;
     if (c.value.isTakingPicture) return;
-    final question = L10n.of(context).photoQuestion;
+    _clearFocus();
     setState(() => _snapping = true);
     try {
       final x = await c.takePicture();
@@ -494,9 +739,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         await File(x.path).delete();
       } catch (_) {}
       if (!mounted) return;
-      final chat = ref.read(chatControllerProvider);
-      setState(() => _photoAt = chat.messages.length);
-      await chat.sendPhoto(bytes, question);
+      // A finger on the photo picks the object to talk about.
+      await _checkPointing(bytes, sendCue: () => false);
+      if (!mounted) return;
+      await _askPhoto(bytes, _focusObj);
     } catch (e) {
       ref.read(errorLogProvider).add('live.photo', '$e');
     } finally {
@@ -586,6 +832,35 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
             )
           else
             const ColoredBox(color: SahbiColors.visor),
+          // Frozen frame + green outline of the tapped / pointed-at object.
+          if (_focusFrame case final f?)
+            Image.memory(f.png, fit: BoxFit.cover, gaplessPlayback: true),
+          if (cam != null && (phase == LivePhase.live || photo))
+            LayoutBuilder(
+              builder: (ctx, box) {
+                final size = box.biggest;
+                final ps = cam.value.previewSize;
+                return GestureDetector(
+                  key: const Key('live_tap_layer'),
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (d) => _onTap(d.localPosition, size),
+                  child: CustomPaint(
+                    size: size,
+                    painter: PointHighlightPainter(
+                      aspect:
+                          _focusFrame?.aspect ??
+                          (ps == null ? 3 / 4 : ps.height / ps.width),
+                      box: _focusObj?.box,
+                      tap: _focusTap,
+                      label: _focusObj?.display,
+                      busy: _locating,
+                      pulse: _pulse,
+                      textDirection: Directionality.of(ctx),
+                    ),
+                  ),
+                );
+              },
+            ),
           // Top bar.
           SafeArea(
             child: Padding(
@@ -613,18 +888,15 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                             shadows: [Shadow(blurRadius: 6)],
                           ),
                         ),
-                        Text(
-                          photo
-                              ? l.photoLabel
-                              : phase == LivePhase.live
-                              ? '${l.liveAiLabel} · ${_mmss(_elapsed.elapsed)}'
-                              : l.liveAiLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: SahbiColors.mint,
-                            shadows: [Shadow(blurRadius: 6)],
+                        if (phase == LivePhase.live)
+                          Text(
+                            _mmss(_elapsed.elapsed),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: SahbiColors.mint,
+                              shadows: [Shadow(blurRadius: 6)],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -730,12 +1002,20 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                     if (phase == LivePhase.live &&
                         _robotText.isEmpty &&
                         _userText.isEmpty)
-                      _Caption(text: l.liveHint, dim: true),
+                      _Caption(
+                        text: '${l.liveHint}\n${l.liveTapHint}',
+                        dim: true,
+                      ),
                     if (_userText.isNotEmpty)
                       _Caption(text: _userText, dim: true),
                     if (_robotText.isNotEmpty) _Caption(text: _robotText),
                     if (photo && _photoAt == null)
-                      _Caption(text: l.photoModeHint, dim: true),
+                      _Caption(
+                        text: '${l.photoModeHint}\n${l.liveTapHint}',
+                        dim: true,
+                      ),
+                    if (_pointNote case final note?)
+                      _Caption(text: note, dim: true),
                     if (photo && _photoAt != null)
                       _Caption(text: photoReply ?? l.photoThinking),
                     const SizedBox(height: 10),

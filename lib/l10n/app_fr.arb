@@ -227,7 +227,6 @@
   "liveEnd": "Terminer",
   "liveNoCamera": "Aucune caméra trouvée.",
   "liveNeedsInternet": "La caméra live a besoin d’Internet.",
-  "liveAiLabel": "IA · Gemini Live",
   "cameraRationaleTitle": "Je regarde avec toi ?",
   "cameraRationaleBody": "Pour voir ce que tu me montres, j’ai besoin de la caméra et du micro. Les images (≈1 par seconde) et le son vont directement à Google Gemini pendant la session uniquement. L’app n’enregistre rien.",
   "cameraDenied": "Sans caméra et micro je ne peux pas voir. Autorise-les dans les réglages.",
@@ -250,7 +249,6 @@
   "photoQuestion": "Qu’est-ce que c’est ? Explique-moi ce que tu vois sur cette photo.",
   "photoThinking": "Je regarde…",
   "photoError": "Je n’ai pas pu expliquer la photo. Réessaie plus tard.",
-  "photoLabel": "IA · photo",
   "ytSearching": "Je cherche sur YouTube : {query}…",
   "ytError": "Aucune de ces vidéos ne peut être lue ici. Essaie un autre morceau.",
   "ytNext": "Suivant",
@@ -268,5 +266,9 @@
   "liveAutoDescribe": "Expliquer ce que je montre",
   "liveAutoDescribeHint": "Vise un objet et reste immobile",
   "ytPlay": "Lecture",
-  "ytPause": "Pause"
+  "ytPause": "Pause",
+  "liveTapHint": "Touche un objet ou montre-le du doigt",
+  "pointLooking": "Je regarde ce que tu montres…",
+  "pointNotFound": "Je ne trouve rien là, touche l’objet directement",
+  "pointQuestion": "C’est quoi, ce que je montre ({label}) ? Parle seulement de cet objet."
 }

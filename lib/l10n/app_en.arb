@@ -454,8 +454,6 @@
   "@liveNoCamera": {},
   "liveNeedsInternet": "Live camera needs the internet.",
   "@liveNeedsInternet": {},
-  "liveAiLabel": "AI · Gemini Live",
-  "@liveAiLabel": {},
   "cameraRationaleTitle": "Shall I look with you?",
   "@cameraRationaleTitle": {},
   "cameraRationaleBody": "To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.",
@@ -518,8 +516,6 @@
   "@photoThinking": {},
   "photoError": "Couldn’t explain the photo right now. Try again later.",
   "@photoError": {},
-  "photoLabel": "AI · photo",
-  "@photoLabel": {},
   "ytSearching": "Searching YouTube for: {query}…",
   "@ytSearching": {
     "placeholders": {
@@ -579,5 +575,17 @@
   "ytPlay": "Play",
   "@ytPlay": {},
   "ytPause": "Pause",
-  "@ytPause": {}
+  "@ytPause": {},
+  "liveTapHint": "Tap an object or point at it with your finger",
+  "pointLooking": "Looking at what you point at…",
+  "pointNotFound": "I can’t find anything there, tap right on the object",
+  "pointQuestion": "What is this thing I’m pointing at ({label})? Talk only about this object.",
+  "@pointQuestion": {
+    "description": "Photo question when the user tapped/pointed at one object",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  }
 }

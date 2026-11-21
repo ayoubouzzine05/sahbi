@@ -715,9 +715,6 @@ class L10nAr extends L10n {
   String get liveNeedsInternet => 'الكاميرا المباشرة خاصها الأنترنيت.';
 
   @override
-  String get liveAiLabel => 'AI · Gemini Live';
-
-  @override
   String get cameraRationaleTitle => 'نشوف معاك؟';
 
   @override
@@ -795,9 +792,6 @@ class L10nAr extends L10n {
   String get photoError => 'ما قدرتش نشرح التصويرة دابا. عاود من بعد.';
 
   @override
-  String get photoLabel => 'AI · تصويرة';
-
-  @override
   String ytSearching(String query) {
     return 'كنقلب فيوتيوب على: $query…';
   }
@@ -859,4 +853,19 @@ class L10nAr extends L10n {
 
   @override
   String get ytPause => 'وقف شوية';
+
+  @override
+  String get liveTapHint => 'كليكي على شي حاجة ولا وري عليها بصبعك';
+
+  @override
+  String get pointLooking => 'كنشوف آش كتوري…';
+
+  @override
+  String get pointNotFound =>
+      'ما لقيت حتى حاجة تما، جرب كليكي على الحاجة نيشان';
+
+  @override
+  String pointQuestion(String label) {
+    return 'شنو هادي اللي كنوري عليها ($label)؟ هضر غير على هاد الحاجة بالدارجة.';
+  }
 }

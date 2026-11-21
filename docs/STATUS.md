@@ -125,6 +125,20 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 7 (2026-11-16): green highlight on the pointed-at object, consistent voice, no "AI" label
+
+| Item | Status | Evidence |
+|---|---|---|
+| Voice switched man/woman and sounded robotic | DONE (code), NOT VERIFIED on a phone | Cause found by probing `/v1/tts` on sahbi-8jkp: about 1 in 6 rapid calls hit Google's free TTS quota (429). The backend reported it as 502, and the app then switched **for the whole session** to the Android voice (often female, robotic). Now: the backend waits Google's `retryDelay` (≤ 6 s) and retries once, otherwise it returns `rate_limited` 429. The app retries the same cloud voice after 1.5 s and 3.5 s. The device voice is used only for that one sentence, or for 2 min after a real failure. Tests: `voice_controller_test` 20/20; backend `followup6.test.ts` (429 path) |
+| Darija accent hint for Gemini TTS | TRIED, REVERTED | A "style:\ntext" prompt was tested live: 16.9 s of speech for a 2.5 s sentence, so the model **read the instruction aloud**. Only the exact words are sent again (commit `1020fdc`) |
+| Green highlight: tap an object | DONE (code), NOT VERIFIED on a phone | `POST /v1/vision/locate` (Gemini `box_2d`). Live test with a real desk photo: taps on the mouse, keyboard and calculator returned tight boxes in 1.1–1.7 s. The app freezes that frame, draws a green box with the name, and tells the robot (live: `POINT:` cue; photo mode: a chat question about that object) |
+| Green highlight: point with a finger | DONE (code), NOT VERIFIED on a phone | Checked when the view settles (instead of LOOK when a finger points at something) and when the user says "hada / هادي / ça / this". A photo of a hand touching an apple returned a box around the apple; a desk with no hand returned `found:false` |
+| Talk to it during the live camera | Already present | The mic streams to Gemini Live with echo cancellation; the robot answers by voice. The pointing cue now steers it to the selected object |
+| "AI · Gemini Live" / "AI · تصويرة" label | DONE | Removed from the live camera top bar; only the timer is left |
+| Tests | DONE | Flutter **335 passed** (per file, `--concurrency=1`, `app_shell_test` skipped: compiler out of RAM here; CI runs it). Backend **128/128**, eslint and tsc clean. `flutter analyze`: no issues |
+
+Labels from the vision model: the first live test gave wrong Darija names (keyboard → "كوبر", apple → "خوخة"). The prompt now asks for the English name first, then the common Darija word, and the live robot gets the English name. Re-test after the change: mouse → "سوري", keyboard → "كلافيي" (correct); the fruit photo → "خوخ" (it does look like a peach); one tap on the calculator came back "not found" (the app then says so and the user can tap again). NOT VERIFIED on real phone photos.
+
 ## Follow-up 6 (2026-11-21): conversation until "safi sir", camera explains by itself, YouTube stops after ~10 s, robot talks when you are quiet, photos
 
 | Request | What was built | Tested here | State on a phone |

@@ -1461,12 +1461,6 @@ abstract class L10n {
   /// **'Live camera needs the internet.'**
   String get liveNeedsInternet;
 
-  /// No description provided for @liveAiLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'AI · Gemini Live'**
-  String get liveAiLabel;
-
   /// No description provided for @cameraRationaleTitle.
   ///
   /// In en, this message translates to:
@@ -1599,12 +1593,6 @@ abstract class L10n {
   /// **'Couldn’t explain the photo right now. Try again later.'**
   String get photoError;
 
-  /// No description provided for @photoLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'AI · photo'**
-  String get photoLabel;
-
   /// No description provided for @ytSearching.
   ///
   /// In en, this message translates to:
@@ -1712,6 +1700,30 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Pause'**
   String get ytPause;
+
+  /// No description provided for @liveTapHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an object or point at it with your finger'**
+  String get liveTapHint;
+
+  /// No description provided for @pointLooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking at what you point at…'**
+  String get pointLooking;
+
+  /// No description provided for @pointNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'I can’t find anything there, tap right on the object'**
+  String get pointNotFound;
+
+  /// Photo question when the user tapped/pointed at one object
+  ///
+  /// In en, this message translates to:
+  /// **'What is this thing I’m pointing at ({label})? Talk only about this object.'**
+  String pointQuestion(String label);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

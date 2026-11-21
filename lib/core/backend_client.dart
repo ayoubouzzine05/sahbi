@@ -408,6 +408,32 @@ class BackendClient {
     return (jsonDecode(res.body) as Map)['images'] as List? ?? const [];
   }
 
+  /// POST /v1/vision/locate: the object under [tap] (0..1 on the image) or,
+  /// without a tap, the object a finger points at. Raw JSON; see
+  /// `LocatedObject.fromJson`.
+  Future<Map<String, dynamic>> locate({
+    required Uint8List image,
+    required String mime,
+    ({double x, double y})? tap,
+    required String language,
+  }) async {
+    final res = await _authed(
+      (h) => _http
+          .post(
+            _uri('/v1/vision/locate'),
+            headers: {...h, 'content-type': 'application/json'},
+            body: jsonEncode({
+              'image': base64Encode(image),
+              'mime': mime,
+              'tap': ?(tap == null ? null : {'x': tap.x, 'y': tap.y}),
+              'language': language,
+            }),
+          )
+          .timeout(const Duration(seconds: 12)),
+    );
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// Single-use Gemini Live token (camera mode). The backend locks model,
   /// prompt and voice into the token; the API key never reaches the app.
   Future<LiveTokenInfo> liveToken({

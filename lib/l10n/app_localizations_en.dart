@@ -713,9 +713,6 @@ class L10nEn extends L10n {
   String get liveNeedsInternet => 'Live camera needs the internet.';
 
   @override
-  String get liveAiLabel => 'AI · Gemini Live';
-
-  @override
   String get cameraRationaleTitle => 'Shall I look with you?';
 
   @override
@@ -794,9 +791,6 @@ class L10nEn extends L10n {
       'Couldn’t explain the photo right now. Try again later.';
 
   @override
-  String get photoLabel => 'AI · photo';
-
-  @override
   String ytSearching(String query) {
     return 'Searching YouTube for: $query…';
   }
@@ -859,4 +853,19 @@ class L10nEn extends L10n {
 
   @override
   String get ytPause => 'Pause';
+
+  @override
+  String get liveTapHint => 'Tap an object or point at it with your finger';
+
+  @override
+  String get pointLooking => 'Looking at what you point at…';
+
+  @override
+  String get pointNotFound =>
+      'I can’t find anything there, tap right on the object';
+
+  @override
+  String pointQuestion(String label) {
+    return 'What is this thing I’m pointing at ($label)? Talk only about this object.';
+  }
 }
