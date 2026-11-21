@@ -176,7 +176,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
 
+    // The face screen stays clean: only "no internet" is shown here; backend
+    // problems are explained by the robot when it cannot answer.
     final banner = ConnectivityBanner(
+      onlyOffline: true,
       net: net,
       hasBackendUrl: backend.hasBaseUrl,
       sendToAi: settings.sendToAi,

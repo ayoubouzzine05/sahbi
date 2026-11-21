@@ -125,6 +125,15 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 10 (2026-11-16): keep the voice; hide the "server"; no "Gemini" in the camera
+
+| Item | Status | Evidence |
+|---|---|---|
+| Keep the voice as it is | DONE | No change to the Follow-up 9 voice |
+| "Server" messages popping up now and then | DONE (code), NOT VERIFIED on a phone | Cause found in the code: ONE failed health check (every 60 s, 6 s timeout, e.g. a Vercel cold start or a mobile network hiccup) marked the backend unreachable and dropped its health. That showed "ما قدرتش نوصل للسيرفر" and could also switch the voice to the phone's. Now a backend that was working survives one failed check (its last health is kept, so voice and face do not flip), a quick re-check follows 5 s later, and only 2 failures in a row count as "unreachable". The face screen shows only "no internet" now. The chat screen banner and error texts no longer say "server"/"Gemini" ("ما قدرتش نتكونيكطا دابا، عاود من بعد شوية"). Honest meaning kept. Test: `connectivity_test` 4/4 (new: one failure tolerated, two not, recovery) |
+| "Gemini Live" showing in the camera | DONE | No "Gemini"/"Google" text is left in the camera screen: the "not configured" message and the permission explanation were reworded (ar/fr/en). The live and chat prompts (1.5.1) tell the robot never to talk about servers, APIs, Gemini, Google or models when it talks about itself. The Privacy screen still names the providers (honest disclosure) |
+| Tests | DONE | Flutter: connectivity, chat_controller, voice_controller, live_voice_tts, search_sources, robot_face pass; `flutter analyze` clean. Backend 128/128 |
+
 ## Follow-up 9 (2026-11-16): one Casablanca male voice, EMO-like personality
 
 | Item | Status | Evidence |

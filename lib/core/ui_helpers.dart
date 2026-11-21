@@ -26,7 +26,12 @@ class ConnectivityBanner extends StatelessWidget {
     required this.net,
     required this.hasBackendUrl,
     required this.sendToAi,
+    this.onlyOffline = false,
   });
+
+  /// Show only "no internet" (and a missing backend URL, which cannot happen
+  /// in a release build: the URL is built in) — face screen.
+  final bool onlyOffline;
 
   final NetState net;
   final bool hasBackendUrl;
@@ -37,7 +42,9 @@ class ConnectivityBanner extends StatelessWidget {
     final l = L10n.of(context);
     String? text;
     IconData icon = Icons.cloud_off_rounded;
-    if (!hasBackendUrl) {
+    if (onlyOffline && hasBackendUrl) {
+      if (!net.hasNetwork) text = l.offlineBanner;
+    } else if (!hasBackendUrl) {
       text = l.backendNotSetBanner;
       icon = Icons.dns_outlined;
     } else if (!net.hasNetwork) {

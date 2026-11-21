@@ -55,7 +55,7 @@ class L10nEn extends L10n {
   String get phaseRetrying => 'Retrying…';
 
   @override
-  String get phaseWaking => 'Waking the server… (up to 1 min)';
+  String get phaseWaking => 'Just a moment…';
 
   @override
   String get stopListening => 'Stop listening';
@@ -81,10 +81,11 @@ class L10nEn extends L10n {
       'Server not configured. Add its URL in Settings.';
 
   @override
-  String get aiNotConfiguredBanner => 'AI service not configured on the server';
+  String get aiNotConfiguredBanner => 'My brain is not working right now';
 
   @override
-  String get serverUnreachableBanner => 'Server unreachable';
+  String get serverUnreachableBanner =>
+      'I can’t connect right now, try again in a moment';
 
   @override
   String get aiDisabledBanner => 'Sending to AI is turned off (Privacy)';
@@ -96,7 +97,7 @@ class L10nEn extends L10n {
   String get errNotConfigured => 'AI not configured';
 
   @override
-  String get errServer => 'Server error';
+  String get errServer => 'Something went wrong, try again in a moment';
 
   @override
   String get errTimeout => 'Timed out, try again';
@@ -419,7 +420,7 @@ class L10nEn extends L10n {
   String get offline => 'Offline';
 
   @override
-  String get networkOnly => 'Network up but server not reachable';
+  String get networkOnly => 'Network is there, but I can’t connect';
 
   @override
   String get secMusic => 'Music';
@@ -678,8 +679,7 @@ class L10nEn extends L10n {
   String get liveReconnecting => 'Reconnecting…';
 
   @override
-  String get liveNotConfigured =>
-      'Live camera is not configured on the server (needs a Gemini key).';
+  String get liveNotConfigured => 'The live camera is not working right now.';
 
   @override
   String get liveError => 'Could not start the live camera.';
@@ -717,7 +717,7 @@ class L10nEn extends L10n {
 
   @override
   String get cameraRationaleBody =>
-      'To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.';
+      'To see what you show me and understand you, I need the camera and microphone. Images and sound are sent only during the session to be understood; the app keeps nothing.';
 
   @override
   String get cameraDenied =>

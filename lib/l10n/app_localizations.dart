@@ -192,7 +192,7 @@ abstract class L10n {
   /// No description provided for @phaseWaking.
   ///
   /// In en, this message translates to:
-  /// **'Waking the server… (up to 1 min)'**
+  /// **'Just a moment…'**
   String get phaseWaking;
 
   /// No description provided for @stopListening.
@@ -240,13 +240,13 @@ abstract class L10n {
   /// No description provided for @aiNotConfiguredBanner.
   ///
   /// In en, this message translates to:
-  /// **'AI service not configured on the server'**
+  /// **'My brain is not working right now'**
   String get aiNotConfiguredBanner;
 
   /// No description provided for @serverUnreachableBanner.
   ///
   /// In en, this message translates to:
-  /// **'Server unreachable'**
+  /// **'I can’t connect right now, try again in a moment'**
   String get serverUnreachableBanner;
 
   /// No description provided for @aiDisabledBanner.
@@ -270,7 +270,7 @@ abstract class L10n {
   /// No description provided for @errServer.
   ///
   /// In en, this message translates to:
-  /// **'Server error'**
+  /// **'Something went wrong, try again in a moment'**
   String get errServer;
 
   /// No description provided for @errTimeout.
@@ -900,7 +900,7 @@ abstract class L10n {
   /// No description provided for @networkOnly.
   ///
   /// In en, this message translates to:
-  /// **'Network up but server not reachable'**
+  /// **'Network is there, but I can’t connect'**
   String get networkOnly;
 
   /// No description provided for @secMusic.
@@ -1398,7 +1398,7 @@ abstract class L10n {
   /// No description provided for @liveNotConfigured.
   ///
   /// In en, this message translates to:
-  /// **'Live camera is not configured on the server (needs a Gemini key).'**
+  /// **'The live camera is not working right now.'**
   String get liveNotConfigured;
 
   /// No description provided for @liveError.
@@ -1470,7 +1470,7 @@ abstract class L10n {
   /// No description provided for @cameraRationaleBody.
   ///
   /// In en, this message translates to:
-  /// **'To see what you show me I need the camera and microphone. Frames (about one per second) and audio go straight to Google Gemini only during the session. The app stores nothing.'**
+  /// **'To see what you show me and understand you, I need the camera and microphone. Images and sound are sent only during the session to be understood; the app keeps nothing.'**
   String get cameraRationaleBody;
 
   /// No description provided for @cameraDenied.

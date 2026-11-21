@@ -55,7 +55,7 @@ class L10nAr extends L10n {
   String get phaseRetrying => 'كنعاود…';
 
   @override
-  String get phaseWaking => 'كنفيّق السيرفر… (حتى دقيقة)';
+  String get phaseWaking => 'لحظة صغيرة…';
 
   @override
   String get stopListening => 'حبس السمع';
@@ -81,11 +81,11 @@ class L10nAr extends L10n {
       'السيرفر ما مضبوطش. زيد العنوان فالإعدادات.';
 
   @override
-  String get aiNotConfiguredBanner =>
-      'خدمة الذكاء الاصطناعي ما مضبوطاش فالسيرفر';
+  String get aiNotConfiguredBanner => 'الذكاء ديالي ما خدامش دابا';
 
   @override
-  String get serverUnreachableBanner => 'ما قدرتش نوصل للسيرفر';
+  String get serverUnreachableBanner =>
+      'ما قدرتش نتكونيكطا دابا، عاود من بعد شوية';
 
   @override
   String get aiDisabledBanner => 'الإرسال للذكاء الاصطناعي مطفي فالخصوصية';
@@ -97,7 +97,7 @@ class L10nAr extends L10n {
   String get errNotConfigured => 'الذكاء الاصطناعي ما مضبوطش';
 
   @override
-  String get errServer => 'مشكل فالسيرفر';
+  String get errServer => 'وقع شي مشكل، عاود من بعد شوية';
 
   @override
   String get errTimeout => 'طول بزاف، عاود';
@@ -422,7 +422,7 @@ class L10nAr extends L10n {
   String get offline => 'بلا أنترنيت';
 
   @override
-  String get networkOnly => 'كاين الريزو ولكن السيرفر ما كيجاوبش';
+  String get networkOnly => 'كاين الريزو ولكن ما قدرتش نتكونيكطا';
 
   @override
   String get secMusic => 'الموسيقى';
@@ -680,8 +680,7 @@ class L10nAr extends L10n {
   String get liveReconnecting => 'كنعاود نتكونيكطا…';
 
   @override
-  String get liveNotConfigured =>
-      'الكاميرا المباشرة ما مفعلاش فالسيرفر (خاص مفتاح Gemini).';
+  String get liveNotConfigured => 'الكاميرا المباشرة ما خدّاماش دابا.';
 
   @override
   String get liveError => 'ما قدرتش نتكونيكطا مع الكاميرا المباشرة.';
@@ -719,7 +718,7 @@ class L10nAr extends L10n {
 
   @override
   String get cameraRationaleBody =>
-      'باش نشوف آش كتوريني ونفهمك، خاصني الكاميرا والميكرو. الصور (تقريبا وحدة فالثانية) والصوت كيمشيو مباشرة لـ Google Gemini غير وقت الجلسة. التطبيق ما كيخزن والو.';
+      'باش نشوف آش كتوريني ونفهمك، خاصني الكاميرا والميكرو. الصور والصوت كيتصيفطو غير وقت الجلسة باش نفهمهم، والتطبيق ما كيخزن والو.';
 
   @override
   String get cameraDenied =>

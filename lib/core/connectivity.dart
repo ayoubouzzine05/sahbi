@@ -13,6 +13,7 @@ class NetState {
     this.health,
     this.lastError,
     this.lastCheck,
+    this.failStreak = 0,
   });
 
   /// OS reports a network interface (not proof of internet).
@@ -23,6 +24,10 @@ class NetState {
   final HealthStatus? health;
   final BackendErrorCode? lastError;
   final DateTime? lastCheck;
+
+  /// Health checks failed in a row (one slow check, e.g. a cold start, is
+  /// not reported as "unreachable" when the backend was working).
+  final int failStreak;
 
   bool get online => hasNetwork && backendReachable == true;
   bool get aiConfigured => online && (health?.configured('llm') ?? false);
@@ -44,7 +49,11 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
   final Connectivity? _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _sub;
   Timer? _timer;
+  Timer? _retry;
   Future<void>? _inflight;
+
+  /// Delay of the quick re-check after a single failed health check.
+  Duration retryAfter = const Duration(seconds: 5);
 
   void start() {
     final c = _connectivity ?? Connectivity();
@@ -108,22 +117,30 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
         lastCheck: DateTime.now(),
       );
     } on BackendException catch (e) {
-      value = NetState(
-        hasNetwork: value.hasNetwork && e.code != BackendErrorCode.noInternet
-            ? value.hasNetwork
-            : value.hasNetwork,
-        backendReachable: false,
-        health: null,
-        lastError: e.code,
-        lastCheck: DateTime.now(),
-      );
+      _failed(e.code);
     } catch (_) {
-      value = NetState(
-        hasNetwork: value.hasNetwork,
-        backendReachable: false,
-        lastError: BackendErrorCode.server,
-        lastCheck: DateTime.now(),
-      );
+      _failed(BackendErrorCode.server);
+    }
+  }
+
+  /// A backend that was working survives ONE failed check (keeps its last
+  /// health, so the voice and the face do not flip); a quick re-check
+  /// follows, and a second failure in a row marks it unreachable.
+  void _failed(BackendErrorCode code) {
+    final streak = value.failStreak + 1;
+    final tolerate =
+        value.backendReachable == true && streak < 2 && value.hasNetwork;
+    value = NetState(
+      hasNetwork: value.hasNetwork,
+      backendReachable: tolerate ? true : false,
+      health: tolerate ? value.health : null,
+      lastError: code,
+      lastCheck: DateTime.now(),
+      failStreak: streak,
+    );
+    if (tolerate) {
+      _retry?.cancel();
+      _retry = Timer(retryAfter, () => unawaited(check()));
     }
   }
 
@@ -131,6 +148,7 @@ class ConnectivityMonitor extends ValueNotifier<NetState> {
   void dispose() {
     _sub?.cancel();
     _timer?.cancel();
+    _retry?.cancel();
     super.dispose();
   }
 }

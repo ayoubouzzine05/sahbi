@@ -55,7 +55,7 @@ class L10nFr extends L10n {
   String get phaseRetrying => 'Nouvel essai…';
 
   @override
-  String get phaseWaking => 'Je réveille le serveur… (jusqu\'à 1 min)';
+  String get phaseWaking => 'Un petit instant…';
 
   @override
   String get stopListening => 'Arrêter l’écoute';
@@ -81,10 +81,12 @@ class L10nFr extends L10n {
       'Serveur non configuré. Ajoute l’URL dans Réglages.';
 
   @override
-  String get aiNotConfiguredBanner => 'Service IA non configuré sur le serveur';
+  String get aiNotConfiguredBanner =>
+      'Mon intelligence ne marche pas pour l’instant';
 
   @override
-  String get serverUnreachableBanner => 'Serveur injoignable';
+  String get serverUnreachableBanner =>
+      'Je n’arrive pas à me connecter, réessaie dans un moment';
 
   @override
   String get aiDisabledBanner => 'Envoi à l’IA désactivé (confidentialité)';
@@ -96,7 +98,7 @@ class L10nFr extends L10n {
   String get errNotConfigured => 'IA non configurée';
 
   @override
-  String get errServer => 'Erreur serveur';
+  String get errServer => 'Un problème est survenu, réessaie dans un moment';
 
   @override
   String get errTimeout => 'Délai dépassé, réessaie';
@@ -422,7 +424,8 @@ class L10nFr extends L10n {
   String get offline => 'Hors ligne';
 
   @override
-  String get networkOnly => 'Réseau présent mais serveur injoignable';
+  String get networkOnly =>
+      'Réseau présent, mais je n’arrive pas à me connecter';
 
   @override
   String get secMusic => 'Musique';
@@ -682,7 +685,7 @@ class L10nFr extends L10n {
 
   @override
   String get liveNotConfigured =>
-      'La caméra live n’est pas configurée sur le serveur (clé Gemini requise).';
+      'La caméra live ne marche pas pour l’instant.';
 
   @override
   String get liveError => 'Impossible de démarrer la caméra live.';
@@ -720,7 +723,7 @@ class L10nFr extends L10n {
 
   @override
   String get cameraRationaleBody =>
-      'Pour voir ce que tu me montres, j’ai besoin de la caméra et du micro. Les images (≈1 par seconde) et le son vont directement à Google Gemini pendant la session uniquement. L’app n’enregistre rien.';
+      'Pour voir ce que tu me montres et te comprendre, j’ai besoin de la caméra et du micro. Les images et le son sont envoyés seulement pendant la session pour être compris ; l’app ne garde rien.';
 
   @override
   String get cameraDenied =>

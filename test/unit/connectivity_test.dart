@@ -62,4 +62,22 @@ void main() {
     await Future.wait([m.check(), m.check(), m.wake()]);
     expect(calls, 1);
   });
+
+  test('one failed check after success is tolerated, two are not', () async {
+    up = true;
+    final m = monitor()..retryAfter = const Duration(hours: 1);
+    await m.check();
+    up = false;
+    await m.check();
+    expect(m.value.backendReachable, isTrue, reason: 'one slow check');
+    expect(m.value.aiConfigured, isTrue, reason: 'last health kept');
+    await m.check();
+    expect(m.value.backendReachable, isFalse);
+    expect(m.value.aiConfigured, isFalse);
+    up = true;
+    await m.check();
+    expect(m.value.backendReachable, isTrue);
+    expect(m.value.failStreak, 0);
+    m.dispose();
+  });
 }
