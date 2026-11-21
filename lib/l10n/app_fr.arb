@@ -270,5 +270,7 @@
   "liveTapHint": "Touche un objet ou montre-le du doigt",
   "pointLooking": "Je regarde ce que tu montres…",
   "pointNotFound": "Je ne trouve rien là, touche l’objet directement",
-  "pointQuestion": "C’est quoi, ce que je montre ({label}) ? Parle seulement de cet objet."
+  "pointQuestion": "C’est quoi, ce que je montre ({label}) ? Parle seulement de cet objet.",
+  "shakeTitle": "Secouer le téléphone",
+  "shakeSubtitle": "Si tu secoues le téléphone, il a le tournis ; si tu recommences, il se fâche. Fonctionne sans internet."
 }

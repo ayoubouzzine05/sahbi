@@ -583,6 +583,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     value: s.proactiveTalk,
                     onChanged: (v) => _set((x) => x.copyWith(proactiveTalk: v)),
                   ),
+                  SwitchListTile(
+                    key: const Key('shake_switch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.shakeTitle),
+                    subtitle: Text(
+                      l.shakeSubtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: s.shakeReaction,
+                    onChanged: (v) => _set((x) => x.copyWith(shakeReaction: v)),
+                  ),
                 ],
               ),
             ),

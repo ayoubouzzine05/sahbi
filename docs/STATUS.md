@@ -125,6 +125,16 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 8 (2026-11-21): shake the phone, the robot gets dizzy and then annoyed
+
+| Item | Status | Evidence |
+|---|---|---|
+| Shake detection | DONE (code), NOT VERIFIED on a phone | `lib/features/personality/shake.dart`, `ShakeDetector`: raw accelerometer at 50 Hz, gravity removed with a low-pass filter, a shake = 3 strong jolts (> 13 m/s²) within 1.1 s, then a 1.5 s cooldown. Tests with synthetic signals: still and walking (±3.5 m/s², 2 Hz) → no shake; one hard bump → no shake; a 4 Hz shake at 20 m/s² → detected within 1 s. The real thresholds on real phones are NOT VERIFIED |
+| Reaction | DONE (code), NOT VERIFIED on a phone | `ShakeMood`: 1st shake = dizzy and surprised, 2nd = annoyed, 3rd and later = angry; calm again after 30 s. Shaken while asleep = grumpy wake-up. 14 pre-written lines (Darija Arabic and Latin, MSA, fr, en), spoken at once with no AI request, never the same twice in a row |
+| Dizzy face | DONE | Spiral eyes that spin in opposite directions and a head wobble (`FaceFrame.dizzy`, `FaceInputs.dizzy`). Rendered and checked as images here |
+| When it listens | DONE (code) | Only while the app is in the foreground (AppLifecycleListener); ignored in the live camera; Settings switch "تحريك التيليفون" (on by default) |
+| Tests | DONE | Flutter **347 passed** (per file; `app_shell_test` skipped here, it runs in CI). `flutter analyze` and `dart format` clean |
+
 ## Follow-up 7 (2026-11-16): green highlight on the pointed-at object, consistent voice, no "AI" label
 
 | Item | Status | Evidence |

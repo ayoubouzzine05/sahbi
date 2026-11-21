@@ -587,5 +587,7 @@
         "type": "String"
       }
     }
-  }
+  },
+  "shakeTitle": "Shake the phone",
+  "shakeSubtitle": "Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline."
 }

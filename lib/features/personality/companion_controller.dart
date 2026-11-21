@@ -26,6 +26,20 @@ class CompanionController extends ChangeNotifier {
   Timer? _revert;
   Timer? _ticker;
   Timer? _lookTimer;
+  Timer? _dizzyTimer;
+
+  /// Spiral eyes after the phone was shaken.
+  bool dizzy = false;
+
+  void makeDizzy(Duration d) {
+    dizzy = true;
+    _dizzyTimer?.cancel();
+    _dizzyTimer = Timer(d, () {
+      dizzy = false;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
 
   /// Fired when the idle engine yawns / falls asleep / wakes up.
   void Function(IdleAction action)? onIdleAction;
@@ -100,6 +114,7 @@ class CompanionController extends ChangeNotifier {
     _revert?.cancel();
     _ticker?.cancel();
     _lookTimer?.cancel();
+    _dizzyTimer?.cancel();
     super.dispose();
   }
 }

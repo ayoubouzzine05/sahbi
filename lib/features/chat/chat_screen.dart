@@ -81,6 +81,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   speaking: voice.state == VoiceState.speaking,
                   listening: listening,
                   listenLevel: voice.level,
+                  dizzy: companion.dizzy,
                 ),
                 wordPulse: voice.wordPulse,
               ),

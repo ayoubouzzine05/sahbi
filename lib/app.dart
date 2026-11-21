@@ -120,6 +120,7 @@ class _SahbiAppState extends ConsumerState<SahbiApp>
     // Conversation after the name, and the robot talking on its own.
     ref.read(conversationProvider);
     ref.read(proactiveProvider);
+    ref.read(shakeProvider);
   }
 
   @override

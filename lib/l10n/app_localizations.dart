@@ -1724,6 +1724,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'What is this thing I’m pointing at ({label})? Talk only about this object.'**
   String pointQuestion(String label);
+
+  /// No description provided for @shakeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shake the phone'**
+  String get shakeTitle;
+
+  /// No description provided for @shakeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline.'**
+  String get shakeSubtitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

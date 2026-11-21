@@ -868,4 +868,11 @@ class L10nEn extends L10n {
   String pointQuestion(String label) {
     return 'What is this thing I’m pointing at ($label)? Talk only about this object.';
   }
+
+  @override
+  String get shakeTitle => 'Shake the phone';
+
+  @override
+  String get shakeSubtitle =>
+      'Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline.';
 }

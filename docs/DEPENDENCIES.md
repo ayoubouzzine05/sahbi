@@ -29,6 +29,7 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 | web_socket_channel | 3.0.3 | BSD-3-Clause | Gemini Live WebSocket (ephemeral token, BidiGenerateContentConstrained) |
 | flutter_pcm_sound | 3.3.3 | Unlicense (public domain) | plays the 24 kHz PCM voice that Gemini Live streams back |
 | wakelock_plus | 1.8.2 | BSD-3-Clause | keeps the screen on while the face dashboard / live camera is visible |
+| sensors_plus | 7.1.1 (`flutter pub add`) | BSD-3-Clause | accelerometer for the shake reaction (read only while the app is open; no permission needed) |
 | webview_flutter | 4.14.1 | BSD-3-Clause | floating in-app card that runs YouTube's official IFrame embed player (music without leaving the app) |
 | webview_flutter_android | 4.14.1 | BSD-3-Clause | Android WebView implementation (media playback without a user gesture) |
 

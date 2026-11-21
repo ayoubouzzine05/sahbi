@@ -17,6 +17,7 @@ class FaceFrame {
     this.listenLevel = 0,
     this.musicNotes = false,
     this.fullScreen = false,
+    this.dizzy = 0,
   });
 
   final FaceParams params;
@@ -36,6 +37,9 @@ class FaceFrame {
   /// Dashboard mode: the whole canvas is the face (no white body, ear pods or
   /// visor frame) — just big glowing eyes, brows and mouth on near-black.
   final bool fullScreen;
+
+  /// 0..1: spiral eyes after the phone was shaken.
+  final double dizzy;
 }
 
 /// Draws SAHBI: a white rounded body, a dark glossy visor and glowing eyes.
@@ -188,7 +192,10 @@ class FacePainter extends CustomPainter {
     final open = (p.eyeOpen * (1 - frame.blink)).clamp(0.0, 1.0);
     for (final side in [-1.0, 1.0]) {
       final c = Offset(visorRect.center.dx + side * s * 0.15, eyeY) + gaze;
-      _eye(canvas, c, eyeW, eyeH, open, p, side, s);
+      if (frame.dizzy < 0.5) {
+        _eye(canvas, c, eyeW, eyeH, open * (1 - frame.dizzy * 1.6), p, side, s);
+      }
+      if (frame.dizzy > 0) _spiralEye(canvas, c, eyeW, p, side, s);
     }
 
     // ---- brows ----------------------------------------------------------------
@@ -454,6 +461,47 @@ class FacePainter extends CustomPainter {
           ..strokeWidth = s * 0.005,
       );
     }
+  }
+
+  /// Cartoon "dizzy" eye: a glowing spiral that keeps turning (the two eyes
+  /// spin in opposite directions).
+  void _spiralEye(
+    Canvas canvas,
+    Offset c,
+    double w,
+    FaceParams p,
+    double side,
+    double s,
+  ) {
+    final a = frame.dizzy.clamp(0.0, 1.0);
+    final r = w * 0.62 * (0.6 + 0.4 * a);
+    const turns = 3.0;
+    final spin = frame.time * 7 * side;
+    final path = Path();
+    const steps = 90;
+    for (var k = 0; k <= steps; k++) {
+      final f = k / steps;
+      final ang = spin + f * turns * 2 * math.pi;
+      final pt = c + Offset(math.cos(ang), math.sin(ang)) * (r * f);
+      k == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.03
+        ..strokeCap = StrokeCap.round
+        ..color = p.accent.withValues(alpha: 0.35 * a)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.02),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.016
+        ..strokeCap = StrokeCap.round
+        ..color = p.accent.withValues(alpha: a),
+    );
   }
 
   @override

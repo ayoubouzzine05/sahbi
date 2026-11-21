@@ -871,4 +871,11 @@ class L10nFr extends L10n {
   String pointQuestion(String label) {
     return 'C’est quoi, ce que je montre ($label) ? Parle seulement de cet objet.';
   }
+
+  @override
+  String get shakeTitle => 'Secouer le téléphone';
+
+  @override
+  String get shakeSubtitle =>
+      'Si tu secoues le téléphone, il a le tournis ; si tu recommences, il se fâche. Fonctionne sans internet.';
 }

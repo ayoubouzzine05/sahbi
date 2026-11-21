@@ -19,6 +19,7 @@ class FaceInputs {
     this.listenLevel = 0,
     this.music = false,
     this.lookAt,
+    this.dizzy = false,
   });
 
   final Emotion emotion;
@@ -30,6 +31,9 @@ class FaceInputs {
 
   /// Gaze target from the idle engine / robot (-1..1), null = automatic.
   final Offset? lookAt;
+
+  /// The phone was shaken: spiral eyes and a wobbling head.
+  final bool dizzy;
 }
 
 /// The animated face: blinking at random intervals, gaze (automatic or
@@ -85,6 +89,9 @@ class _RobotFaceState extends State<RobotFace>
 
   // mouth
   double _mouthEnv = 0;
+
+  /// 0..1, eases in/out so the spirals never pop.
+  double _dizzy = 0;
   double _lastPulseT = -10;
   int _lastPulse = 0;
 
@@ -208,6 +215,12 @@ class _RobotFaceState extends State<RobotFace>
     // Music bob.
     var tilt = _current.tilt;
     if (i.music && !i.speaking) tilt += math.sin(_t * 2 * math.pi * 1.0) * 0.06;
+    // Dizzy: fast in, slow out, and the head wobbles.
+    _dizzy +=
+        ((i.dizzy ? 1.0 : 0.0) - _dizzy) *
+        (1 - math.exp(-dt * (i.dizzy ? 9 : 2.5)));
+    if (_dizzy < 0.01) _dizzy = 0;
+    tilt += math.sin(_t * 2 * math.pi * 1.6) * 0.16 * _dizzy;
 
     _current = _current.copyWith(
       gazeX: _gaze.dx.clamp(-1, 1),
@@ -298,6 +311,7 @@ class _RobotFaceState extends State<RobotFace>
                       musicNotes:
                           widget.inputs.music && !widget.inputs.speaking,
                       fullScreen: widget.fullScreen,
+                      dizzy: widget.animate ? _dizzy : 0,
                     ),
                   ),
                 ),

@@ -92,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         listenLevel: voice.level,
         music: music.playing,
         lookAt: companion.lookAt,
+        dizzy: companion.dizzy,
       ),
       wordPulse: voice.wordPulse,
       semanticLabel: '$name — ${companion.emotion.name}',

@@ -868,4 +868,11 @@ class L10nAr extends L10n {
   String pointQuestion(String label) {
     return 'شنو هادي اللي كنوري عليها ($label)؟ هضر غير على هاد الحاجة بالدارجة.';
   }
+
+  @override
+  String get shakeTitle => 'تحريك التيليفون';
+
+  @override
+  String get shakeSubtitle =>
+      'إلا حركتي التيليفون بزاف كيدوخ، وإلا عاودتي كيتقلق عليك. خدام بلا أنترنيت.';
 }

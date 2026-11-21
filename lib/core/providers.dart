@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:material_ui/material_ui.dart'
+    show AppLifecycleListener, AppLifecycleState, WidgetsBinding;
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/chat/chat_controller.dart';
@@ -12,6 +15,7 @@ import '../features/music/music_models.dart';
 import '../features/personality/companion_controller.dart';
 import '../features/personality/companion_lines.dart';
 import '../features/personality/idle_behavior.dart';
+import '../features/personality/shake.dart';
 import '../features/personality/voice_state.dart';
 import '../features/robot_link/robot_link_controller.dart';
 import '../features/settings/app_settings.dart';
@@ -335,4 +339,40 @@ final proactiveProvider = Provider<void>((ref) {
     }
   };
   ref.onDispose(() => companion.onIdleAction = null);
+});
+
+/// Shake the phone: the robot gets dizzy, then annoyed (pre-written lines,
+/// no AI request). The accelerometer is only read while the app is open.
+final shakeProvider = Provider<ShakeWatcher>((ref) {
+  final companion = ref.read(companionProvider);
+  final chat = ref.read(chatControllerProvider);
+  final voice = ref.read(voiceControllerProvider);
+  final wake = ref.read(wakeNameProvider);
+  final mood = ShakeMood();
+  final w = ShakeWatcher(
+    events: () =>
+        accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval)
+            .map((e) => (e.x, e.y, e.z)),
+    // Not in the live camera (moving the phone is normal there).
+    enabled: () =>
+        ref.read(settingsProvider).shakeReaction && !wake.externallyBlocked,
+    onShake: () async {
+      final r = mood.onShake(asleep: companion.idle.asleep);
+      companion
+        ..interact()
+        ..makeDizzy(r.dizzyFor);
+      await voice.interrupt();
+      await chat.sayLocal(r.line, robotInitiated: true);
+    },
+  );
+  final life = AppLifecycleListener(
+    onStateChange: (s) => w.setActive(s == AppLifecycleState.resumed),
+  );
+  final now = WidgetsBinding.instance.lifecycleState;
+  w.setActive(now == null || now == AppLifecycleState.resumed);
+  ref.onDispose(() {
+    life.dispose();
+    w.stop();
+  });
+  return w;
 });

@@ -38,6 +38,7 @@ class AppSettings {
     this.keepScreenOn = true,
     this.proactiveTalk = true,
     this.liveAutoDescribe = true,
+    this.shakeReaction = true,
   });
 
   final String uiLocale; // ar | fr | en
@@ -86,6 +87,9 @@ class AppSettings {
 
   /// Live camera: explain what the camera points at without being asked.
   final bool liveAutoDescribe;
+
+  /// Shaking the phone makes the robot dizzy, then annoyed.
+  final bool shakeReaction;
   final bool cameraRationaleSeen;
 
   /// Keep the screen awake while the face dashboard is visible.
@@ -127,6 +131,7 @@ class AppSettings {
     bool? wakeByName,
     bool? proactiveTalk,
     bool? liveAutoDescribe,
+    bool? shakeReaction,
     bool? cameraRationaleSeen,
     bool? keepScreenOn,
     bool clearDeviceVoice = false,
@@ -163,6 +168,7 @@ class AppSettings {
       wakeByName: wakeByName ?? this.wakeByName,
       proactiveTalk: proactiveTalk ?? this.proactiveTalk,
       liveAutoDescribe: liveAutoDescribe ?? this.liveAutoDescribe,
+      shakeReaction: shakeReaction ?? this.shakeReaction,
       cameraRationaleSeen: cameraRationaleSeen ?? this.cameraRationaleSeen,
       keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     );
@@ -199,6 +205,7 @@ class AppSettings {
     'keepScreenOn': keepScreenOn,
     'proactiveTalk': proactiveTalk,
     'liveAutoDescribe': liveAutoDescribe,
+    'shakeReaction': shakeReaction,
   };
 
   /// Trims, collapses whitespace, drops control/markup characters, caps length.
@@ -260,6 +267,7 @@ class AppSettings {
       keepScreenOn: pick('keepScreenOn', d.keepScreenOn),
       proactiveTalk: pick('proactiveTalk', d.proactiveTalk),
       liveAutoDescribe: pick('liveAutoDescribe', d.liveAutoDescribe),
+      shakeReaction: pick('shakeReaction', d.shakeReaction),
     );
   }
 
