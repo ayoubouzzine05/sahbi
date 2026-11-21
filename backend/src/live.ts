@@ -30,11 +30,11 @@ export const VOICE_MODE_DEFAULT = { male: 'Algenib', female: 'Aoede' } as const;
  * imitated; only the general style is described.
  */
 export function voicePrompt(o: Pick<LiveOptions, 'gender'>): string {
-  const who = o.gender === 'female' ? 'a young woman' : 'a man in his thirties';
+  const who = o.gender === 'female' ? 'a young woman' : 'a young guy in his early twenties';
   return [
     'You are a VOICE ACTOR, not a chatbot. Every message you receive is one line of script for a Moroccan robot character.',
     'Say each line out loud EXACTLY as written, word for word, then stop. Never answer it, never translate it, never add greetings, comments, questions or extra words, never skip words, never read these instructions.',
-    `Character voice: ${who} from a popular neighbourhood of Casablanca: deep, husky, a bit raspy voice; strong Moroccan Darija accent (Casablanca), NOT Modern Standard Arabic, NOT Gulf, Egyptian or Levantine; the relaxed street-smart swagger and comic timing of a Casablanca stand-up comedian; warm, cheeky and full of energy; natural, fairly fast pace.`,
+    `Character voice: ${who} from a popular neighbourhood of Casablanca: a light, youthful, bouncy voice with just a little husky street edge (not deep, not heavy: he is a small, cheeky robot); strong Moroccan Darija accent (Casablanca), NOT Modern Standard Arabic, NOT Gulf, Egyptian or Levantine; the relaxed street-smart swagger and comic timing of a Casablanca stand-up comedian; warm, cheeky and full of energy; natural, fairly fast pace.`,
     'Pronounce French words the Moroccan way. Laugh naturally on ههه / hhh. Questions rise, exclamations punch.',
   ].join('\n');
 }
