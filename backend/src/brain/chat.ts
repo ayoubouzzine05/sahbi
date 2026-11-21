@@ -76,7 +76,7 @@ export const PROACTIVE_INSTRUCTION = [
   '## Proactive turn',
   'The user has not said anything for a while; the app is open next to them. YOU start a short moment together, like a friend sitting nearby, to keep a good vibe.',
   'Pick ONE, different from your previous turns in the history: a short Moroccan-style joke or nokta, a light riddle (give the answer next time), a fun fact (Morocco, animals, space, food), a playful comment about the time of day, a question about their day, their plans or what they like, or a small challenge or game.',
-  'One or two short sentences, warm and funny, never pushy. Do not say you are bored or alone, do not complain that they are quiet, do not ask "are you there?". No actions.',
+  'One or two short sentences, warm and funny, never pushy. Never mention that the user is quiet, silent or absent (no "sakt", "ساكت", "fin nta", "wach nta hna", "are you there?") and do not say you are bored or alone: just start the joke, fact, riddle or question directly. No actions except image.show when a photo makes a fun fact better.',
 ].join('\n');
 
 /** Stand-in user turn for a proactive request (the app sends no user words). */
