@@ -119,11 +119,11 @@ describe('Gemini speech recognition', () => {
     expect(sttInstruction('ar-MA')).toContain('mostly uses Moroccan Darija');
   });
 
-  it('is the default STT with a Gemini key; hedging defaults to 5 s', () => {
+  it('is the default STT with a Gemini key; hedging defaults to 3.5 s', () => {
     const c = loadConfig({ AUTH_SECRET: 'x'.repeat(20), LLM_API_KEY: 'AQ.k' });
     expect(c.stt.provider).toBe('gemini');
     expect(isSttConfigured(c)).toBe(true);
-    expect(c.llm.hedgeMs).toBe(5000);
+    expect(c.llm.hedgeMs).toBe(3500);
     expect(loadConfig({ AUTH_SECRET: 'x'.repeat(20), LLM_API_KEY: 'AQ.k', LLM_HEDGE_MS: '0' }).llm.hedgeMs).toBe(0);
     expect(loadConfig({ AUTH_SECRET: 'x'.repeat(20) }).stt.provider).toBe('none');
   });

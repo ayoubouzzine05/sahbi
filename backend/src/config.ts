@@ -55,8 +55,10 @@ export const GEMINI_PRESET = {
   // gemini-3.8-flash answered 503 repeatedly on the live deploy, hence a chain.
   // Live probe on homy-vert (GET /v1/diag/llm, 2026-11-21): gemini-4-hydrogen and
   // gemini-3.8-flash hung for 30 s even on a one-word prompt; 3.5-flash-lite answered in 0.75 s.
-  model: 'gemini-3.6-flash',
-  fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-4-hydrogen', 'gemini-3.8-flash'],
+  // Second probe: 3.6-flash hung too, 3.8-flash 503 "high demand"; 3.5-flash-lite 0.7–9.7 s,
+  // 3.1-flash-lite 2.3 s. The lite models go first; hedging covers a slow one.
+  model: 'gemini-3.5-flash-lite',
+  fallbackModels: ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-4-hydrogen', 'gemini-3.8-flash'],
   timeoutMs: 20000, // per model; the app waits ~45 s per request
   reasoningEffort: 'low',
   // Fast, cheap models first for transcription; the chat models after them.
@@ -119,7 +121,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       baseUrl: str(env, 'LLM_BASE_URL', defaultBase),
       timeoutMs: int(env, 'LLM_TIMEOUT_MS', gemini ? GEMINI_PRESET.timeoutMs : 30000),
       fallbackModels: fallbackModels(env, gemini),
-      hedgeMs: gemini ? Number.parseInt(str(env, 'LLM_HEDGE_MS', '5000'), 10) || 0 : 0,
+      hedgeMs: gemini ? Number.parseInt(str(env, 'LLM_HEDGE_MS', '3500'), 10) || 0 : 0,
       maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', gemini ? GEMINI_PRESET.maxOutputTokens : 800),
       reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },
