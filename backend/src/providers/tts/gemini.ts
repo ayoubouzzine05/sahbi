@@ -20,10 +20,18 @@ export function geminiVoiceFor(req: Pick<TtsRequest, 'voice' | 'gender'>): strin
 }
 
 /** Delivery hint; Moroccan Darija is not in Google's TTS language table, so the accent is best-effort. */
-export function speechStyle(language: string): string {
+export function speechStyle(language: string, gender: 'male' | 'female' = 'male'): string {
   return language.startsWith('ar')
-    ? 'Casual, warm and friendly Moroccan speaker talking to a friend in Moroccan Darija, natural conversational pace'
-    : 'Casual, warm and friendly, natural conversational pace';
+    ? `Read this aloud like a young ${gender === 'female' ? 'woman' : 'man'} from Casablanca chatting with a friend, in a natural Moroccan Darija accent (not Modern Standard Arabic), warm, relaxed and lively`
+    : 'Read this aloud in a warm, relaxed and lively conversational tone';
+}
+
+/**
+ * Prompt sent to the TTS model: a short delivery instruction, then the exact
+ * words. Google documents this "style: text" form for controllable speech.
+ */
+export function ttsPrompt(text: string, language: string, gender: 'male' | 'female' = 'male'): string {
+  return `${speechStyle(language, gender)}:\n${text}`;
 }
 
 /**
@@ -36,24 +44,39 @@ export function speechStyle(language: string): string {
 export class GeminiTtsProvider implements TtsProvider {
   readonly name = 'gemini';
   constructor(
-    private readonly opts: { apiKey: string; baseUrl: string; model: string; timeoutMs: number },
+    private readonly opts: { apiKey: string; baseUrl: string; model: string; timeoutMs: number; maxRateLimitWaitMs?: number },
     private readonly fetchImpl: FetchLike = fetch,
+    private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {}
 
   async synthesize(req: TtsRequest): Promise<{ audio: Buffer; contentType: string }> {
     const body = {
-      contents: [{ role: 'user', parts: [{ text: req.text }] }],
+      contents: [{ role: 'user', parts: [{ text: ttsPrompt(req.text, req.language, req.gender) }] }],
       generationConfig: {
         responseModalities: ['AUDIO'],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiVoiceFor(req) } } },
       },
     };
-    const res = await fetchWithRetry(
-      this.fetchImpl,
-      generateContentUrl(this.opts.baseUrl, this.opts.model),
-      { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
-      { timeoutMs: this.opts.timeoutMs, retries: 1 },
-    );
+    const call = () =>
+      fetchWithRetry(
+        this.fetchImpl,
+        generateContentUrl(this.opts.baseUrl, this.opts.model),
+        { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
+        { timeoutMs: this.opts.timeoutMs, retries: 1 },
+      );
+    let res = await call();
+    // The free TTS tier allows only a few sentences per minute. When Google
+    // says the quota frees up soon, wait for it (same voice, a little later)
+    // instead of failing; otherwise report rate_limited so the app can retry.
+    if (res.status === 429) {
+      const wait = await retryDelayMs(res);
+      const max = this.opts.maxRateLimitWaitMs ?? 6000;
+      if (wait !== null && wait <= max) {
+        await this.sleep(wait + 250);
+        res = await call();
+      }
+      if (res.status === 429) throw new ServiceError('rate_limited', 'TTS free quota is busy, try again in a few seconds', 429);
+    }
     await expectGoogleOk(res, 'TTS');
     const json = (await res.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> } }>;
@@ -85,3 +108,16 @@ export function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
   h.writeUInt32LE(pcm.length, 40);
   return Buffer.concat([h, pcm]);
 }
+
+/** Google's RetryInfo.retryDelay ("12s", "1.5s") from a 429 body, in ms. */
+export async function retryDelayMs(res: Response): Promise<number | null> {
+  try {
+    const j = (await res.json()) as { error?: { details?: Array<{ '@type'?: string; retryDelay?: string }> } };
+    const d = (j.error?.details ?? []).find((x) => typeof x.retryDelay === 'string')?.retryDelay;
+    const m = d ? /^(\d+(?:\.\d+)?)s$/.exec(d) : null;
+    return m ? Math.round(Number(m[1]) * 1000) : null;
+  } catch {
+    return null;
+  }
+}
+

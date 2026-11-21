@@ -15,6 +15,7 @@ void main() {
   late VoiceController v;
   late List<String> finals;
   late List<bool> ducks;
+  var now = DateTime(2026, 11, 21, 12);
 
   setUp(() {
     dStt = f.FakeStt('device');
@@ -36,6 +37,11 @@ void main() {
       log: ErrorLog(),
       onFinalText: finals.add,
       onDuckMusic: ducks.add,
+      clock: () => now,
+      cloudRetryDelays: const [
+        Duration(milliseconds: 5),
+        Duration(milliseconds: 5),
+      ],
     );
   });
 
@@ -153,6 +159,49 @@ void main() {
       await v.speak('again', language: 'darija');
       expect(cTts.spoken.length, 1, reason: 'cloud is skipped after a failure');
     });
+    test(
+      'rate limited: retries the SAME cloud voice, no phone voice',
+      () async {
+        cTts
+          ..mode = f.TtsMode.fail
+          ..failMessage = 'rateLimited: TTS returned HTTP 429'
+          ..failTimes = 2;
+        expect(await v.speak('salam', language: 'darija'), isTrue);
+        expect(cTts.spoken.length, 3, reason: '2 rate-limited tries + success');
+        expect(dTts.spoken, isEmpty);
+        expect(v.state, VoiceState.idle);
+        cTts.failTimes = null;
+        cTts.mode = f.TtsMode.finish;
+        await v.speak('again', language: 'darija');
+        expect(dTts.spoken, isEmpty, reason: 'cloud stays the voice');
+      },
+    );
+    test('still rate limited after the retries: phone voice for this '
+        'sentence only, cloud again next time', () async {
+      cTts
+        ..mode = f.TtsMode.fail
+        ..failMessage = 'rateLimited: 429';
+      expect(await v.speak('one', language: 'darija'), isTrue);
+      expect(dTts.spoken, ['darija:one']);
+      cTts.mode = f.TtsMode.finish;
+      await v.speak('two', language: 'darija');
+      expect(cTts.spoken.last, 'darija:two');
+      expect(dTts.spoken, ['darija:one']);
+    });
+    test(
+      'a real cloud failure uses the phone voice for 2 minutes only',
+      () async {
+        cTts.mode = f.TtsMode.fail;
+        await v.speak('one', language: 'darija');
+        cTts.mode = f.TtsMode.finish;
+        now = now.add(const Duration(minutes: 1));
+        await v.speak('two', language: 'darija');
+        expect(dTts.spoken, ['darija:one', 'darija:two']);
+        now = now.add(const Duration(minutes: 2));
+        await v.speak('three', language: 'darija');
+        expect(cTts.spoken.last, 'darija:three');
+      },
+    );
     test('off mode / no engine: nothing is spoken and it says so', () async {
       settings = const AppSettings(ttsMode: TtsMode.off);
       expect(await v.speak('x', language: 'darija'), isFalse);

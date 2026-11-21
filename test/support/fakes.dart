@@ -52,6 +52,12 @@ class FakeTts implements TtsProvider {
   ProviderAvailability avail;
   TtsMode mode;
   int words;
+
+  /// Failure text for [TtsMode.fail].
+  String failMessage = 'synth error';
+
+  /// Fail only the first N utterances, then finish (null = always fail).
+  int? failTimes;
   final spoken = <String>[];
   int stops = 0;
 
@@ -70,7 +76,12 @@ class FakeTts implements TtsProvider {
       case TtsMode.finish:
         yield const TtsDone();
       case TtsMode.fail:
-        yield const TtsFailure('synth error');
+        final n = failTimes;
+        if (n != null && spoken.length > n) {
+          yield const TtsDone();
+        } else {
+          yield TtsFailure(failMessage);
+        }
       case TtsMode.hang:
         await Completer<void>().future; // never finishes until stopped
     }

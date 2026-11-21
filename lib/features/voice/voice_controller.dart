@@ -21,7 +21,24 @@ class VoiceController extends ChangeNotifier {
     required this.log,
     this.onFinalText,
     this.onDuckMusic,
-  });
+    DateTime Function()? clock,
+    this.cloudRetryDelays = const [
+      Duration(milliseconds: 1500),
+      Duration(milliseconds: 3500),
+    ],
+    this.cloudFailCooldown = const Duration(minutes: 2),
+  }) : _clock = clock ?? DateTime.now;
+
+  final DateTime Function() _clock;
+
+  /// Waits before trying the cloud voice again when it is rate limited
+  /// (Gemini's free TTS allows only a few sentences per minute). Retrying
+  /// keeps the same voice instead of switching to the phone's voice.
+  final List<Duration> cloudRetryDelays;
+
+  /// After a real cloud failure (network, server) the phone voice is used
+  /// for this long, then the cloud voice is tried again.
+  final Duration cloudFailCooldown;
 
   final SttProvider deviceStt;
   final SttProvider cloudStt;
@@ -62,7 +79,14 @@ class VoiceController extends ChangeNotifier {
   bool hasWordTimings = false;
 
   bool _cloudSttFailed = false;
-  bool _cloudTtsFailed = false;
+  DateTime? _cloudTtsFailedUntil;
+  String? _lastTtsFailure;
+
+  bool get _cloudTtsFailed {
+    final u = _cloudTtsFailedUntil;
+    return u != null && _clock().isBefore(u);
+  }
+
   StreamSubscription<SttEvent>? _sttSub;
   StreamSubscription<TtsEvent>? _ttsSub;
   SttProvider? _currentStt;
@@ -79,7 +103,7 @@ class VoiceController extends ChangeNotifier {
   /// Reset sticky cloud failures (e.g. after a successful health check).
   void resetFallbacks() {
     _cloudSttFailed = false;
-    _cloudTtsFailed = false;
+    _cloudTtsFailedUntil = null;
   }
 
   bool _go(VoiceState to, {String? error}) {
@@ -238,24 +262,53 @@ class VoiceController extends ChangeNotifier {
       setThinking(false);
       return false;
     }
-    final ok = await _speakWith(
-      which == 'cloud' ? cloudTts : deviceTts,
-      text,
-      language,
-    );
-    if (gen != _ttsGeneration) return false; // interrupted: stay quiet
-    if (!ok && which == 'cloud' && state != VoiceState.listening) {
-      _cloudTtsFailed = true;
-      activeTts = 'device';
-      if (await deviceTts.availability() == ProviderAvailability.available) {
-        return _speakWith(deviceTts, text, language);
+    if (which == 'device') return _speakWith(deviceTts, text, language);
+    // Cloud voice: on a rate limit wait and retry with the SAME voice; only
+    // fall back to the phone's voice for this sentence if it keeps failing.
+    for (var attempt = 0; ; attempt++) {
+      final ok = await _speakWith(cloudTts, text, language, idleAfter: false);
+      if (gen != _ttsGeneration) return false; // interrupted: stay quiet
+      if (ok) {
+        _settleIdle();
+        return true;
       }
+      if (state == VoiceState.listening) return false;
+      final limited = _lastTtsFailure?.startsWith('rateLimited') ?? false;
+      if (limited && attempt < cloudRetryDelays.length) {
+        log.add('tts.cloud', 'rate limited, retry ${attempt + 1}');
+        _go(VoiceState.thinking); // nobody opens the mic meanwhile
+        await Future<void>.delayed(cloudRetryDelays[attempt]);
+        if (gen != _ttsGeneration || state == VoiceState.listening) {
+          return false;
+        }
+        continue;
+      }
+      if (!limited) _cloudTtsFailedUntil = _clock().add(cloudFailCooldown);
+      break;
     }
-    return ok;
+    activeTts = 'device';
+    if (await deviceTts.availability() == ProviderAvailability.available &&
+        gen == _ttsGeneration) {
+      return _speakWith(deviceTts, text, language);
+    }
+    _settleIdle();
+    return false;
   }
 
-  Future<bool> _speakWith(TtsProvider p, String text, String language) async {
+  void _settleIdle() {
+    if (state == VoiceState.speaking || state == VoiceState.thinking) {
+      _go(VoiceState.idle);
+    }
+  }
+
+  Future<bool> _speakWith(
+    TtsProvider p,
+    String text,
+    String language, {
+    bool idleAfter = true,
+  }) async {
     _currentTts = p;
+    _lastTtsFailure = null;
     activeTts = p.id;
     hasWordTimings = false;
     final done = _speaking = Completer<bool>();
@@ -275,6 +328,7 @@ class VoiceController extends ChangeNotifier {
                 if (!done.isCompleted) done.complete(true);
               case TtsFailure(:final message):
                 log.add('tts.${p.id}', message);
+                _lastTtsFailure = message;
                 lastError = 'tts_failed';
                 if (!done.isCompleted) done.complete(false);
             }
@@ -285,7 +339,7 @@ class VoiceController extends ChangeNotifier {
         );
     final ok = await done.future;
     onDuckMusic?.call(false);
-    if (state == VoiceState.speaking) _go(VoiceState.idle);
+    if (idleAfter && state == VoiceState.speaking) _go(VoiceState.idle);
     return ok;
   }
 

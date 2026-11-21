@@ -5,6 +5,8 @@ import { PROACTIVE_INSTRUCTION, PROACTIVE_USER_TURN, runChat, type ChatEvent } f
 import { ChatRequestSchema, ReplySchema } from '../src/brain/schema.js';
 import { livePrompt } from '../src/live.js';
 import { WikimediaImages, isPhoto } from '../src/providers/images/wikimedia.js';
+import { GeminiTtsProvider, retryDelayMs, ttsPrompt } from '../src/providers/tts/gemini.js';
+import { ServiceError } from '../src/errors.js';
 import { ScriptedLlm } from '../src/providers/llm/scripted.js';
 import type { FetchLike } from '../src/http.js';
 import { PROMPT, deps, fakeWeather, goodReply, replyCall } from './helpers.js';
@@ -123,5 +125,56 @@ describe('GET /v1/images', () => {
     const t2 = await token(app);
     const nc = await app.inject({ method: 'GET', url: '/v1/images?q=cat', headers: { authorization: `Bearer ${t2}` } });
     expect(nc.statusCode).toBe(503);
+  });
+});
+
+describe('Gemini TTS rate limit (free quota: a few sentences per minute)', () => {
+  const quota = (delay?: string) =>
+    new Response(
+      JSON.stringify({ error: { code: 429, status: 'RESOURCE_EXHAUSTED', details: delay ? [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: delay }] : [] } }),
+      { status: 429, headers: { 'content-type': 'application/json' } },
+    );
+  const audio = () =>
+    json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;rate=24000', data: Buffer.from([0, 0, 1, 0]).toString('base64') } }] } }] });
+  const opts = { apiKey: 'k', baseUrl: 'https://g.test/v1beta', model: 'tts-model', timeoutMs: 1000 };
+
+  it('reads RetryInfo.retryDelay', async () => {
+    expect(await retryDelayMs(quota('4s'))).toBe(4000);
+    expect(await retryDelayMs(quota('1.5s'))).toBe(1500);
+    expect(await retryDelayMs(quota())).toBeNull();
+  });
+
+  it('waits a short retryDelay and retries with the same voice', async () => {
+    const replies = [quota('3s'), quota('3s'), audio()];
+    let calls = 0;
+    const waits: number[] = [];
+    const fake: FetchLike = async () => replies[calls++]!;
+    const p = new GeminiTtsProvider(opts, fake, async (ms) => void waits.push(ms));
+    const out = await p.synthesize({ text: 'salam', language: 'ar-MA', gender: 'male' });
+    expect(out.contentType).toBe('audio/wav');
+    expect(waits).toEqual([3250]);
+  });
+
+  it('a long wait or a second 429 gives rate_limited (429), not a server error', async () => {
+    for (const replies of [[quota('40s'), quota('40s')], [quota('2s'), quota('2s'), quota('2s'), quota('2s')]]) {
+      let calls = 0;
+      const fake: FetchLike = async () => replies[calls++] ?? quota('2s');
+      const p = new GeminiTtsProvider(opts, fake, async () => {});
+      const err = await p.synthesize({ text: 'x', language: 'ar-MA' }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ServiceError);
+      expect((err as ServiceError).code).toBe('rate_limited');
+      expect((err as ServiceError).status).toBe(429);
+    }
+  });
+});
+
+describe('Gemini TTS delivery hint', () => {
+  it('asks for a Moroccan Darija accent matching the voice gender, then the exact words', () => {
+    const m = ttsPrompt('واخا أصاحبي', 'ar-MA', 'male');
+    expect(m).toMatch(/young man from Casablanca/);
+    expect(m).toMatch(/Darija/);
+    expect(m.endsWith(':\nواخا أصاحبي')).toBe(true);
+    expect(ttsPrompt('x', 'ar-MA', 'female')).toMatch(/young woman/);
+    expect(ttsPrompt('bonjour', 'fr-FR')).not.toMatch(/Darija/);
   });
 });
