@@ -36,6 +36,8 @@ class AppSettings {
     this.wakeByName = true,
     this.cameraRationaleSeen = false,
     this.keepScreenOn = true,
+    this.proactiveTalk = true,
+    this.liveAutoDescribe = true,
   });
 
   final String uiLocale; // ar | fr | en
@@ -78,6 +80,12 @@ class AppSettings {
   /// Listen for [robotName] while the app is open (on-device recogniser),
   /// then answer without pressing the mic.
   final bool wakeByName;
+
+  /// The robot talks by itself (jokes, questions) when the user is quiet.
+  final bool proactiveTalk;
+
+  /// Live camera: explain what the camera points at without being asked.
+  final bool liveAutoDescribe;
   final bool cameraRationaleSeen;
 
   /// Keep the screen awake while the face dashboard is visible.
@@ -117,6 +125,8 @@ class AppSettings {
     String? robotName,
     String? voiceGender,
     bool? wakeByName,
+    bool? proactiveTalk,
+    bool? liveAutoDescribe,
     bool? cameraRationaleSeen,
     bool? keepScreenOn,
     bool clearDeviceVoice = false,
@@ -151,6 +161,8 @@ class AppSettings {
       robotName: robotName == null ? this.robotName : cleanRobotName(robotName),
       voiceGender: voiceGender ?? this.voiceGender,
       wakeByName: wakeByName ?? this.wakeByName,
+      proactiveTalk: proactiveTalk ?? this.proactiveTalk,
+      liveAutoDescribe: liveAutoDescribe ?? this.liveAutoDescribe,
       cameraRationaleSeen: cameraRationaleSeen ?? this.cameraRationaleSeen,
       keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     );
@@ -185,6 +197,8 @@ class AppSettings {
     'wakeByNameV2': wakeByName,
     'cameraRationaleSeen': cameraRationaleSeen,
     'keepScreenOn': keepScreenOn,
+    'proactiveTalk': proactiveTalk,
+    'liveAutoDescribe': liveAutoDescribe,
   };
 
   /// Trims, collapses whitespace, drops control/markup characters, caps length.
@@ -244,6 +258,8 @@ class AppSettings {
       wakeByName: pick('wakeByNameV2', d.wakeByName),
       cameraRationaleSeen: pick('cameraRationaleSeen', d.cameraRationaleSeen),
       keepScreenOn: pick('keepScreenOn', d.keepScreenOn),
+      proactiveTalk: pick('proactiveTalk', d.proactiveTalk),
+      liveAutoDescribe: pick('liveAutoDescribe', d.liveAutoDescribe),
     );
   }
 

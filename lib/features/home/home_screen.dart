@@ -13,6 +13,7 @@ import '../chat/chat_models.dart';
 import '../face/robot_face.dart';
 import '../personality/voice_state.dart';
 import '../voice/mic_flow.dart';
+import '../chat/photo_strip.dart';
 import 'talk_controls.dart';
 
 /// Dashboard: the whole screen is the robot's face (eyes, brows, mouth).
@@ -72,6 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final net = ref.watch(connectivityProvider).value;
     final settings = ref.watch(settingsProvider);
     final wake = ref.watch(wakeNameProvider);
+    final convo = ref.watch(conversationProvider);
     final backend = ref.read(backendClientProvider);
     final name = settings.displayRobotName(l.appTitle);
 
@@ -119,7 +121,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       VoiceState.speaking => lastSahbi?.text,
       VoiceState.error => l.stateError,
       VoiceState.idle =>
-        _controlsVisible && wake.active ? l.wakeListening(name) : null,
+        convo.active
+            ? l.conversationOn
+            : _controlsVisible && wake.active
+            ? l.wakeListening(name)
+            : null,
     };
 
     final top = Padding(
@@ -157,6 +163,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           const Spacer(),
+          if (convo.active)
+            TextButton.icon(
+              key: const Key('end_conversation'),
+              onPressed: convo.end,
+              icon: const Icon(Icons.forum_outlined, size: 18),
+              label: Text(l.conversationEnd),
+            ),
           MicIndicator(on: voice.micOpen),
         ],
       ),
@@ -220,6 +233,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           fit: StackFit.expand,
           children: [
             face,
+            // Asleep after 10 minutes without an answer: dimmed face, still
+            // listening for the name (taps go through to wake it too).
+            if (companion.idle.asleep)
+              IgnorePointer(
+                child: Container(
+                  key: const Key('sleep_dim'),
+                  color: Colors.black.withValues(alpha: 0.6),
+                  alignment: Alignment.bottomCenter,
+                  padding: const EdgeInsets.only(bottom: 120),
+                  child: Text(
+                    settings.wakeByName
+                        ? l.sleepingHint(name)
+                        : l.sleepingHintTap,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: SahbiColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
             SafeArea(
               child: Column(
                 children: [
@@ -229,6 +263,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: top,
                   ),
                   banner,
+                  if (chat.shownImages.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: PhotoOverlayCard(
+                        images: chat.shownImages,
+                        query: chat.shownImagesQuery ?? '',
+                        onClose: chat.clearShownImages,
+                      ),
+                    ),
                   const Spacer(),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),

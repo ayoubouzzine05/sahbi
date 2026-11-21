@@ -533,5 +533,51 @@
   "ytNext": "Next",
   "@ytNext": {},
   "ytClose": "Close",
-  "@ytClose": {}
+  "@ytClose": {},
+  "photosCaption": "Photos: {source}. Tap to enlarge.",
+  "@photosCaption": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "photoOpenPage": "Author & licence",
+  "@photoOpenPage": {},
+  "photoFailed": "Photo could not load",
+  "@photoFailed": {},
+  "photosFor": "Photos: {query}",
+  "@photosFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "proactiveTitle": "Talk to me when I'm quiet",
+  "@proactiveTitle": {},
+  "proactiveSubtitle": "Jokes, riddles and questions every few minutes while the app is open. After 10 minutes without an answer I go to sleep until you call my name. Each line uses one AI request.",
+  "@proactiveSubtitle": {},
+  "sleepingHint": "Sleeping… call “{name}” to wake me up",
+  "@sleepingHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sleepingHintTap": "Sleeping… tap to wake me up",
+  "@sleepingHintTap": {},
+  "conversationOn": "I'm with you — say “safi sir” to stop",
+  "@conversationOn": {},
+  "conversationEnd": "End conversation",
+  "@conversationEnd": {},
+  "liveAutoDescribe": "Explain what I point at",
+  "@liveAutoDescribe": {},
+  "liveAutoDescribeHint": "Point the camera at something and hold it still",
+  "@liveAutoDescribeHint": {},
+  "ytPlay": "Play",
+  "@ytPlay": {},
+  "ytPause": "Pause",
+  "@ytPause": {}
 }

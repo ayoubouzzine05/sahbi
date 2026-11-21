@@ -383,8 +383,6 @@ class BackendClient {
     return res.bodyBytes;
   }
 
-  /// Single-use Gemini Live token (camera mode). The backend locks model,
-  /// prompt and voice into the token; the API key never reaches the app.
   /// GET /v1/music/youtube: embeddable YouTube videos for a song/artist.
   Future<List<YoutubeVideo>> youtubeSearch(String query) async {
     final res = await _authed(
@@ -399,6 +397,19 @@ class BackendClient {
     ];
   }
 
+  /// GET /v1/images: free photos (Wikipedia / Wikimedia Commons) of [query]
+  /// as raw JSON maps; the caller validates them.
+  Future<List<Object?>> images(String query) async {
+    final res = await _authed(
+      (h) => _http
+          .get(_uri('/v1/images', {'q': query}), headers: h)
+          .timeout(const Duration(seconds: 15)),
+    );
+    return (jsonDecode(res.body) as Map)['images'] as List? ?? const [];
+  }
+
+  /// Single-use Gemini Live token (camera mode). The backend locks model,
+  /// prompt and voice into the token; the API key never reaches the app.
   Future<LiveTokenInfo> liveToken({
     String? robotName,
     String? userName,

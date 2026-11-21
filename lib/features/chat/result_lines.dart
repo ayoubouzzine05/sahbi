@@ -130,6 +130,13 @@ Line resultLine(ActionResult r) {
         'YouTube Music ouvert',
         'Opened YouTube Music',
       ),
+      'Showing photos': (
+        'ها التصاور',
+        'Ha tsawer',
+        'إليك الصور',
+        'Voici les photos',
+        'Here are the photos',
+      ),
       'Remembered': (
         'صافي، غادي نعقل على هادشي',
         'Safi, ghadi n3qel 3la hadchi',
@@ -167,6 +174,20 @@ Line resultLine(ActionResult r) {
       'لم أجد هذه الأغنية في موسيقاك. عند الاتصال بالخادم أبحث عنها في يوتيوب.',
       'Pas trouvé dans ta musique. Une fois connecté au serveur, je la cherche sur YouTube.',
       'Not in your music. Once connected to the server, I can search YouTube.',
+    ),
+    'images_not_found': (
+      'ما لقيتش تصاور ديال هادشي.',
+      'Ma l9itch tsawer dyal hadchi.',
+      'لم أجد صورا لهذا.',
+      'Je n’ai pas trouvé de photos.',
+      'I found no photos of that.',
+    ),
+    'images_unavailable': (
+      'ما قدرتش نجيب التصاور دابا.',
+      'Ma 9dertch njib tsawer daba.',
+      'تعذر جلب الصور الآن.',
+      'Impossible de charger les photos pour l’instant.',
+      'Could not load photos right now.',
     ),
     'not_playing': (
       'ما كاينة حتى موسيقى خدامة.',

@@ -21,6 +21,7 @@ import '../personality/voice_state.dart';
 import '../voice/wake_name.dart';
 import 'live_player.dart';
 import 'live_session.dart';
+import 'scene_watcher.dart';
 
 enum LivePhase {
   permission,
@@ -82,6 +83,12 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   final Stopwatch _elapsed = Stopwatch();
   bool _snapping = false;
   int? _photoAt;
+
+  /// Explains what the camera points at without being asked.
+  final SceneWatcher _scene = SceneWatcher();
+
+  /// A LOOK was sent and the model has not finished its answer yet.
+  DateTime? _lookSentAt;
 
   @override
   void initState() {
@@ -269,6 +276,12 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       case LiveAudio(:final pcm):
         unawaited(_play(pcm));
       case LiveTranscript(:final text, :final fromUser):
+        if (fromUser && text.trim().isNotEmpty) {
+          // The user's own question about the view comes first.
+          _scene
+            ..userSpoke()
+            ..markDescribed();
+        }
         setState(() {
           if (fromUser) {
             _userText = _newUserTurn ? text : '$_userText$text';
@@ -285,6 +298,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       case LiveTurnComplete():
         _player.turnComplete();
         _newRobotTurn = true;
+        _lookSentAt = null;
       case LiveReconnecting():
         setState(() => phase = LivePhase.reconnecting);
       case LiveInternal():
@@ -383,10 +397,26 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         await File(x.path).delete();
       } catch (_) {}
       s.sendImage(bytes);
+      await _maybeLook(s, bytes);
     } catch (e) {
       ref.read(errorLogProvider).add('live.frame', '$e');
     } finally {
       _capturing = false;
+    }
+  }
+
+  /// When the camera settles on something new, ask the robot to explain it
+  /// (the frame was just sent, so the model sees what the user sees).
+  Future<void> _maybeLook(LiveSession s, Uint8List jpeg) async {
+    if (!ref.read(settingsProvider).liveAutoDescribe || _muted) return;
+    final sig = await sceneSignature(jpeg);
+    if (sig == null || !mounted) return;
+    final sent = _lookSentAt;
+    final waiting =
+        sent != null && DateTime.now().difference(sent).inSeconds < 10;
+    if (_scene.onFrame(sig, robotBusy: _player.playing || waiting)) {
+      _lookSentAt = DateTime.now();
+      s.sendText(liveLookCue);
     }
   }
 
@@ -492,6 +522,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   Future<void> _switchCamera() async {
     if (_cameras.length < 2) return;
     _camIndex = (_camIndex + 1) % _cameras.length;
+    _scene.reset();
     await _openCamera();
   }
 
@@ -602,6 +633,35 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
                       tooltip: l.liveRetry,
                       icon: const Icon(Icons.videocam_rounded),
                       onPressed: _snapping ? null : _restart,
+                    ),
+                  if (phase == LivePhase.live)
+                    IconButton.filledTonal(
+                      key: const Key('live_auto_describe'),
+                      tooltip: l.liveAutoDescribe,
+                      isSelected: settings.liveAutoDescribe,
+                      icon: const Icon(Icons.center_focus_weak_rounded),
+                      selectedIcon: const Icon(
+                        Icons.center_focus_strong_rounded,
+                        color: SahbiColors.green,
+                      ),
+                      onPressed: () {
+                        final on = !settings.liveAutoDescribe;
+                        ref
+                            .read(settingsProvider.notifier)
+                            .update((x) => x.copyWith(liveAutoDescribe: on));
+                        if (on) _scene.reset();
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                on
+                                    ? '${l.liveAutoDescribe} ✓ — ${l.liveAutoDescribeHint}'
+                                    : '${l.liveAutoDescribe} ✗',
+                              ),
+                            ),
+                          );
+                      },
                     ),
                   if (_cameras.length > 1 && cam != null)
                     IconButton.filledTonal(

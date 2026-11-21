@@ -571,4 +571,142 @@ void main() {
       expect(chat.messages.last.errorCode, 'no_internet');
     });
   });
+
+  group('follow-up 6: proactive lines and photos', () {
+    test(
+      'proactive() asks in proactive mode, speaks, adds no user turn',
+      () async {
+        respond = (_) => http.Response.bytes(
+          utf8.encode(sse([('final', reply(display: 'Nokta: ...'))])),
+          200,
+          headers: {'content-type': 'text/event-stream; charset=utf-8'},
+        );
+        final spoke = await chat.proactive();
+        expect(spoke, isTrue);
+        expect(lastBody()['mode'], 'proactive');
+        expect(chat.messages.where((m) => m.role == ChatRole.user), isEmpty);
+        expect(last().proactive, isTrue);
+        expect(last().text, 'Nokta: ...');
+        expect(tts.spoken, isNotEmpty);
+        expect(chat.robotTalking, isFalse);
+        // Only the robot's line goes into the conversation context.
+        expect(chat.context.turns.map((t) => t.role), ['assistant']);
+      },
+    );
+
+    test('proactive() stays silent offline and on server errors', () async {
+      net = const NetState(hasNetwork: false);
+      expect(await chat.proactive(), isFalse);
+      expect(calls, isEmpty);
+      expect(chat.messages, isEmpty);
+      net = NetState(hasNetwork: true, backendReachable: true, health: healthy);
+      respond = (_) => http.Response('{"error":{"code":"x"}}', 500);
+      expect(await chat.proactive(), isFalse);
+      expect(chat.messages, isEmpty, reason: 'no error bubble');
+    });
+
+    test('proactive lines never run music or settings actions', () async {
+      respond = (_) => http.Response.bytes(
+        utf8.encode(
+          sse([
+            (
+              'final',
+              reply(
+                actions: [
+                  {'type': 'music.play', 'query': 'x'},
+                ],
+              ),
+            ),
+          ]),
+        ),
+        200,
+        headers: {'content-type': 'text/event-stream; charset=utf-8'},
+      );
+      await chat.proactive();
+      expect(engine.calls, isNot(contains('play')));
+    });
+
+    test('image.show fetches photos and attaches them', () async {
+      respond = (req) {
+        if (req.url.path == '/v1/images') {
+          expect(req.url.queryParameters['q'], 'Chefchaouen');
+          return http.Response(
+            jsonEncode({
+              'images': [
+                {
+                  'url': 'https://upload.wikimedia.org/a/800px-Chef.jpg',
+                  'title': 'Chefchaouen',
+                  'page': 'https://en.wikipedia.org/wiki/Chefchaouen',
+                  'source': 'Wikipedia',
+                },
+                {'url': 'https://evil.example/x.jpg', 'title': 'bad'},
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response.bytes(
+          utf8.encode(
+            sse([
+              (
+                'final',
+                reply(
+                  display: 'Chefchaouen, lmdina zer9a!',
+                  actions: [
+                    {'type': 'image.show', 'query': 'Chefchaouen'},
+                  ],
+                ),
+              ),
+            ]),
+          ),
+          200,
+          headers: {'content-type': 'text/event-stream; charset=utf-8'},
+        );
+      };
+      await chat.send('wrini tswira dyal chefchaouen');
+      final m = last();
+      expect(m.images.map((i) => i.url), [
+        'https://upload.wikimedia.org/a/800px-Chef.jpg',
+      ], reason: 'only Wikimedia image hosts are accepted');
+      expect(m.results.single.ok, isTrue);
+      expect(chat.shownImages, hasLength(1));
+      expect(chat.shownImagesQuery, 'Chefchaouen');
+      expect(tts.spoken.single, contains('سلام'));
+      // A new message clears the photos from the face screen.
+      respond = (_) => http.Response.bytes(
+        utf8.encode(sse([('final', reply())])),
+        200,
+        headers: {'content-type': 'text/event-stream; charset=utf-8'},
+      );
+      await chat.send('chokran');
+      expect(chat.shownImages, isEmpty);
+      expect(m.images, hasLength(1), reason: 'still in the chat history');
+    });
+
+    test('image.show with no results reports it honestly', () async {
+      respond = (req) => req.url.path == '/v1/images'
+          ? http.Response('{"images":[]}', 200)
+          : http.Response.bytes(
+              utf8.encode(
+                sse([
+                  (
+                    'final',
+                    reply(
+                      actions: [
+                        {'type': 'image.show', 'query': 'zzzz'},
+                      ],
+                    ),
+                  ),
+                ]),
+              ),
+              200,
+              headers: {'content-type': 'text/event-stream; charset=utf-8'},
+            );
+      await chat.send('wrini zzzz');
+      expect(last().images, isEmpty);
+      expect(last().results.single.ok, isFalse);
+      expect(last().results.single.message, startsWith('images_not_found'));
+    });
+  });
 }

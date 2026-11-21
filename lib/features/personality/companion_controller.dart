@@ -61,6 +61,7 @@ class CompanionController extends ChangeNotifier {
           const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'),
           hold: const Duration(milliseconds: 1200),
         );
+      case IdleAction.chatter: // handled by onIdleAction (the AI talks)
       case IdleAction.none:
         break;
     }
@@ -85,8 +86,9 @@ class CompanionController extends ChangeNotifier {
     source = d.source;
     _revert?.cancel();
     _revert = Timer(hold, () {
-      emotion = Emotion.neutral;
-      intensity = 0.5;
+      // Asleep: go back to the sleeping face, not to neutral.
+      emotion = idle.asleep ? Emotion.sleepy : Emotion.neutral;
+      intensity = idle.asleep ? 1 : 0.5;
       source = 'idle';
       notifyListeners();
     });

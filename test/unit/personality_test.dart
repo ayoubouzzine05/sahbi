@@ -146,16 +146,49 @@ void main() {
         IdleBehavior(clock: () => now, random: _FixedRandom(rnd));
     setUp(() => now = DateTime(2026, 1, 1, 12));
 
-    test('yawns after 60 s, sleeps after 120 s, wakes on interaction', () {
+    test('chats by itself on schedule, yawns at 9 min, sleeps at 10 min', () {
       final i = make();
-      now = now.add(const Duration(seconds: 61));
-      expect(i.tick(), IdleAction.yawn);
-      now = now.add(const Duration(seconds: 60));
-      expect(i.tick(), IdleAction.fallAsleep);
+      final start = now;
+      IdleAction at(Duration d) {
+        now = start.add(d);
+        return i.tick();
+      }
+
+      expect(at(const Duration(seconds: 44)), isNot(IdleAction.chatter));
+      expect(at(const Duration(seconds: 45)), IdleAction.chatter);
+      expect(at(const Duration(seconds: 46)), isNot(IdleAction.chatter));
+      expect(at(const Duration(minutes: 2)), IdleAction.chatter);
+      expect(at(const Duration(minutes: 3, seconds: 30)), IdleAction.chatter);
+      expect(at(const Duration(minutes: 5, seconds: 30)), IdleAction.chatter);
+      expect(at(const Duration(minutes: 8)), IdleAction.chatter);
+      expect(at(const Duration(minutes: 9)), IdleAction.yawn);
+      expect(at(const Duration(minutes: 10)), IdleAction.fallAsleep);
       expect(i.asleep, isTrue);
-      expect(i.tick(), IdleAction.none);
+      expect(at(const Duration(minutes: 30)), IdleAction.none);
       expect(i.interact(), IdleAction.wakeUp);
       expect(i.asleep, isFalse);
+    });
+    test('missed chatter moments are skipped, not replayed', () {
+      final i = make();
+      now = now.add(const Duration(minutes: 4));
+      expect(i.tick(), IdleAction.chatter); // one line, not three
+      now = now.add(const Duration(seconds: 1));
+      expect(i.tick(), isNot(IdleAction.chatter));
+    });
+    test('chatter off still sleeps after 10 min', () {
+      final i = make()..chatterEnabled = false;
+      now = now.add(const Duration(minutes: 2));
+      expect(i.tick(), isNot(IdleAction.chatter));
+      now = now.add(const Duration(minutes: 8));
+      expect(i.tick(), IdleAction.fallAsleep);
+    });
+    test('an interaction restarts the chatter schedule', () {
+      final i = make();
+      now = now.add(const Duration(seconds: 45));
+      expect(i.tick(), IdleAction.chatter);
+      i.interact();
+      now = now.add(const Duration(seconds: 45));
+      expect(i.tick(), IdleAction.chatter);
     });
     test('looks around periodically when random allows', () {
       final i = make(rnd: 0.1);
@@ -166,8 +199,8 @@ void main() {
       expect(j.tick(), IdleAction.none);
     });
     test('busy (listening/speaking/music) never sleeps and wakes up', () {
-      final i = make();
-      now = now.add(const Duration(seconds: 130));
+      final i = make()..chatterEnabled = false;
+      now = now.add(const Duration(minutes: 11));
       expect(i.tick(), IdleAction.fallAsleep);
       expect(i.tick(busy: true), IdleAction.wakeUp);
       now = now.add(const Duration(seconds: 500));

@@ -809,4 +809,54 @@ class L10nEn extends L10n {
 
   @override
   String get ytClose => 'Close';
+
+  @override
+  String photosCaption(String source) {
+    return 'Photos: $source. Tap to enlarge.';
+  }
+
+  @override
+  String get photoOpenPage => 'Author & licence';
+
+  @override
+  String get photoFailed => 'Photo could not load';
+
+  @override
+  String photosFor(String query) {
+    return 'Photos: $query';
+  }
+
+  @override
+  String get proactiveTitle => 'Talk to me when I\'m quiet';
+
+  @override
+  String get proactiveSubtitle =>
+      'Jokes, riddles and questions every few minutes while the app is open. After 10 minutes without an answer I go to sleep until you call my name. Each line uses one AI request.';
+
+  @override
+  String sleepingHint(String name) {
+    return 'Sleeping… call “$name” to wake me up';
+  }
+
+  @override
+  String get sleepingHintTap => 'Sleeping… tap to wake me up';
+
+  @override
+  String get conversationOn => 'I\'m with you — say “safi sir” to stop';
+
+  @override
+  String get conversationEnd => 'End conversation';
+
+  @override
+  String get liveAutoDescribe => 'Explain what I point at';
+
+  @override
+  String get liveAutoDescribeHint =>
+      'Point the camera at something and hold it still';
+
+  @override
+  String get ytPlay => 'Play';
+
+  @override
+  String get ytPause => 'Pause';
 }

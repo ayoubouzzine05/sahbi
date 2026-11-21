@@ -572,6 +572,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     value: s.idleEnabled,
                     onChanged: (v) => _set((x) => x.copyWith(idleEnabled: v)),
                   ),
+                  SwitchListTile(
+                    key: const Key('proactive_switch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.proactiveTitle),
+                    subtitle: Text(
+                      l.proactiveSubtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: s.proactiveTalk,
+                    onChanged: (v) => _set((x) => x.copyWith(proactiveTalk: v)),
+                  ),
                 ],
               ),
             ),

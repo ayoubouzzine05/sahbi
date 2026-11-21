@@ -254,5 +254,19 @@
   "ytSearching": "كنقلب فيوتيوب على: {query}…",
   "ytError": "ما قدرتش نقرا حتى فيديو من هادو هنا. جرب أغنية أخرى.",
   "ytNext": "اللي من بعد",
-  "ytClose": "سد"
+  "ytClose": "سد",
+  "photosCaption": "التصاور: {source}. ضغط باش تكبر.",
+  "photoOpenPage": "المؤلف والرخصة",
+  "photoFailed": "ما بغاتش التصويرة تبان",
+  "photosFor": "تصاور: {query}",
+  "proactiveTitle": "هضر معايا ملي نكون ساكت",
+  "proactiveSubtitle": "نكت، ألغاز وأسئلة كل شوية ملي يكون التطبيق محلول. إلا دازت 10 دقايق بلا ما تجاوبني كنعس حتى تعيط عليا بسميتي. كل جملة كتاخد طلب واحد للذكاء الاصطناعي.",
+  "sleepingHint": "ناعس… عيط “{name}” باش نفيق",
+  "sleepingHintTap": "ناعس… ضغط باش نفيق",
+  "conversationOn": "أنا معاك — گول “صافي سير” باش نحبسو",
+  "conversationEnd": "سالي الهضرة",
+  "liveAutoDescribe": "شرح لي كنوري ليك",
+  "liveAutoDescribeHint": "وجه الكاميرا لشي حاجة وثبت شوية",
+  "ytPlay": "شغل",
+  "ytPause": "وقف شوية"
 }

@@ -12,6 +12,7 @@ import '../personality/voice_state.dart';
 import '../search/search_sources.dart';
 import '../voice/mic_flow.dart';
 import 'chat_models.dart';
+import 'photo_strip.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -351,6 +352,14 @@ class _Bubble extends StatelessWidget {
           ),
         );
       }
+    }
+    if (m.images.isNotEmpty) {
+      content.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: PhotoStrip(images: m.images),
+        ),
+      );
     }
     final tr = m.translation;
     if (tr != null) {

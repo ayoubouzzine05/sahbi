@@ -254,5 +254,19 @@
   "ytSearching": "Je cherche sur YouTube : {query}…",
   "ytError": "Aucune de ces vidéos ne peut être lue ici. Essaie un autre morceau.",
   "ytNext": "Suivant",
-  "ytClose": "Fermer"
+  "ytClose": "Fermer",
+  "photosCaption": "Photos : {source}. Touche pour agrandir.",
+  "photoOpenPage": "Auteur et licence",
+  "photoFailed": "Photo indisponible",
+  "photosFor": "Photos : {query}",
+  "proactiveTitle": "Me parler quand je me tais",
+  "proactiveSubtitle": "Blagues, devinettes et questions de temps en temps quand l’app est ouverte. Après 10 minutes sans réponse je m’endors jusqu’à ce que tu m’appelles par mon nom. Chaque phrase utilise une requête IA.",
+  "sleepingHint": "Je dors… appelle « {name} » pour me réveiller",
+  "sleepingHintTap": "Je dors… touche pour me réveiller",
+  "conversationOn": "Je t’écoute — dis « safi sir » pour arrêter",
+  "conversationEnd": "Terminer la conversation",
+  "liveAutoDescribe": "Expliquer ce que je montre",
+  "liveAutoDescribeHint": "Vise un objet et reste immobile",
+  "ytPlay": "Lecture",
+  "ytPause": "Pause"
 }

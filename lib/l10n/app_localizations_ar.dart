@@ -810,4 +810,53 @@ class L10nAr extends L10n {
 
   @override
   String get ytClose => 'سد';
+
+  @override
+  String photosCaption(String source) {
+    return 'التصاور: $source. ضغط باش تكبر.';
+  }
+
+  @override
+  String get photoOpenPage => 'المؤلف والرخصة';
+
+  @override
+  String get photoFailed => 'ما بغاتش التصويرة تبان';
+
+  @override
+  String photosFor(String query) {
+    return 'تصاور: $query';
+  }
+
+  @override
+  String get proactiveTitle => 'هضر معايا ملي نكون ساكت';
+
+  @override
+  String get proactiveSubtitle =>
+      'نكت، ألغاز وأسئلة كل شوية ملي يكون التطبيق محلول. إلا دازت 10 دقايق بلا ما تجاوبني كنعس حتى تعيط عليا بسميتي. كل جملة كتاخد طلب واحد للذكاء الاصطناعي.';
+
+  @override
+  String sleepingHint(String name) {
+    return 'ناعس… عيط “$name” باش نفيق';
+  }
+
+  @override
+  String get sleepingHintTap => 'ناعس… ضغط باش نفيق';
+
+  @override
+  String get conversationOn => 'أنا معاك — گول “صافي سير” باش نحبسو';
+
+  @override
+  String get conversationEnd => 'سالي الهضرة';
+
+  @override
+  String get liveAutoDescribe => 'شرح لي كنوري ليك';
+
+  @override
+  String get liveAutoDescribeHint => 'وجه الكاميرا لشي حاجة وثبت شوية';
+
+  @override
+  String get ytPlay => 'شغل';
+
+  @override
+  String get ytPause => 'وقف شوية';
 }

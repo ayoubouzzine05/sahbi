@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'music_models.dart';
@@ -33,15 +35,43 @@ enum YoutubeState { idle, searching, playing, paused, error }
 abstract class YoutubeSurface {
   Future<void> pause();
   Future<void> resume();
+
+  /// 0..100 (used to duck the song while the robot talks).
+  Future<void> setVolume(int volume);
 }
 
 /// In-app YouTube playback through the official embedded player (shown on
 /// screen, never in the background, as YouTube's embed terms require).
 class YoutubeController extends ChangeNotifier {
-  YoutubeController({required this.search});
+  YoutubeController({
+    required this.search,
+    DateTime Function()? clock,
+    this.canAutoResume,
+    this.resumeEvery = const Duration(seconds: 1),
+  }) : _clock = clock ?? DateTime.now;
 
   /// Backend search (`/v1/music/youtube`). Throws when unavailable.
   final Future<List<YoutubeVideo>> Function(String query) search;
+  final DateTime Function() _clock;
+
+  /// False while something else needs the audio (the mic is listening):
+  /// an interrupted song waits until it is true again.
+  bool Function()? canAutoResume;
+  final Duration resumeEvery;
+
+  /// Max automatic resumes per song, so we never fight the user or the
+  /// system forever.
+  static const maxAutoResumes = 12;
+
+  DateTime? _userTouch;
+  DateTime? _expectPause;
+  Timer? _resumeTimer;
+  int _autoResumes = 0;
+
+  /// True while a song that was paused by something other than the user
+  /// (Android audio focus, the WebView) is being resumed.
+  bool get interrupted => _resumeTimer != null;
+  int get autoResumes => _autoResumes;
 
   YoutubeState state = YoutubeState.idle;
   List<YoutubeVideo> results = const [];
@@ -84,6 +114,7 @@ class YoutubeController extends ChangeNotifier {
     }
     results = found;
     state = YoutubeState.playing;
+    _newSong();
     notifyListeners();
     return ActionResult.ok('Playing on YouTube "${found.first.title}"');
   }
@@ -92,6 +123,8 @@ class YoutubeController extends ChangeNotifier {
     if (state != YoutubeState.playing) {
       return const ActionResult.fail('not_playing');
     }
+    _cancelResume();
+    _expectPause = _clock();
     await surface?.pause();
     state = YoutubeState.paused;
     notifyListeners();
@@ -110,6 +143,7 @@ class YoutubeController extends ChangeNotifier {
 
   Future<ActionResult> stop() async {
     if (!active) return const ActionResult.fail('not_playing');
+    _cancelResume();
     _gen++;
     state = YoutubeState.idle;
     results = const [];
@@ -125,6 +159,7 @@ class YoutubeController extends ChangeNotifier {
     }
     index++;
     state = YoutubeState.playing;
+    _newSong();
     notifyListeners();
     return ActionResult.ok('Playing on YouTube "${current!.title}"');
   }
@@ -133,6 +168,7 @@ class YoutubeController extends ChangeNotifier {
     if (results.isEmpty) return const ActionResult.fail('queue_empty');
     if (index > 0) index--;
     state = YoutubeState.playing;
+    _newSong();
     notifyListeners();
     return ActionResult.ok('Playing on YouTube "${current!.title}"');
   }
@@ -142,7 +178,9 @@ class YoutubeController extends ChangeNotifier {
     if (index + 1 < results.length) {
       index++;
       state = YoutubeState.playing;
+      _newSong();
     } else {
+      _cancelResume();
       state = YoutubeState.error;
     }
     notifyListeners();
@@ -150,20 +188,88 @@ class YoutubeController extends ChangeNotifier {
 
   /// Reported by the player: the video finished.
   void onEnded() {
+    _cancelResume();
     state = YoutubeState.idle;
     results = const [];
     notifyListeners();
   }
 
-  /// Reported by the player when the user used its own controls.
+  /// The user touched the player (its own pause button, the video…).
+  void userTouchedPlayer() => _userTouch = _clock();
+
+  bool _recent(DateTime? t, int ms) =>
+      t != null && _clock().difference(t).inMilliseconds <= ms;
+
+  /// Reported by the player. A pause right after the user touched the
+  /// player (or after our own pause) is respected; any other pause comes
+  /// from Android (another app or the speech recogniser took the audio) or
+  /// the WebView, and the song is resumed as soon as the mic is free.
   void onPlayerState({required bool playingNow}) {
-    if (state == YoutubeState.playing && !playingNow) {
+    if (playingNow) {
+      _cancelResume();
+      if (state == YoutubeState.paused) {
+        state = YoutubeState.playing;
+        notifyListeners();
+      }
+      return;
+    }
+    if (state != YoutubeState.playing) return;
+    if (_recent(_userTouch, 2500) || _recent(_expectPause, 2500)) {
+      _cancelResume();
       state = YoutubeState.paused;
       notifyListeners();
-    } else if (state == YoutubeState.paused && playingNow) {
-      state = YoutubeState.playing;
+      return;
+    }
+    if (_autoResumes >= maxAutoResumes) {
+      state = YoutubeState.paused; // give up: the play button still works
+      notifyListeners();
+      return;
+    }
+    if (_resumeTimer == null) {
+      _resumeTimer = Timer.periodic(resumeEvery, (_) => _tryResume());
       notifyListeners();
     }
+  }
+
+  void _tryResume() {
+    if (state != YoutubeState.playing) {
+      _cancelResume();
+      return;
+    }
+    if (!(canAutoResume?.call() ?? true)) return;
+    if (_autoResumes >= maxAutoResumes) {
+      _cancelResume();
+      state = YoutubeState.paused;
+      notifyListeners();
+      return;
+    }
+    _autoResumes++;
+    unawaited(surface?.resume());
+  }
+
+  void _cancelResume() {
+    final t = _resumeTimer;
+    if (t == null) return;
+    t.cancel();
+    _resumeTimer = null;
+    notifyListeners();
+  }
+
+  void _newSong() {
+    _cancelResume();
+    _autoResumes = 0;
+  }
+
+  /// Lower the song while the robot talks.
+  Future<void> duck(bool on) async {
+    if (!active) return;
+    await surface?.setVolume(on ? 25 : 100);
+  }
+
+  @override
+  void dispose() {
+    _resumeTimer?.cancel();
+    super.dispose();
   }
 
   void dismissError() {

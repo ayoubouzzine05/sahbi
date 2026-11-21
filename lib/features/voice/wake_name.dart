@@ -191,6 +191,7 @@ class WakeNameController extends ChangeNotifier {
     required this.onCommand,
     required this.log,
     this.localeFor,
+    this.musicPlaying,
     Duration? restartDelay,
   }) : restartDelay = restartDelay ?? const Duration(milliseconds: 400);
 
@@ -202,11 +203,17 @@ class WakeNameController extends ChangeNotifier {
   final Future<void> Function() onWake;
   final void Function(String text) onCommand;
   final Future<String> Function(String replyLanguage)? localeFor;
+
+  /// While music plays the name is not listened for: every recogniser
+  /// session takes Android's audio focus, which paused YouTube songs after a
+  /// few seconds (and the song drowns the voice anyway).
+  final bool Function()? musicPlaying;
   final ErrorLog log;
   final Duration restartDelay;
 
   bool _foreground = true;
   int _suspended = 0;
+  bool _inConversation = false;
   bool _running = false;
   int _gen = 0;
   int _failures = 0;
@@ -221,7 +228,21 @@ class WakeNameController extends ChangeNotifier {
       settings().wakeByName &&
       _foreground &&
       _suspended == 0 &&
+      !_inConversation &&
+      !(musicPlaying?.call() ?? false) &&
       voiceState() == VoiceState.idle;
+
+  /// Another screen owns the mic (live camera) or the app is not visible.
+  bool get externallyBlocked => _suspended > 0 || !_foreground;
+  bool get foreground => _foreground;
+
+  /// During a conversation the mic opens by itself after each answer, so
+  /// the name is not needed (and must not compete for the mic).
+  void setConversation(bool on) {
+    if (_inConversation == on) return;
+    _inConversation = on;
+    refresh();
+  }
 
   /// App lifecycle: only listen while the app is in the foreground.
   void setForeground(bool v) {

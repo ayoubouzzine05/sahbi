@@ -117,6 +117,9 @@ class _SahbiAppState extends ConsumerState<SahbiApp>
     ref.read(robotLinkProvider);
     // Wake-by-name only runs while the app is in the foreground.
     ref.read(wakeNameProvider);
+    // Conversation after the name, and the robot talking on its own.
+    ref.read(conversationProvider);
+    ref.read(proactiveProvider);
   }
 
   @override
@@ -130,6 +133,14 @@ class _SahbiAppState extends ConsumerState<SahbiApp>
     ref
         .read(wakeNameProvider)
         .setForeground(state == AppLifecycleState.resumed);
+    // Opening the app again counts as the user being here (no goodnight
+    // line the moment they come back after a long time).
+    if (state == AppLifecycleState.resumed) {
+      ref.read(companionProvider).interact();
+    }
+    if (state == AppLifecycleState.paused) {
+      ref.read(conversationProvider).end();
+    }
   }
 
   @override

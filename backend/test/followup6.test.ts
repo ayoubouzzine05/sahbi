@@ -42,11 +42,11 @@ describe('image.show action', () => {
 });
 
 describe('live prompt', () => {
-  it('never places the robot in a phone and explains taps and continuous talk', () => {
+  it('never places the robot in a phone and explains LOOK cues and continuous talk', () => {
     const p = livePrompt({ robotName: 'Zizou' });
     expect(p).not.toMatch(/living in the user's phone/);
     expect(p).toMatch(/never say you live in a phone/);
-    expect(p).toMatch(/TAP/);
+    expect(p).toMatch(/"LOOK"/);
     expect(p).toMatch(/continuous conversation/);
   });
 });

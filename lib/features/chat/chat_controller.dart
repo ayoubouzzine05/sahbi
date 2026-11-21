@@ -94,6 +94,21 @@ class ChatController extends ChangeNotifier {
   ChatMessage? _brainMsg;
   int _brainGen = 0;
 
+  /// True while the robot talks on its own (a proactive line or its
+  /// goodnight): that is not the user being active.
+  bool robotTalking = false;
+
+  /// Photos currently shown on the face screen ("wrini …"); empty = none.
+  List<ChatImage> shownImages = const [];
+  String? shownImagesQuery;
+
+  void clearShownImages() {
+    if (shownImages.isEmpty) return;
+    shownImages = const [];
+    shownImagesQuery = null;
+    notifyListeners();
+  }
+
   /// Drops the in-flight AI request (new input, stop button, dispose).
   ///
   /// Cancelling a subscription does not fire onDone, so the waiting send()
@@ -171,6 +186,9 @@ class ChatController extends ChangeNotifier {
   Future<void> send(String raw) async {
     final text = raw.trim();
     if (text.isEmpty) return;
+    robotTalking = false;
+    shownImages = const []; // a new subject: the old photos leave the face
+    shownImagesQuery = null;
     companion.interact();
     _wasSpeaking = voice.state == VoiceState.speaking;
     await voice.interrupt(); // new input interrupts speech
@@ -326,11 +344,74 @@ class ChatController extends ChangeNotifier {
     return _offlineReason() ?? '';
   }
 
-  Map<String, dynamic> _request(String text, {Uint8List? image}) {
+  /// The robot speaks first (the user has been quiet): a joke, a riddle, a
+  /// question… written by the AI. Silent when the AI is not reachable (no
+  /// error bubble for something the user did not ask). Returns true if it
+  /// spoke.
+  Future<bool> proactive() async {
+    if (busy || _offlineReason() != null) return false;
+    if (voice.state != VoiceState.idle) return false;
+    robotTalking = true;
+    try {
+      return await _askBrain('', proactive: true);
+    } finally {
+      robotTalking = false;
+    }
+  }
+
+  /// Says a fixed line (goodbye, goodnight) without the AI. When
+  /// [robotInitiated] it does not count as the user being active.
+  Future<void> sayLocal(
+    Line line, {
+    bool robotInitiated = false,
+    bool showEmotion = true,
+  }) async {
+    if (robotInitiated) robotTalking = true;
+    try {
+      await _say(
+        _sahbi(line, ChatKind.command),
+        emotion: showEmotion ? line.emotion : null,
+        intensity: line.intensity,
+      );
+    } finally {
+      if (robotInitiated) robotTalking = false;
+    }
+  }
+
+  /// image.show: fetches free photos and attaches them to [m].
+  Future<ActionResult> _showImages(ChatMessage m, Object? query) async {
+    if (query is! String || query.trim().isEmpty) {
+      return const ActionResult.fail('images: no subject');
+    }
+    final q = query.trim();
+    try {
+      final list = [
+        for (final j in await backend.images(q)) ?ChatImage.fromJson(j),
+      ];
+      if (list.isEmpty) return ActionResult.fail('images_not_found:$q');
+      m
+        ..images = list
+        ..imageQuery = q;
+      shownImages = list;
+      shownImagesQuery = q;
+      notifyListeners();
+      return const ActionResult.ok('Showing photos');
+    } catch (e) {
+      log.add('images', '$e');
+      return ActionResult.fail('images_unavailable: $e');
+    }
+  }
+
+  Map<String, dynamic> _request(
+    String text, {
+    Uint8List? image,
+    bool proactive = false,
+  }) {
     final s = settings();
     final now = _clock();
     return {
-      'message': text,
+      'message': proactive ? '.' : text,
+      if (proactive) 'mode': 'proactive',
       if (image != null)
         'image': {'mime': 'image/jpeg', 'data': base64Encode(image)},
       'history': [for (final t in context.turns) t.toJson()],
@@ -354,16 +435,21 @@ class ChatController extends ChangeNotifier {
     };
   }
 
-  Future<void> _askBrain(String text, {Uint8List? image}) async {
+  Future<bool> _askBrain(
+    String text, {
+    Uint8List? image,
+    bool proactive = false,
+  }) async {
     var reason = _offlineReason();
+    if (proactive && reason != null) return false;
     if (reason == 'server_unreachable' && hooks.wakeBackend != null) {
       final woke = await _wakeBackend();
-      if (woke == null) return; // superseded or stopped while waking
+      if (woke == null) return false; // superseded or stopped while waking
       reason = woke.isEmpty ? null : woke;
     }
     if (reason != null) {
       await _offline(text, reason);
-      return;
+      return true;
     }
     busy = true;
     voice.setThinking(true);
@@ -379,6 +465,7 @@ class ChatController extends ChangeNotifier {
       kind: ChatKind.ai,
       streaming: true,
       phase: 'thinking',
+      proactive: proactive,
     );
     messages.add(m);
     notifyListeners();
@@ -388,7 +475,7 @@ class ChatController extends ChangeNotifier {
     _brainMsg = m;
     BrainReply? reply;
     _brainSub = backend
-        .chat(_request(text, image: image))
+        .chat(_request(text, image: image, proactive: proactive))
         .listen(
           (e) {
             switch (e) {
@@ -425,12 +512,20 @@ class ChatController extends ChangeNotifier {
           cancelOnError: true,
         );
     await done.future;
-    if (gen != _brainGen) return; // superseded or stopped
+    if (gen != _brainGen) return false; // superseded or stopped
     _brainSub = null;
     _brainDone = null;
     _brainMsg = null;
     busy = false;
     final r = reply;
+    if (r == null && proactive) {
+      // Nobody asked for it: drop it quietly instead of an error bubble.
+      messages.remove(m);
+      voice.setThinking(false);
+      companion.show(const DetectedEmotion(Emotion.neutral, 0.5));
+      notifyListeners();
+      return false;
+    }
     if (r == null) {
       if (m.kind != ChatKind.error) {
         // Stream ended without a final reply: treat as server error.
@@ -444,7 +539,7 @@ class ChatController extends ChangeNotifier {
       voice.setError(m.errorCode ?? 'server');
       companion.show(const DetectedEmotion(Emotion.sad, 0.3));
       notifyListeners();
-      return;
+      return true;
     }
     m
       ..text = r.displayText
@@ -457,10 +552,11 @@ class ChatController extends ChangeNotifier {
       ..searchUnavailable = r.searchUnavailable;
     final emo = detector.fromLlm(r.emotion.name, r.intensity);
     companion.show(emo);
-    context
-      ..add('user', image == null ? text : '[photo] $text')
-      ..add('assistant', r.displayText);
-    unawaited(memory.addChat('user', text));
+    if (!proactive) {
+      context.add('user', image == null ? text : '[photo] $text');
+      unawaited(memory.addChat('user', text));
+    }
+    context.add('assistant', r.displayText);
     unawaited(memory.addChat('assistant', r.displayText));
     notifyListeners();
 
@@ -475,6 +571,11 @@ class ChatController extends ChangeNotifier {
         );
         continue;
       }
+      if (a.type == 'image.show') {
+        results.add(await _showImages(m, a.args['query']));
+        continue;
+      }
+      if (proactive) continue; // a proactive line never changes anything
       final cmd = actionToCommand(a);
       if (cmd != null) results.add(await execute(cmd));
     }
@@ -489,6 +590,7 @@ class ChatController extends ChangeNotifier {
       voice.setThinking(false);
     }
     unawaited(_maybeSummarize());
+    return true;
   }
 
   Future<void> _maybeSummarize() async {

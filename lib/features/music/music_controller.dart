@@ -254,6 +254,7 @@ class MusicController extends ChangeNotifier {
   Future<void> duck(bool on) async {
     if (on == _ducked) return;
     _ducked = on;
+    unawaited(youtube?.duck(on));
     if (on) {
       _preDuckVolume = snapshot.volume;
       if (snapshot.playing) await engine.setVolume(_preDuckVolume * 0.25);

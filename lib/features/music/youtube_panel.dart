@@ -13,7 +13,9 @@ import 'youtube_controller.dart';
 
 /// Floating card with the official YouTube embedded player, so songs play
 /// inside the app. Shown only while YouTube is active; it pauses when the app
-/// leaves the screen (embedded playback must stay visible).
+/// leaves the screen and resumes when it comes back (YouTube's embed terms:
+/// the player must stay visible, at least 200×200 px, no audio-only).
+/// Kept compact: 16:9 at most 356 px wide (= the 200 px minimum height).
 class YoutubePanel extends ConsumerWidget {
   const YoutubePanel({super.key});
 
@@ -22,7 +24,7 @@ class YoutubePanel extends ConsumerWidget {
     final yt = ref.watch(youtubeControllerProvider);
     final l = L10n.of(context);
     if (yt.state == YoutubeState.idle) return const SizedBox.shrink();
-    final width = MediaQuery.sizeOf(context).width.clamp(0.0, 420.0) - 24;
+    final width = (MediaQuery.sizeOf(context).width - 24).clamp(0.0, 356.0);
     Widget body;
     if (yt.state == YoutubeState.searching) {
       body = _Row(
@@ -78,6 +80,14 @@ class YoutubePanel extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                ),
+                IconButton(
+                  key: const Key('yt_play_pause'),
+                  tooltip: yt.playing ? l.ytPause : l.ytPlay,
+                  icon: Icon(
+                    yt.playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  ),
+                  onPressed: yt.playing ? yt.pause : yt.resume,
                 ),
                 if (yt.index + 1 < yt.results.length)
                   IconButton(
@@ -159,6 +169,7 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer>
   late final WebViewController _web;
   String? _loadedId;
   bool _pageReady = false;
+  bool _pausedByLifecycle = false;
 
   @override
   void initState() {
@@ -201,9 +212,16 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final c = widget.controller;
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      unawaited(widget.controller.pause());
+      if (c.state == YoutubeState.playing) {
+        _pausedByLifecycle = true;
+        unawaited(c.pause());
+      }
+    } else if (state == AppLifecycleState.resumed && _pausedByLifecycle) {
+      _pausedByLifecycle = false;
+      unawaited(c.resume());
     }
   }
 
@@ -241,6 +259,11 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer>
   @override
   Future<void> resume() => _web.runJavaScript('player&&player.playVideo();');
 
+  @override
+  Future<void> setVolume(int volume) => _web.runJavaScript(
+    'player&&player.setVolume&&player.setVolume(${volume.clamp(0, 100)});',
+  );
+
   static String _html(String id) =>
       '''
 <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -259,6 +282,11 @@ function onYouTubeIframeAPIReady(){
 }
 </script><script src="https://www.youtube.com/iframe_api"></script></body></html>''';
 
+  /// Touches on the player tell its own pause button apart from pauses
+  /// caused by Android (they are resumed automatically).
   @override
-  Widget build(BuildContext context) => WebViewWidget(controller: _web);
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (_) => widget.controller.userTouchedPlayer(),
+    child: WebViewWidget(controller: _web),
+  );
 }

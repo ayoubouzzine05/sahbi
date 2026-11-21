@@ -1628,6 +1628,90 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Close'**
   String get ytClose;
+
+  /// No description provided for @photosCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos: {source}. Tap to enlarge.'**
+  String photosCaption(String source);
+
+  /// No description provided for @photoOpenPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Author & licence'**
+  String get photoOpenPage;
+
+  /// No description provided for @photoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo could not load'**
+  String get photoFailed;
+
+  /// No description provided for @photosFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos: {query}'**
+  String photosFor(String query);
+
+  /// No description provided for @proactiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to me when I\'m quiet'**
+  String get proactiveTitle;
+
+  /// No description provided for @proactiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Jokes, riddles and questions every few minutes while the app is open. After 10 minutes without an answer I go to sleep until you call my name. Each line uses one AI request.'**
+  String get proactiveSubtitle;
+
+  /// No description provided for @sleepingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleeping… call “{name}” to wake me up'**
+  String sleepingHint(String name);
+
+  /// No description provided for @sleepingHintTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleeping… tap to wake me up'**
+  String get sleepingHintTap;
+
+  /// No description provided for @conversationOn.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m with you — say “safi sir” to stop'**
+  String get conversationOn;
+
+  /// No description provided for @conversationEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End conversation'**
+  String get conversationEnd;
+
+  /// No description provided for @liveAutoDescribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Explain what I point at'**
+  String get liveAutoDescribe;
+
+  /// No description provided for @liveAutoDescribeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at something and hold it still'**
+  String get liveAutoDescribeHint;
+
+  /// No description provided for @ytPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get ytPlay;
+
+  /// No description provided for @ytPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get ytPause;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {
