@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { ephemeralSecret, isValidInstallId, issueToken, verifyToken } from './auth.js';
 import { type ChatEvent, runChat, summarise } from './brain/chat.js';
 import { promptVersion } from './brain/context.js';
+import { locateObject, LocateRequestSchema } from './brain/locate.js';
 import { ChatRequestSchema, formatZodError, HistoryTurnSchema } from './brain/schema.js';
 import { type Config, isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured } from './config.js';
 import { notConfigured, ServiceError } from './errors.js';
@@ -113,6 +114,7 @@ export function buildServer(deps: Deps): FastifyInstance {
         llm: { configured: isLlmConfigured(config) && !!deps.llm, provider: config.llm.provider },
         search: { configured: isSearchConfigured(config) && !!deps.search, provider: config.search.provider },
         images: { configured: !!deps.images, provider: deps.images ? 'wikimedia' : 'none' },
+        vision: { configured: !!deps.llm && isLlmConfigured(config) },
         youtube: { configured: !!deps.youtube, provider: deps.youtubeMode ?? (deps.youtube ? 'youtube-embed' : 'none') },
         weather: { configured: true, provider: 'open-meteo' },
         stt: { configured: isSttConfigured(config) && !!deps.stt, provider: config.stt.provider },
@@ -214,6 +216,22 @@ export function buildServer(deps: Deps): FastifyInstance {
         return sendError(reply, err);
       }
     });
+
+    // Camera screens: which object did the user tap / point at? (image in memory only, never logged)
+    app.post(
+      '/v1/vision/locate',
+      { preHandler: requireAuth, bodyLimit: config.chatBodyLimitBytes, config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+      async (req, reply) => {
+        const parsed = LocateRequestSchema.safeParse(req.body);
+        if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: formatZodError(parsed.error) } });
+        if (!deps.llm || !isLlmConfigured(config)) return sendError(reply, notConfigured('AI'));
+        try {
+          return await locateObject(deps.llm, parsed.data);
+        } catch (err) {
+          return sendError(reply, err);
+        }
+      },
+    );
 
     // Latency of each chat model (tiny fixed prompt, no user content). At most once per 30 s.
     let lastDiag = 0;
