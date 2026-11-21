@@ -135,6 +135,8 @@ Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, spe
 | EMO-like personality | DONE (prompt) | Chat prompt 1.5.0 and live prompt: a tiny robot with a big personality (curious, playful, cheeky, expressive, a little ego, loves music, gets bored, reacts with a short feeling first), as a Casablanca "weld lblad". SAHBI stays its own original robot: no EMO / LivingAI assets, name or sounds |
 | Tests | DONE | New `test/unit/live_voice_tts_test.dart` (5 tests: streaming at 25680 Hz, session reuse = 1 token, no audio → failure and a fresh session, stop = interrupted, fallback and cooldown). Voice, chat, live and settings test files pass. `flutter analyze` clean. Backend **128/128**, tsc and eslint clean |
 
+Android run 44954126934 (`cf6aab3`): tests, APK and emulator integration test passed; Release `latest` sahbi-arm64.apk 24,855,992 bytes. Checked on sahbi-8jkp after deploy: prompt 1.5.0, voice-mode token OK, first audio in 0.7 s.
+
 ## Follow-up 8 (2026-11-21): shake the phone, the robot gets dizzy and then annoyed
 
 | Item | Status | Evidence |
