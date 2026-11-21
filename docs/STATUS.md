@@ -135,6 +135,16 @@ Measured on homy-vert before the fix (real output):
 | `/v1/tts` one sentence | 3.2 s |
 | `/v1/health` stt | `configured: false`, so the phone used Android's built-in recogniser (poor at Darija) |
 
+Measured after the fix (homy-vert, 2026-11-21):
+
+| Measurement | Result |
+|---|---|
+| `GET /v1/diag/llm` (one-word prompt) | gemini-4-hydrogen and gemini-3.6-flash: timeout 30 s or 503; gemini-3.8-flash: 503 "high demand"; gemini-3.5-flash-lite: 0.7–9.7 s; gemini-3.1-flash-lite: 1.2–2.3 s. The chain is now 3.5-flash-lite → 3.1-flash-lite → bigger models, hedge 3.5 s |
+| `/v1/chat` 4 Darija questions | 6.7 s (first, cold), 1.1 s, 1.5 s, 5.8 s (with a web search). Before: 21–25 s |
+| `/v1/stt` (Gemini) on two Darija sentences spoken by Gemini TTS | 1.1 s each, word-for-word ("عافاك" came back as "عفاك"). A real human voice on a phone is NOT VERIFIED |
+| Android CI run 44911390339 for `f4827b7` | unit/widget/golden tests, APK build and the emulator integration test passed; Release `latest` updated |
+| Known trade-off | the lite models are smaller; Darija answers are good in these tests, but one answer came back in Arabizi instead of Arabic script |
+
 Changes:
 
 | Problem | Cause found | Fix | State |
