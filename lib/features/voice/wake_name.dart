@@ -169,7 +169,8 @@ WakeHit? matchWakeName(String transcript, String name) {
   return null;
 }
 
-/// Names to listen for: the user's chosen name, or صاحبي / Sahbi by default.
+/// Names to listen for: the user's chosen name, or صاحبي / Sahbi by default
+/// ("sahbi" is an everyday word, so it is not used once a name is chosen).
 List<String> wakeNamesFor(AppSettings s) => s.robotName.trim().isEmpty
     ? const ['صاحبي', 'sahbi']
     : [s.robotName.trim()];
@@ -280,10 +281,10 @@ class WakeNameController extends ChangeNotifier {
     _sub = listen(locale).listen(
       (e) {
         if (gen != _gen || handled) return;
-        final text = switch (e) {
-          SttPartial(:final text) => text,
-          SttFinal(:final text) => text,
-          _ => null,
+        final (text, alts) = switch (e) {
+          SttPartial(:final text, :final alternates) => (text, alternates),
+          SttFinal(:final text, :final alternates) => (text, alternates),
+          _ => (null, const <String>[]),
         };
         if (e case SttFailure(:final code, :final message)) {
           if (code != 'no_match') {
@@ -296,7 +297,12 @@ class WakeNameController extends ChangeNotifier {
           return;
         }
         if (text == null || text.isEmpty) return;
-        final hit = _match(text);
+        // The name is often only in the recogniser's 2nd/3rd guess.
+        WakeHit? hit;
+        for (final t in [text, ...alts]) {
+          hit = _match(t);
+          if (hit != null) break;
+        }
         if (hit == null) return;
         // In a partial, wait for the final result when words follow the name.
         if (e is SttPartial && hit.rest.isNotEmpty) return;

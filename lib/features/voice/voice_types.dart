@@ -13,13 +13,19 @@ sealed class SttEvent {
 }
 
 class SttPartial extends SttEvent {
-  const SttPartial(this.text);
+  const SttPartial(this.text, {this.alternates = const []});
   final String text;
+
+  /// Other hypotheses of the recogniser (used to spot the robot's name).
+  final List<String> alternates;
 }
 
 class SttFinal extends SttEvent {
-  const SttFinal(this.text);
+  const SttFinal(this.text, {this.alternates = const []});
   final String text;
+
+  /// Other hypotheses of the recogniser (used to spot the robot's name).
+  final List<String> alternates;
 }
 
 class SttLevel extends SttEvent {

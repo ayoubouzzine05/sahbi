@@ -69,23 +69,16 @@ class CloudStt implements SttProvider {
           ),
           path: _path!,
         );
-        var heardSpeech = false;
-        var silentMs = 0;
-        var totalMs = 0;
+        final vad = EndOfSpeech();
         _ampSub = _rec
             .onAmplitudeChanged(const Duration(milliseconds: 100))
             .listen((a) {
-              totalMs += 100;
               final level = ((a.current + 50) / 50).clamp(0.0, 1.0);
               if (!ctrl.isClosed) ctrl.add(SttLevel(level));
-              if (a.current > -35) {
-                heardSpeech = true;
-                silentMs = 0;
-              } else {
-                silentMs += 100;
+              if (vad.add(a.current)) {
+                // Nobody spoke: do not upload seconds of silence.
+                vad.heardSpeech ? stop() : _noSpeech(ctrl);
               }
-              // Auto-stop on 1.5 s of silence after speech, or 20 s max.
-              if ((heardSpeech && silentMs >= 1500) || totalMs >= 20000) stop();
             });
       } catch (e) {
         if (!ctrl.isClosed) {
@@ -142,6 +135,14 @@ class CloudStt implements SttProvider {
     }
   }
 
+  Future<void> _noSpeech(StreamController<SttEvent> ctrl) async {
+    if (!ctrl.isClosed) {
+      ctrl.add(const SttFailure('no_match', 'No speech heard'));
+    }
+    _cancelled = true;
+    await stop(); // closes the stream without uploading anything
+  }
+
   Future<void> _delete(String? path) async {
     if (path == null) return;
     try {
@@ -153,5 +154,63 @@ class CloudStt implements SttProvider {
   Future<void> cancel() async {
     _cancelled = true;
     await stop();
+  }
+}
+
+/// Decides when the user has finished talking from 100 ms loudness readings
+/// (dBFS). The threshold follows the room's noise floor, so a TV or a fan
+/// does not keep the recording open until the time limit, and a quiet voice
+/// in a silent room is still caught.
+class EndOfSpeech {
+  EndOfSpeech({
+    this.stepMs = 100,
+    this.silenceMs = 900,
+    this.maxMs = 15000,
+    this.noSpeechMs = 7000,
+  });
+
+  final int stepMs;
+
+  /// Silence after speech that ends the utterance.
+  final int silenceMs;
+
+  /// Hard limit for one utterance.
+  final int maxMs;
+
+  /// Give up when nobody spoke at all.
+  final int noSpeechMs;
+
+  double? _floor;
+  bool heardSpeech = false;
+  int _silent = 0;
+  int _total = 0;
+  int _loud = 0;
+
+  /// Returns true when recording should stop.
+  bool add(double db) {
+    _total += stepMs;
+    final d = db.isFinite ? db.clamp(-90.0, 0.0) : -90.0;
+    // Noise floor: the quietest reading of the first 0.5 s, then quick to go
+    // down and slow to go up (speech must not raise it). Capped at -40 dBFS so
+    // a user who starts talking at once is never mistaken for background.
+    final f = _floor;
+    _floor = f == null
+        ? d
+        : _total <= 500
+        ? (d < f ? d : f)
+        : (d < f ? f + (d - f) * 0.5 : f + (d - f) * 0.02);
+    final speechAt = (_floor! + 12).clamp(-48.0, -28.0);
+    if (d >= speechAt) {
+      _loud += stepMs;
+      // 200 ms of loud audio = speech (a click or a cough does not count).
+      if (_loud >= 200) heardSpeech = true;
+      _silent = 0;
+    } else {
+      _loud = 0;
+      _silent += stepMs;
+    }
+    if (heardSpeech && _silent >= silenceMs) return true;
+    if (!heardSpeech && _total >= noSpeechMs) return true;
+    return _total >= maxMs;
   }
 }

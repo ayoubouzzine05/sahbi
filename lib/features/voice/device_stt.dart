@@ -82,12 +82,18 @@ class DeviceStt implements SttProvider {
       await _stt.listen(
         onResult: (SpeechRecognitionResult r) {
           if (ctrl.isClosed) return;
+          final alts = [
+            for (final a in r.alternates)
+              if (a.recognizedWords.isNotEmpty &&
+                  a.recognizedWords != r.recognizedWords)
+                a.recognizedWords,
+          ];
           if (r.finalResult) {
-            ctrl.add(SttFinal(r.recognizedWords));
+            ctrl.add(SttFinal(r.recognizedWords, alternates: alts));
             ctrl.close();
           } else {
             _lastPartial = r.recognizedWords;
-            ctrl.add(SttPartial(r.recognizedWords));
+            ctrl.add(SttPartial(r.recognizedWords, alternates: alts));
           }
         },
         onSoundLevelChange: (level) {

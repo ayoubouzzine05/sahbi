@@ -1,4 +1,4 @@
-import { expectOk, fetchWithRetry, type FetchLike } from '../../http.js';
+import { expectOk, type FetchLike } from '../../http.js';
 import { ServiceError } from '../../errors.js';
 import type { Block, LlmMessage, LlmProvider, LlmRequest, LlmResponse } from './types.js';
 
@@ -71,6 +71,8 @@ export class GeminiProvider implements LlmProvider {
       reasoningEffort?: string;
       /** Tried in order when a model is overloaded (429/5xx), times out, or is unknown (404). */
       fallbackModels?: string[];
+      /** Start the next model in parallel when no answer after this many ms (0 = off). */
+      hedgeMs?: number;
     },
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
@@ -83,31 +85,118 @@ export class GeminiProvider implements LlmProvider {
   /**
    * One attempt per model (no same-model retries): on the free tier a busy
    * model tends to stay busy for a while, so moving on answers faster.
-   * Auth/request errors (400/401/403) stop immediately — another model won't help.
+   * Hedged: when a model has not answered after `hedgeMs`, the next model is
+   * started in parallel and the first good answer wins (the other request is
+   * aborted). A failed model (429/404/5xx, timeout) fails over at once.
+   * Auth/request errors (400/401/403) are returned as-is — another model won't help.
    */
-  private async post(body: unknown): Promise<Response> {
+  private post(body: unknown): Promise<Response> {
     const models = this.models;
-    let lastErr: unknown;
-    for (const [i, model] of models.entries()) {
-      const last = i === models.length - 1;
-      try {
-        const res = await fetchWithRetry(
-          this.fetchImpl,
-          generateContentUrl(this.opts.baseUrl, model),
-          { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey }, body: JSON.stringify(body) },
-          { timeoutMs: this.opts.timeoutMs, retries: 0 },
-        );
-        if (!last && (res.status === 429 || res.status === 404 || res.status >= 500)) {
-          lastErr = new ServiceError('upstream_error', `LLM returned HTTP ${res.status}`, 502);
-          continue;
+    const hedgeMs = this.opts.hedgeMs ?? 0;
+    const payload = JSON.stringify(body);
+    return new Promise<Response>((resolve, reject) => {
+      let next = 0;
+      let inflight = 0;
+      let done = false;
+      let lastErr: unknown = new ServiceError('upstream_error', 'LLM unavailable', 502);
+      let hedge: ReturnType<typeof setTimeout> | undefined;
+      const ctrls = new Set<AbortController>();
+      const failover = () => {
+        if (done) return;
+        if (!launch() && inflight === 0) {
+          done = true;
+          clearTimeout(hedge);
+          reject(lastErr);
         }
-        return res;
-      } catch (err) {
-        lastErr = err;
-        if (last) throw err;
-      }
-    }
-    throw lastErr instanceof Error ? lastErr : new ServiceError('upstream_error', 'LLM unavailable', 502);
+      };
+      const launch = (): boolean => {
+        if (done || next >= models.length) return false;
+        const model = models[next++]!;
+        inflight++;
+        const ctrl = new AbortController();
+        ctrls.add(ctrl);
+        const timer = setTimeout(() => ctrl.abort(), this.opts.timeoutMs);
+        this.fetchImpl(generateContentUrl(this.opts.baseUrl, model), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey },
+          body: payload,
+          signal: ctrl.signal,
+        }).then(
+          (res) => {
+            clearTimeout(timer);
+            inflight--;
+            if (done) return;
+            const retryable = res.status === 429 || res.status === 404 || res.status >= 500;
+            if (retryable && (next < models.length || inflight > 0)) {
+              lastErr = new ServiceError('upstream_error', `LLM returned HTTP ${res.status}`, 502);
+              void res.body?.cancel().catch(() => undefined);
+              failover();
+              return;
+            }
+            this.lastModel = model;
+            done = true;
+            clearTimeout(hedge);
+            for (const c of ctrls) if (c !== ctrl) c.abort();
+            resolve(res);
+          },
+          (err: unknown) => {
+            clearTimeout(timer);
+            inflight--;
+            if (done) return;
+            const aborted = err instanceof Error && err.name === 'AbortError';
+            lastErr = new ServiceError(aborted ? 'upstream_timeout' : 'upstream_error', aborted ? 'Upstream timed out' : 'Upstream unreachable', aborted ? 504 : 502);
+            failover();
+          },
+        );
+        clearTimeout(hedge);
+        if (hedgeMs > 0 && next < models.length) hedge = setTimeout(() => launch(), hedgeMs);
+        return true;
+      };
+      launch();
+    });
+  }
+
+  /** Model that produced the last successful response (for diagnostics). */
+  lastModel = '';
+
+  /** Times a tiny request on every model in parallel (no user content). */
+  async probe(): Promise<Array<{ model: string; status: number | string; ms: number; detail?: string }>> {
+    const level = thinkingLevel(this.opts.reasoningEffort);
+    const body = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: ok' }] }],
+      generationConfig: { maxOutputTokens: 256, ...(level ? { thinkingConfig: { thinkingLevel: level } } : {}) },
+    });
+    return Promise.all(
+      this.models.map(async (model) => {
+        const t0 = Date.now();
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 30000);
+        try {
+          const res = await this.fetchImpl(generateContentUrl(this.opts.baseUrl, model), {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-goog-api-key': this.opts.apiKey },
+            body,
+            signal: ctrl.signal,
+          });
+          let detail: string | undefined;
+          if (!res.ok) {
+            try {
+              const j = (await res.json()) as { error?: { status?: string; message?: string } };
+              detail = [j.error?.status, j.error?.message?.slice(0, 120)].filter(Boolean).join(': ');
+            } catch {
+              /* not JSON */
+            }
+          } else {
+            await res.arrayBuffer();
+          }
+          return { model, status: res.status, ms: Date.now() - t0, ...(detail ? { detail } : {}) };
+        } catch (err) {
+          return { model, status: err instanceof Error && err.name === 'AbortError' ? 'timeout' : 'error', ms: Date.now() - t0 };
+        } finally {
+          clearTimeout(timer);
+        }
+      }),
+    );
   }
 
   async complete(req: LlmRequest): Promise<LlmResponse> {

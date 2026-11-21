@@ -33,7 +33,7 @@ class AppSettings {
     this.micRationaleSeen = false,
     this.robotName = '',
     this.voiceGender = 'male',
-    this.wakeByName = false,
+    this.wakeByName = true,
     this.cameraRationaleSeen = false,
     this.keepScreenOn = true,
   });
@@ -181,7 +181,8 @@ class AppSettings {
     'micRationaleSeen': micRationaleSeen,
     'robotName': robotName,
     'voiceGender': voiceGender,
-    'wakeByName': wakeByName,
+    // V2: on by default (V1 defaulted to off and was rarely switched on).
+    'wakeByNameV2': wakeByName,
     'cameraRationaleSeen': cameraRationaleSeen,
     'keepScreenOn': keepScreenOn,
   };
@@ -240,7 +241,7 @@ class AppSettings {
       micRationaleSeen: pick('micRationaleSeen', d.micRationaleSeen),
       robotName: cleanRobotName(pick('robotName', d.robotName)),
       voiceGender: oneOf('voiceGender', ['male', 'female'], d.voiceGender),
-      wakeByName: pick('wakeByName', d.wakeByName),
+      wakeByName: pick('wakeByNameV2', d.wakeByName),
       cameraRationaleSeen: pick('cameraRationaleSeen', d.cameraRationaleSeen),
       keepScreenOn: pick('keepScreenOn', d.keepScreenOn),
     );

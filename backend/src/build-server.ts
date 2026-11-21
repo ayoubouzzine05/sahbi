@@ -28,6 +28,8 @@ export interface Deps {
   /** Finds embeddable YouTube videos for in-app playback; null when not configured. */
   youtube?: ((query: string) => Promise<YoutubeVideo[] | { videos: YoutubeVideo[]; suggested?: number; embeddable?: number }>) | null;
   youtubeMode?: string;
+  /** Times each chat model with a tiny prompt (GET /v1/diag/llm). */
+  diag?: (() => Promise<unknown>) | null;
   promptTemplate: string;
   logger?: boolean;
 }
@@ -197,6 +199,15 @@ export function buildServer(deps: Deps): FastifyInstance {
       } catch (err) {
         return sendError(reply, err);
       }
+    });
+
+    // Latency of each chat model (tiny fixed prompt, no user content). At most once per 30 s.
+    let lastDiag = 0;
+    app.get('/v1/diag/llm', { preHandler: requireAuth }, async (_req, reply) => {
+      if (!deps.diag) return sendError(reply, notConfigured('Model diagnostics'));
+      if (Date.now() - lastDiag < 30000) return reply.code(429).send({ error: { code: 'rate_limited', message: 'Try again in 30 s' } });
+      lastDiag = Date.now();
+      return { models: await deps.diag(), hedgeMs: config.llm.hedgeMs, timeoutMs: config.llm.timeoutMs };
     });
 
     app.post('/v1/stt', { preHandler: requireAuth, bodyLimit: config.audioBodyLimitBytes }, async (req, reply) => {

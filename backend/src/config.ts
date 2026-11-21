@@ -21,12 +21,14 @@ export interface Config {
     timeoutMs: number;
     /** Gemini only: models tried after `model` (LLM_FALLBACK_MODELS, comma-separated; 'none' disables). */
     fallbackModels: string[];
+    /** Gemini: start the next model in parallel after this many ms without an answer (0 = off). */
+    hedgeMs: number;
     maxOutputTokens: number;
     /** Optional OpenAI-style reasoning_effort (e.g. 'low'); sent only when set. */
     reasoningEffort: string;
   };
   search: { provider: 'brave' | 'gemini' | 'free' | 'none'; apiKey: string; geminiModels: string[]; youtubeApiKey: string; pipedInstances: string[] };
-  stt: { provider: 'azure' | 'openai' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string };
+  stt: { provider: 'azure' | 'openai' | 'gemini' | 'none'; azureKey: string; azureRegion: string; openaiKey: string; openaiModel: string; geminiModels: string[] };
   tts: { provider: 'azure' | 'gemini' | 'none'; azureKey: string; azureRegion: string; defaultVoice: string; geminiModel: string };
   live: { model: string; enabled: boolean };
   contextTokenBudget: number;
@@ -55,6 +57,8 @@ export const GEMINI_PRESET = {
   fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
   timeoutMs: 20000, // per model; the app waits ~45 s per request
   reasoningEffort: 'low',
+  // Fast, cheap models first for transcription; the chat models after them.
+  sttModels: ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'],
   ttsModel: 'gemini-3.8-flash-tts', // free tier (pricing page, 2026-11-18)
   liveModel: 'gemini-3.8-live', // free tier (pricing page, 2026-11-18)
   // Google Search grounding is free (500 RPD shared) only on 2.5 Flash / Flash-Lite (pricing page, 2026-11-19).
@@ -113,6 +117,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       baseUrl: str(env, 'LLM_BASE_URL', defaultBase),
       timeoutMs: int(env, 'LLM_TIMEOUT_MS', gemini ? GEMINI_PRESET.timeoutMs : 30000),
       fallbackModels: fallbackModels(env, gemini),
+      hedgeMs: gemini ? Number.parseInt(str(env, 'LLM_HEDGE_MS', '5000'), 10) || 0 : 0,
       maxOutputTokens: int(env, 'LLM_MAX_OUTPUT_TOKENS', gemini ? GEMINI_PRESET.maxOutputTokens : 800),
       reasoningEffort: str(env, 'LLM_REASONING_EFFORT', gemini ? GEMINI_PRESET.reasoningEffort : ''),
     },
@@ -139,11 +144,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
               .filter((s) => /^https:\/\//.test(s)),
     },
     stt: {
-      provider: oneOf(str(env, 'STT_PROVIDER', 'none'), ['azure', 'openai', 'none'] as const, 'none'),
+      // Gemini audio understanding is used automatically with a Gemini key (free, good with Darija).
+      provider: oneOf(str(env, 'STT_PROVIDER', gemini ? 'gemini' : 'none'), ['azure', 'openai', 'gemini', 'none'] as const, 'none'),
       azureKey,
       azureRegion,
       openaiKey: str(env, 'OPENAI_STT_API_KEY'),
       openaiModel: str(env, 'OPENAI_STT_MODEL'),
+      geminiModels: str(env, 'GEMINI_STT_MODELS', GEMINI_PRESET.sttModels.join(','))
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
     },
     tts: {
       // Gemini TTS is used automatically with a Gemini LLM key unless TTS_PROVIDER says otherwise.
@@ -173,6 +183,7 @@ export function isSearchConfigured(c: Config): boolean {
 export function isSttConfigured(c: Config): boolean {
   if (c.stt.provider === 'azure') return c.stt.azureKey !== '' && c.stt.azureRegion !== '';
   if (c.stt.provider === 'openai') return c.stt.openaiKey !== '' && c.stt.openaiModel !== '';
+  if (c.stt.provider === 'gemini') return c.llm.provider === 'gemini' && c.llm.apiKey !== '' && c.stt.geminiModels.length > 0;
   return false;
 }
 export function isTtsConfigured(c: Config): boolean {

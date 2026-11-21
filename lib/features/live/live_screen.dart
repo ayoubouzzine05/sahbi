@@ -19,6 +19,7 @@ import '../face/robot_face.dart';
 import '../personality/emotion.dart';
 import '../personality/voice_state.dart';
 import '../voice/wake_name.dart';
+import 'live_player.dart';
 import 'live_session.dart';
 
 enum LivePhase {
@@ -66,6 +67,14 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
   bool _muted = false;
   bool _speaking = false;
   bool _pcmReady = false;
+  Timer? _speakTick;
+
+  /// Ordered, pre-buffered playback + mic muting while the robot talks.
+  late final LivePlayer _player = LivePlayer(
+    feed: (pcm) => FlutterPcmSound.feed(
+      PcmArrayInt16(bytes: ByteData.view(Uint8List.fromList(pcm).buffer)),
+    ),
+  );
   String _robotText = '';
   String _userText = '';
   bool _newRobotTurn = true;
@@ -274,6 +283,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       case LiveInterrupted():
         unawaited(_flushAudio());
       case LiveTurnComplete():
+        _player.turnComplete();
         _newRobotTurn = true;
       case LiveReconnecting():
         setState(() => phase = LivePhase.reconnecting);
@@ -311,14 +321,16 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     });
     // Speaker output: 24 kHz mono PCM.
     try {
+      // The plugin prints every feed call by default: too slow for streaming.
+      await FlutterPcmSound.setLogLevel(LogLevel.none);
       await FlutterPcmSound.setup(sampleRate: 24000, channelCount: 1);
       await FlutterPcmSound.setFeedThreshold(2400);
-      FlutterPcmSound.setFeedCallback((remaining) {
-        if (remaining == 0 && _speaking && mounted) {
-          setState(() => _speaking = false);
-        }
-      });
       _pcmReady = true;
+      // "Speaking" follows the audio actually queued, not the network.
+      _speakTick = Timer.periodic(const Duration(milliseconds: 150), (_) {
+        final s = _player.playing;
+        if (s != _speaking && mounted) setState(() => _speaking = s);
+      });
     } catch (e) {
       ref.read(errorLogProvider).add('live.audio', '$e');
     }
@@ -339,7 +351,13 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
         ),
       );
       _micSub = stream.listen((chunk) {
-        if (!_muted) _session?.sendAudio(chunk);
+        if (_muted) return;
+        // Half-duplex: while the robot's voice is playing (and a moment
+        // after), send silence instead of the mic so the model does not hear
+        // itself through the speaker, cut itself off and start again.
+        _session?.sendAudio(
+          _player.micShouldBeMuted ? Uint8List(chunk.length) : chunk,
+        );
       });
     } catch (e) {
       ref.read(errorLogProvider).add('live.mic', '$e');
@@ -353,6 +371,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     final c = _cam;
     final s = _session;
     if (_capturing || c == null || s == null || !s.ready) return;
+    // Taking a picture is heavy on many phones: skip frames while the robot
+    // talks so its voice does not stutter.
+    if (_player.playing) return;
     if (!c.value.isInitialized || c.value.isTakingPicture) return;
     _capturing = true;
     try {
@@ -371,21 +392,12 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
 
   Future<void> _play(Uint8List pcm) async {
     if (!_pcmReady || pcm.length < 2) return;
-    final even = pcm.length.isEven ? pcm : pcm.sublist(0, pcm.length - 1);
-    final copy = Uint8List.fromList(even);
-    try {
-      await FlutterPcmSound.feed(
-        PcmArrayInt16(bytes: ByteData.view(copy.buffer)),
-      );
-      FlutterPcmSound.start();
-      if (!_speaking && mounted) setState(() => _speaking = true);
-    } catch (e) {
-      ref.read(errorLogProvider).add('live.audio', '$e');
-    }
+    _player.add(pcm);
   }
 
   /// Barge-in: drop whatever is still queued in the speaker.
   Future<void> _flushAudio() async {
+    _player.clear();
     if (!_pcmReady) return;
     try {
       _pcmReady = false;
@@ -406,6 +418,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     _limitTimer = null;
     _clock?.cancel();
     _clock = null;
+    _speakTick?.cancel();
+    _speakTick = null;
+    _player.clear();
     _elapsed.stop();
     final mic = _micSub;
     _micSub = null;

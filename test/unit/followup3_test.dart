@@ -115,8 +115,8 @@ void main() {
     Future<void> tick() =>
         Future<void>.delayed(const Duration(milliseconds: 20));
 
-    test('off by default / without mic permission nothing listens', () async {
-      settings = const AppSettings();
+    test('switched off / without mic permission nothing listens', () async {
+      settings = const AppSettings(wakeByName: false);
       final w = make()..refresh();
       await tick();
       expect(listens, 0);
@@ -126,6 +126,15 @@ void main() {
       await tick();
       expect(listens, 0);
       expect(w.lastError, 'no_permission');
+      w.dispose();
+    });
+
+    test('the name is also found in the recogniser alternates', () async {
+      final w = make()..refresh();
+      await tick();
+      ctrl.add(const SttFinal('zero chno ljaw', alternates: ['زيزو شنو الجو']));
+      await tick();
+      expect(commands, ['شنو الجو']);
       w.dispose();
     });
 
@@ -207,11 +216,19 @@ void main() {
   });
 
   group('AppSettings robot name / voice', () {
-    test('defaults: male voice, no custom name, wake off', () {
+    test('defaults: male voice, no custom name, wake by name on', () {
       const s = AppSettings();
       expect(s.voiceGender, 'male');
       expect(s.robotName, '');
-      expect(s.wakeByName, isFalse);
+      expect(s.wakeByName, isTrue);
+      // Old installs saved the V1 default (off): wake by name is now on, but
+      // a choice saved with the new key is kept.
+      expect(
+        AppSettings.decode('{"wakeByName": false, "robotName": "Zizou"}')
+            .wakeByName,
+        isTrue,
+      );
+      expect(AppSettings.decode('{"wakeByNameV2": false}').wakeByName, isFalse);
       expect(s.keepScreenOn, isTrue);
       expect(s.displayRobotName('صاحبي'), 'صاحبي');
     });

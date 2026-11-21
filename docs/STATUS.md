@@ -1,4 +1,4 @@
-# Status (2026-11-19)
+# Status (2026-11-21)
 
 DONE = implemented and verified by commands run here. PARTIAL = part done. NOT DONE = missing. NOT VERIFIED = written but could not be run here; the reason is given.
 
@@ -124,6 +124,26 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 | Photo mode: `/v1/chat` with the same JPEG | 200 in 22 s; correct Darija description |
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
+
+## Follow-up 5 (2026-11-21): slow replies, poor understanding, live-camera stutter/loop, wake by name
+
+Measured on homy-vert before the fix (real output):
+
+| Measurement | Result |
+|---|---|
+| `/v1/chat` "salam" | **21.7 s** (`thinking` at 0 s, whole answer at 21.7 s): the first model (gemini-4-hydrogen) ran into its 20 s timeout on every request, then the fallback answered in about 1 s |
+| `/v1/tts` one sentence | 3.2 s |
+| `/v1/health` stt | `configured: false`, so the phone used Android's built-in recogniser (poor at Darija) |
+
+Changes:
+
+| Problem | Cause found | Fix | State |
+|---|---|---|---|
+| Slow replies | first model hangs until the 20 s timeout | hedged requests: the next model starts in parallel after 5 s (`LLM_HEDGE_MS`), the first good answer wins, the other request is aborted; `GET /v1/diag/llm` times each model | backend tests (hedging, failover, 400 not retried, probe); **live effect NOT VERIFIED until deployed** |
+| Does not understand Darija well | no cloud STT configured | new `GeminiSttProvider` (audio understanding, same free key, Darija-aware instruction, Arabic script for Darija), default when a Gemini key exists; models `gemini-3.5-flash-lite` → `3.1-flash-lite` → `3.8-flash` | backend tests; **live quality NOT VERIFIED** |
+| Recording does not stop in a noisy room | fixed −35 dB threshold: a TV/fan never counted as silence (20 s limit) | `EndOfSpeech`: the threshold follows the room's noise floor, ends 0.9 s after speech, gives up after 7 s with no speech (nothing uploaded), 15 s max | unit tests (quiet room, TV, pauses, click, immediate talk, limit) |
+| Live camera: first word glitches, sentence loops | (1) playback uses the media stream, which the phone's echo canceller often does not remove, so the model hears itself, is "interrupted" and restarts; (2) audio chunks were fed concurrently (could arrive out of order); (3) a photo every second plus a log line for every audio chunk made the UI thread stutter | `LivePlayer`: strictly ordered feeding, 200 ms pre-buffer at the start of a reply, the mic sends silence while the robot talks plus 0.7 s; no camera frames while the robot talks; plugin logging off | unit tests; **on a phone NOT VERIFIED**. Side effect: you can no longer interrupt the robot by voice in live mode; it hears you again 0.7 s after it stops |
+| Calling it by name does nothing | wake by name was **off by default** (setting in Settings); the name was matched only against the recogniser's first guess | on by default (new settings key, so old installs switch on once), the name is also matched against the recogniser's alternative guesses | unit tests; **on a phone NOT VERIFIED** |
 
 ## Follow-up 4 (2026-11-19): web search, emotion colours, YouTube inside the app, no "in your phone"
 

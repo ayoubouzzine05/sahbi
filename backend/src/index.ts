@@ -13,6 +13,7 @@ import { YoutubeFinder } from './providers/music/youtube.js';
 import { FreeWebSearchProvider } from './providers/search/free.js';
 import { GeminiGroundedSearchProvider } from './providers/search/gemini.js';
 import { AzureSttProvider } from './providers/stt/azure.js';
+import { GeminiSttProvider } from './providers/stt/gemini.js';
 import { OpenAiSttProvider } from './providers/stt/openai.js';
 import { AzureTtsProvider } from './providers/tts/azure.js';
 import { PROMPT_TEMPLATE } from './prompt.generated.js';
@@ -30,7 +31,7 @@ if (isLlmConfigured(config)) {
     config.llm.provider === 'anthropic'
       ? new AnthropicProvider(opts)
       : config.llm.provider === 'gemini'
-        ? new GeminiProvider({ ...opts, reasoningEffort, fallbackModels: config.llm.fallbackModels })
+        ? new GeminiProvider({ ...opts, reasoningEffort, fallbackModels: config.llm.fallbackModels, hedgeMs: config.llm.hedgeMs })
         : new OpenAiProvider({ ...opts, reasoningEffort });
 }
 
@@ -54,10 +55,13 @@ const app: FastifyInstance = buildServer({
   search,
   youtube: youtube.mode === 'none' ? null : (q: string) => youtube.findWithStats(q),
   youtubeMode: youtube.mode,
+  diag: llm instanceof GeminiProvider ? () => (llm as GeminiProvider).probe() : null,
   stt: isSttConfigured(config)
     ? config.stt.provider === 'azure'
       ? new AzureSttProvider(config.stt.azureKey, config.stt.azureRegion)
-      : new OpenAiSttProvider(config.stt.openaiKey, config.stt.openaiModel)
+      : config.stt.provider === 'gemini'
+        ? new GeminiSttProvider({ apiKey: config.llm.apiKey, baseUrl: config.llm.baseUrl, models: config.stt.geminiModels, timeoutMs: 15000 })
+        : new OpenAiSttProvider(config.stt.openaiKey, config.stt.openaiModel)
     : null,
   tts: !isTtsConfigured(config)
     ? null
