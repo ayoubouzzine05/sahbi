@@ -47,9 +47,9 @@ describe('config: Gemini TTS + Live', () => {
 
 describe('GeminiTtsProvider', () => {
   it('picks voices by gender and accepts known names only', () => {
-    expect(geminiVoiceFor({ gender: 'male' })).toBe('Puck');
+    expect(geminiVoiceFor({ gender: 'male' })).toBe('Algenib');
     expect(geminiVoiceFor({ gender: 'female' })).toBe('Aoede');
-    expect(geminiVoiceFor({})).toBe('Puck');
+    expect(geminiVoiceFor({})).toBe('Algenib');
     expect(geminiVoiceFor({ voice: 'Charon', gender: 'female' })).toBe('Charon');
     expect(geminiVoiceFor({ voice: 'Hacker', gender: 'female' })).toBe('Aoede');
   });
@@ -68,7 +68,7 @@ describe('GeminiTtsProvider', () => {
     expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-tts:generateContent');
     expect(key).toBe('AQ.k');
     expect(body.generationConfig.responseModalities).toEqual(['AUDIO']);
-    expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Puck');
+    expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Algenib');
     expect(body.contents[0].parts[0].text).toBe('سلام');
     expect(out.contentType).toBe('audio/wav');
     expect(out.audio.subarray(0, 4).toString('ascii')).toBe('RIFF');

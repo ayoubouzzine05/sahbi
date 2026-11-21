@@ -294,23 +294,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(l.voiceGenderTitle),
-                  const SizedBox(height: 6),
-                  _seg(
-                    [('male', l.voiceMale), ('female', l.voiceFemale)],
-                    s.voiceGender,
-                    (v) => _set((x) => x.copyWith(voiceGender: v)),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, bottom: 4),
-                    child: Text(
-                      l.voiceGenderNote,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: SahbiColors.textSecondary,
-                      ),
-                    ),
-                  ),
                   Row(
                     children: [
                       SizedBox(width: 80, child: Text(l.speechRate)),

@@ -11,7 +11,8 @@ export const GEMINI_VOICES = {
   male: ['Puck', 'Charon', 'Fenrir', 'Orus', 'Achird', 'Algenib', 'Alnilam', 'Enceladus', 'Iapetus', 'Rasalgethi', 'Sadachbia', 'Sadaltager', 'Schedar', 'Umbriel', 'Zubenelgenubi', 'Algieba'],
   female: ['Aoede', 'Kore', 'Leda', 'Zephyr', 'Achernar', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Laomedeia', 'Pulcherrima', 'Sulafat', 'Vindemiatrix'],
 } as const;
-export const DEFAULT_GEMINI_VOICE = { male: 'Puck', female: 'Aoede' } as const;
+/** Algenib = the voice the user picked (live voice "C"); the fallback TTS keeps the same timbre. */
+export const DEFAULT_GEMINI_VOICE = { male: 'Algenib', female: 'Aoede' } as const;
 
 export function geminiVoiceFor(req: Pick<TtsRequest, 'voice' | 'gender'>): string {
   const all: readonly string[] = [...GEMINI_VOICES.male, ...GEMINI_VOICES.female];

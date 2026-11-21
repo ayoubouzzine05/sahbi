@@ -19,6 +19,7 @@ import '../face/robot_face.dart';
 import '../personality/emotion.dart';
 import '../personality/voice_state.dart';
 import '../voice/wake_name.dart';
+import '../voice/live_voice_tts.dart';
 import 'live_player.dart';
 import 'live_session.dart';
 import 'pointing.dart';
@@ -73,6 +74,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
 
   /// Ordered, pre-buffered playback + mic muting while the robot talks.
   late final LivePlayer _player = LivePlayer(
+    // Same voice and speed as the robot's normal voice (see LiveVoiceTts).
+    sampleRate: liveVoiceOutputRate,
     feed: (pcm) => FlutterPcmSound.feed(
       PcmArrayInt16(bytes: ByteData.view(Uint8List.fromList(pcm).buffer)),
     ),
@@ -112,6 +115,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final wake = ref.read(wakeNameProvider)..suspend();
+    // The camera session owns the speaker: close the speaking-voice session.
+    unawaited(ref.read(liveVoiceTtsProvider).close());
     _wake = wake;
     unawaited(WakelockPlus.enable().catchError((_) {}));
     WidgetsBinding.instance.addPostFrameCallback((_) => _begin());
@@ -184,7 +189,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
           .liveToken(
             robotName: s.robotName.isEmpty ? null : s.robotName,
             userName: s.userName.trim().isEmpty ? null : s.userName.trim(),
-            gender: s.voiceGender,
+            gender: sahbiVoiceGender,
             replyLanguage: s.replyLanguage,
           );
     } on BackendException catch (e) {
@@ -372,7 +377,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     try {
       // The plugin prints every feed call by default: too slow for streaming.
       await FlutterPcmSound.setLogLevel(LogLevel.none);
-      await FlutterPcmSound.setup(sampleRate: 24000, channelCount: 1);
+      await FlutterPcmSound.setup(
+        sampleRate: liveVoiceOutputRate,
+        channelCount: 1,
+      );
       await FlutterPcmSound.setFeedThreshold(2400);
       _pcmReady = true;
       // "Speaking" follows the audio actually queued, not the network.
@@ -677,7 +685,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     try {
       _pcmReady = false;
       await FlutterPcmSound.release();
-      await FlutterPcmSound.setup(sampleRate: 24000, channelCount: 1);
+      await FlutterPcmSound.setup(
+        sampleRate: liveVoiceOutputRate,
+        channelCount: 1,
+      );
       await FlutterPcmSound.setFeedThreshold(2400);
       _pcmReady = true;
     } catch (e) {

@@ -125,6 +125,16 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 9 (2026-11-16): one Casablanca male voice, EMO-like personality
+
+| Item | Status | Evidence |
+|---|---|---|
+| Voice switching (man / woman / robot) | DONE (code), NOT VERIFIED on a phone | Cause: the free Gemini TTS (`/v1/tts`) allows about 100 requests a day per project and about 10 a minute. When it ran out, the app switched to the phone's voice. Now the robot speaks through a **Gemini Live session in "voice" mode** (`POST /v1/live/token {mode:"voice"}`), which reads each line word for word. `LiveVoiceTts` streams it, keeps the session open between sentences (the single-use token is not wasted) and closes it after 90 s of silence, when the live camera opens, or when the app goes to the background. The old `/v1/tts` is kept only as a fallback, and it now uses the **same** prebuilt voice (Algenib instead of Puck). The phone's voice is the last resort. The "male/female voice" setting was removed: it is always male. Whether the Live free tier holds up for a whole day of talking is NOT VERIFIED |
+| Casablanca voice | DONE | Prebuilt voice Algenib with a light, young "Casablanca street" voice-actor prompt, played 7% faster (24000 → 25680 Hz), which makes it lighter and quicker. This is option "C", chosen by the user from samples generated here (median pitch about 179 Hz). It is a Casablanca *style* only: no real person's voice is cloned. The Piper Darija voice was rejected by the user. The live camera uses the same voice and speed |
+| Latency (sandbox → Google) | MEASURED here | First audio arrived 0.5–1.0 s after the text was sent (once 2.0 s). On a phone: NOT VERIFIED |
+| EMO-like personality | DONE (prompt) | Chat prompt 1.5.0 and live prompt: a tiny robot with a big personality (curious, playful, cheeky, expressive, a little ego, loves music, gets bored, reacts with a short feeling first), as a Casablanca "weld lblad". SAHBI stays its own original robot: no EMO / LivingAI assets, name or sounds |
+| Tests | DONE | New `test/unit/live_voice_tts_test.dart` (5 tests: streaming at 25680 Hz, session reuse = 1 token, no audio → failure and a fresh session, stop = interrupted, fallback and cooldown). Voice, chat, live and settings test files pass. `flutter analyze` clean. Backend **128/128**, tsc and eslint clean |
+
 ## Follow-up 8 (2026-11-21): shake the phone, the robot gets dizzy and then annoyed
 
 | Item | Status | Evidence |
@@ -135,7 +145,7 @@ Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, spe
 | When it listens | DONE (code) | Only while the app is in the foreground (AppLifecycleListener); ignored in the live camera; Settings switch "تحريك التيليفون" (on by default) |
 | Tests | DONE | Flutter **347 passed** (per file; `app_shell_test` skipped here, it runs in CI). `flutter analyze` and `dart format` clean |
 
-## Follow-up 7 (2026-11-16): green highlight on the pointed-at object, consistent voice, no "AI" label
+## Follow-up 7 (2026-11-21): green highlight on the pointed-at object, consistent voice, no "AI" label
 
 | Item | Status | Evidence |
 |---|---|---|

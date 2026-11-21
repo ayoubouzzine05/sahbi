@@ -24,6 +24,7 @@ import '../features/voice/cloud_tts.dart';
 import '../features/voice/conversation_session.dart';
 import '../features/voice/device_stt.dart';
 import '../features/voice/device_tts.dart';
+import '../features/voice/live_voice_tts.dart';
 import '../features/voice/mic_permission.dart';
 import '../features/voice/voice_controller.dart';
 import '../features/voice/voice_types.dart';
@@ -115,22 +116,59 @@ final cloudSttProvider = Provider<SttProvider>(
     isConfigured: () => ref.read(connectivityProvider).value.cloudSttConfigured,
   ),
 );
+
+/// SAHBI always speaks with ONE male Casablanca voice (Follow-up 9: never
+/// female, never switching). The old gender setting is ignored on purpose.
+const sahbiVoiceGender = 'male';
+
 final deviceTtsProvider = Provider<TtsProvider>(
   (ref) => DeviceTts(
     voiceName: () => ref.read(settingsProvider).deviceVoiceName,
-    gender: () => ref.read(settingsProvider).voiceGender,
+    gender: () => sahbiVoiceGender,
     rate: () => ref.read(settingsProvider).speechRate,
     pitch: () => ref.read(settingsProvider).pitch,
   ),
 );
-final cloudTtsProvider = Provider<TtsProvider>(
+
+/// Backend `/v1/tts` (Gemini TTS, same prebuilt voice): fallback only.
+final backendTtsProvider = Provider<TtsProvider>(
   (ref) => CloudTts(
     ref.read(backendClientProvider),
     isConfigured: () => ref.read(connectivityProvider).value.cloudTtsConfigured,
     voice: () => ref.read(settingsProvider).cloudVoice,
-    gender: () => ref.read(settingsProvider).voiceGender,
+    gender: () => sahbiVoiceGender,
     rate: () => ref.read(settingsProvider).speechRate,
     pitch: () => ref.read(settingsProvider).pitch,
+  ),
+);
+
+/// SAHBI's voice: the Gemini Live voice-actor session (light Casablanca
+/// style the user picked), streamed. Unlimited daily use is NOT VERIFIED.
+final liveVoiceTtsProvider = Provider<LiveVoiceTts>((ref) {
+  final t = LiveVoiceTts(
+    isConfigured: () => ref.read(connectivityProvider).value.liveConfigured,
+    token: () {
+      final s = ref.read(settingsProvider);
+      return ref
+          .read(backendClientProvider)
+          .liveToken(
+            gender: sahbiVoiceGender,
+            replyLanguage: s.replyLanguage,
+            mode: 'voice',
+          );
+    },
+  );
+  ref.onDispose(() => unawaited(t.close()));
+  return t;
+});
+
+/// Live voice first; the backend TTS only for a sentence the live voice
+/// could not start (then the live voice is retried after a minute).
+final cloudTtsProvider = Provider<TtsProvider>(
+  (ref) => FallbackTts(
+    ref.read(liveVoiceTtsProvider),
+    ref.read(backendTtsProvider),
+    onPrimaryFailure: (m) => ref.read(errorLogProvider).add('tts.live', m),
   ),
 );
 
@@ -144,8 +182,10 @@ final voiceControllerProvider = ChangeNotifierProvider<VoiceController>((ref) {
     settings: () => ref.read(settingsProvider),
     cloudSttReady: () =>
         ref.read(connectivityProvider).value.cloudSttConfigured,
-    cloudTtsReady: () =>
-        ref.read(connectivityProvider).value.cloudTtsConfigured,
+    cloudTtsReady: () {
+      final n = ref.read(connectivityProvider).value;
+      return n.liveConfigured || n.cloudTtsConfigured;
+    },
     log: ref.read(errorLogProvider),
     onDuckMusic: music.duck,
   );

@@ -30,6 +30,7 @@ class NetState {
       online && (health?.configured('search') ?? false);
   bool get cloudSttConfigured => online && (health?.configured('stt') ?? false);
   bool get cloudTtsConfigured => online && (health?.configured('tts') ?? false);
+  bool get liveConfigured => online && (health?.configured('live') ?? false);
 }
 
 /// connectivity_plus for interface changes + a real reachability check

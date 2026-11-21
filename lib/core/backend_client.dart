@@ -441,6 +441,8 @@ class BackendClient {
     String? userName,
     required String gender,
     required String replyLanguage,
+    String mode = 'camera',
+    String? voice,
   }) async {
     final res = await _authed(
       (h) => _http
@@ -452,6 +454,8 @@ class BackendClient {
               'user_name': ?userName,
               'gender': gender,
               'reply_language': replyLanguage,
+              'mode': mode,
+              'voice': ?voice,
             }),
           )
           .timeout(timeout),
