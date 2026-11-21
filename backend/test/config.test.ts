@@ -11,7 +11,7 @@ describe('Gemini one-key deploy', () => {
     expect(c.llm.model).toBe(GEMINI_PRESET.model);
     expect(c.llm.reasoningEffort).toBe('low');
     expect(c.llm.maxOutputTokens).toBe(4096);
-    expect(c.llm.fallbackModels).toEqual(['gemini-3.5-flash-lite', 'gemini-3.8-flash']);
+    expect(c.llm.fallbackModels).toEqual([...GEMINI_PRESET.fallbackModels]);
     expect(c.llm.timeoutMs).toBe(20000);
     expect(isLlmConfigured(c)).toBe(true);
   });

@@ -53,8 +53,10 @@ export const GEMINI_PRESET = {
   baseUrl: 'https://generativelanguage.googleapis.com',
   // All free-tier models per https://ai.google.dev/gemini-api/docs/pricing (checked 2026-11-18).
   // gemini-3.8-flash answered 503 repeatedly on the live deploy, hence a chain.
-  model: 'gemini-4-hydrogen',
-  fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+  // Live probe on homy-vert (GET /v1/diag/llm, 2026-11-21): gemini-4-hydrogen and
+  // gemini-3.8-flash hung for 30 s even on a one-word prompt; 3.5-flash-lite answered in 0.75 s.
+  model: 'gemini-3.6-flash',
+  fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-4-hydrogen', 'gemini-3.8-flash'],
   timeoutMs: 20000, // per model; the app waits ~45 s per request
   reasoningEffort: 'low',
   // Fast, cheap models first for transcription; the chat models after them.
