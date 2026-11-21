@@ -21,12 +21,13 @@ describe('ReplySchema', () => {
   it('JSON schema for the tool stays in sync with zod enums', () => {
     expect(REPLY_TOOL_JSON_SCHEMA.properties.language.enum).toEqual(['darija', 'ar', 'fr', 'en']);
     expect(REPLY_TOOL_JSON_SCHEMA.properties.emotion.enum).toEqual(['neutral', 'happy', 'sad', 'curious', 'surprised', 'sleepy', 'angry']);
-    const zodTypes = ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language'];
+    const zodTypes = ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language', 'image.show'];
     expect(REPLY_TOOL_JSON_SCHEMA.properties.actions.items.properties.type.enum).toEqual(zodTypes);
     for (const t of zodTypes) {
       const sample: Record<string, unknown> = { type: t };
       if (t === 'translate') Object.assign(sample, { source_text: 'a', target_language: 'en', translation: 'b' });
       if (t === 'set_reply_language') sample.language = 'fr';
+      if (t === 'image.show') sample.query = 'Chefchaouen';
       expect(ReplySchema.safeParse({ ...goodReply, actions: [sample] }).success, t).toBe(true);
     }
   });

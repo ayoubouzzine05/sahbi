@@ -28,6 +28,8 @@ export interface Deps {
   /** Finds embeddable YouTube videos for in-app playback; null when not configured. */
   youtube?: ((query: string) => Promise<YoutubeVideo[] | { videos: YoutubeVideo[]; suggested?: number; embeddable?: number }>) | null;
   youtubeMode?: string;
+  /** Free photos for "show me …" (GET /v1/images). */
+  images?: ((query: string) => Promise<unknown[]>) | null;
   /** Times each chat model with a tiny prompt (GET /v1/diag/llm). */
   diag?: (() => Promise<unknown>) | null;
   promptTemplate: string;
@@ -110,6 +112,7 @@ export function buildServer(deps: Deps): FastifyInstance {
       services: {
         llm: { configured: isLlmConfigured(config) && !!deps.llm, provider: config.llm.provider },
         search: { configured: isSearchConfigured(config) && !!deps.search, provider: config.search.provider },
+        images: { configured: !!deps.images, provider: deps.images ? 'wikimedia' : 'none' },
         youtube: { configured: !!deps.youtube, provider: deps.youtubeMode ?? (deps.youtube ? 'youtube-embed' : 'none') },
         weather: { configured: true, provider: 'open-meteo' },
         stt: { configured: isSttConfigured(config) && !!deps.stt, provider: config.stt.provider },
@@ -196,6 +199,17 @@ export function buildServer(deps: Deps): FastifyInstance {
       try {
         const r = await deps.youtube(parsed.data.q);
         return Array.isArray(r) ? { videos: r } : r;
+      } catch (err) {
+        return sendError(reply, err);
+      }
+    });
+
+    app.get('/v1/images', { preHandler: requireAuth }, async (req, reply) => {
+      if (!deps.images) return sendError(reply, notConfigured('Image search'));
+      const parsed = z.object({ q: z.string().trim().min(1).max(120) }).safeParse(req.query);
+      if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: 'q (1-120 chars) required' } });
+      try {
+        return { images: await deps.images(parsed.data.q) };
       } catch (err) {
         return sendError(reply, err);
       }

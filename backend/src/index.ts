@@ -9,6 +9,7 @@ import { GeminiProvider } from './providers/llm/gemini.js';
 import { OpenAiProvider } from './providers/llm/openai.js';
 import type { LlmProvider } from './providers/llm/types.js';
 import { BraveSearchProvider } from './providers/search/brave.js';
+import { WikimediaImages } from './providers/images/wikimedia.js';
 import { YoutubeFinder } from './providers/music/youtube.js';
 import { FreeWebSearchProvider } from './providers/search/free.js';
 import { GeminiGroundedSearchProvider } from './providers/search/gemini.js';
@@ -43,6 +44,7 @@ const search = !isSearchConfigured(config)
     : config.search.provider === 'gemini' && geminiKey
       ? new GeminiGroundedSearchProvider({ apiKey: geminiKey, baseUrl: config.llm.baseUrl, models: config.search.geminiModels, timeoutMs: 25000 })
       : new FreeWebSearchProvider();
+const wikimedia = new WikimediaImages();
 const youtube = new YoutubeFinder({
   apiKey: config.search.youtubeApiKey || undefined,
   piped: config.search.pipedInstances,
@@ -55,6 +57,7 @@ const app: FastifyInstance = buildServer({
   search,
   youtube: youtube.mode === 'none' ? null : (q: string) => youtube.findWithStats(q),
   youtubeMode: youtube.mode,
+  images: (q: string) => wikimedia.search(q),
   diag: llm instanceof GeminiProvider ? () => (llm as GeminiProvider).probe() : null,
   stt: isSttConfigured(config)
     ? config.stt.provider === 'azure'

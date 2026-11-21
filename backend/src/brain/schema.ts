@@ -13,6 +13,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('set_volume'), level: z.number().min(0).max(1).optional(), delta: z.number().min(-1).max(1).optional() }),
   z.object({ type: z.literal('translate'), source_text: z.string().max(1000), target_language: z.string().max(20), translation: z.string().max(2000) }),
   z.object({ type: z.literal('set_reply_language'), language: z.enum(LANGUAGES) }),
+  z.object({ type: z.literal('image.show'), query: z.string().trim().min(1).max(120) }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -46,7 +47,7 @@ export const REPLY_TOOL_JSON_SCHEMA = {
         type: 'object',
         required: ['type'],
         properties: {
-          type: { type: 'string', enum: ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language'] },
+          type: { type: 'string', enum: ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language', 'image.show'] },
           query: { type: 'string' },
           source: { type: 'string', enum: ['local', 'spotify', 'youtube', 'youtube_music'] },
           level: { type: 'number', minimum: 0, maximum: 1 },
@@ -81,6 +82,8 @@ export const ChatRequestSchema = z.object({
     .default({ reply_language: 'darija', darija_script: 'arabic', humor: 0.6, formality: 'casual' }),
   /** Only sent by the app when the user consented to memory. */
   memory: z.object({ facts: z.array(z.string().max(300)).max(30) }).optional(),
+  /** 'proactive': the user has been quiet; the robot starts a short interaction itself (message is ignored). */
+  mode: z.enum(['chat', 'proactive']).default('chat'),
   /** Optional camera photo (live camera "photo mode"). */
   image: z
     .object({

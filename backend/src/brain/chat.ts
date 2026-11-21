@@ -71,15 +71,27 @@ export function computeVerification(cited: Source[], sourcesAgree: boolean | und
  * Runs one chat turn: tool loop (search / weather), then a schema-validated reply.
  * Invalid output is retried exactly once with the validation error fed back to the model.
  */
+/** Appended to the system prompt when the app asks for a proactive turn. */
+export const PROACTIVE_INSTRUCTION = [
+  '## Proactive turn',
+  'The user has not said anything for a while; the app is open next to them. YOU start a short moment together, like a friend sitting nearby, to keep a good vibe.',
+  'Pick ONE, different from your previous turns in the history: a short Moroccan-style joke or nokta, a light riddle (give the answer next time), a fun fact (Morocco, animals, space, food), a playful comment about the time of day, a question about their day, their plans or what they like, or a small challenge or game.',
+  'One or two short sentences, warm and funny, never pushy. Do not say you are bored or alone, do not complain that they are quiet, do not ask "are you there?". No actions.',
+].join('\n');
+
+/** Stand-in user turn for a proactive request (the app sends no user words). */
+export const PROACTIVE_USER_TURN = '(silence — the user has been quiet for a while; start something fun)';
+
 export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerator<ChatEvent> {
-  const system = fillPrompt(deps.promptTemplate, req);
+  const proactive = req.mode === 'proactive';
+  const system = fillPrompt(deps.promptTemplate, req) + (proactive ? `\n\n${PROACTIVE_INSTRUCTION}` : '');
   const history = trimHistory(req.history, deps.tokenBudget);
   const messages: LlmMessage[] = history.map((t) => ({ role: t.role, content: [{ type: 'text', text: t.text }] }));
   // Anthropic requires alternating roles: merge consecutive same-role turns.
   const merged: LlmMessage[] = [];
   const userContent: Block[] = [
     ...(req.image ? [{ type: 'image' as const, mime: req.image.mime, data: req.image.data }] : []),
-    { type: 'text' as const, text: req.message },
+    { type: 'text' as const, text: proactive ? PROACTIVE_USER_TURN : req.message },
   ];
   for (const m of [...messages, { role: 'user' as const, content: userContent }]) {
     const last = merged[merged.length - 1];
@@ -87,7 +99,8 @@ export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerato
     else merged.push({ role: m.role, content: [...m.content] });
   }
 
-  const tools = [REPLY_TOOL, WEB_SEARCH_TOOL, WEATHER_TOOL];
+  // A proactive line needs no web search (saves the free quota).
+  const tools = proactive ? [REPLY_TOOL] : [REPLY_TOOL, WEB_SEARCH_TOOL, WEATHER_TOOL];
   const sources = new Map<number, Source>();
   const usedTools = new Set<string>();
   let searchUnavailable = false;
