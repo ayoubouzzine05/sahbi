@@ -39,6 +39,8 @@ class AppSettings {
     this.proactiveTalk = true,
     this.liveAutoDescribe = true,
     this.shakeReaction = true,
+    this.robotEyes = true,
+    this.robotEyesAsked = false,
   });
 
   final String uiLocale; // ar | fr | en
@@ -92,6 +94,13 @@ class AppSettings {
   final bool shakeReaction;
   final bool cameraRationaleSeen;
 
+  /// The robot looks through the front camera on the face screen (eyes
+  /// follow movement, reacts to what it is shown).
+  final bool robotEyes;
+
+  /// The camera explanation for the robot's eyes was shown once.
+  final bool robotEyesAsked;
+
   /// Keep the screen awake while the face dashboard is visible.
   final bool keepScreenOn;
 
@@ -132,6 +141,8 @@ class AppSettings {
     bool? proactiveTalk,
     bool? liveAutoDescribe,
     bool? shakeReaction,
+    bool? robotEyes,
+    bool? robotEyesAsked,
     bool? cameraRationaleSeen,
     bool? keepScreenOn,
     bool clearDeviceVoice = false,
@@ -169,6 +180,8 @@ class AppSettings {
       proactiveTalk: proactiveTalk ?? this.proactiveTalk,
       liveAutoDescribe: liveAutoDescribe ?? this.liveAutoDescribe,
       shakeReaction: shakeReaction ?? this.shakeReaction,
+      robotEyes: robotEyes ?? this.robotEyes,
+      robotEyesAsked: robotEyesAsked ?? this.robotEyesAsked,
       cameraRationaleSeen: cameraRationaleSeen ?? this.cameraRationaleSeen,
       keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     );
@@ -206,6 +219,8 @@ class AppSettings {
     'proactiveTalk': proactiveTalk,
     'liveAutoDescribe': liveAutoDescribe,
     'shakeReaction': shakeReaction,
+    'robotEyes': robotEyes,
+    'robotEyesAsked': robotEyesAsked,
   };
 
   /// Trims, collapses whitespace, drops control/markup characters, caps length.
@@ -268,6 +283,8 @@ class AppSettings {
       proactiveTalk: pick('proactiveTalk', d.proactiveTalk),
       liveAutoDescribe: pick('liveAutoDescribe', d.liveAutoDescribe),
       shakeReaction: pick('shakeReaction', d.shakeReaction),
+      robotEyes: pick('robotEyes', d.robotEyes),
+      robotEyesAsked: pick('robotEyesAsked', d.robotEyesAsked),
     );
   }
 

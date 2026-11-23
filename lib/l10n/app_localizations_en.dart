@@ -875,4 +875,28 @@ class L10nEn extends L10n {
   @override
   String get shakeSubtitle =>
       'Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline.';
+
+  @override
+  String get eyesOpen => 'Open his eyes (he can see)';
+
+  @override
+  String get eyesClose => 'Close his eyes (he can’t see)';
+
+  @override
+  String get eyesRationaleTitle => 'Can I see you?';
+
+  @override
+  String get eyesRationaleBody =>
+      'I want to see like a real robot: my eyes follow movement, and when you show me something I react (scared, happy, amazed…). I use the front camera only while my face is on screen. A small picture goes to the AI only when you show me something new; the app keeps nothing. You can close my eyes with the eye button.';
+
+  @override
+  String get eyesSettingTitle => 'Robot eyes';
+
+  @override
+  String get eyesSettingSubtitle =>
+      'Front camera while the face is on screen: the eyes follow movement and he reacts to what you show him.';
+
+  @override
+  String get eyesDenied =>
+      'To see, he needs the camera. You can allow it in the phone settings.';
 }

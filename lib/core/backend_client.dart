@@ -434,6 +434,39 @@ class BackendClient {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// POST /v1/vision/react: should the robot react to this frame from its
+  /// eyes? Raw JSON ({react:false} or reaction, display_text, tts_text,
+  /// emotion, intensity, subject_en).
+  Future<Map<String, dynamic>> react({
+    required Uint8List image,
+    required String replyLanguage,
+    required String darijaScript,
+    String? robotName,
+    String? userName,
+    List<String> recent = const [],
+    String mood = 'ok',
+  }) async {
+    final res = await _authed(
+      (h) => _http
+          .post(
+            _uri('/v1/vision/react'),
+            headers: {...h, 'content-type': 'application/json'},
+            body: jsonEncode({
+              'image': base64Encode(image),
+              'mime': 'image/jpeg',
+              'reply_language': replyLanguage,
+              'darija_script': darijaScript,
+              'robot_name': ?robotName,
+              'user_name': ?userName,
+              'recent': recent,
+              'mood': mood,
+            }),
+          )
+          .timeout(const Duration(seconds: 15)),
+    );
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// Single-use Gemini Live token (camera mode). The backend locks model,
   /// prompt and voice into the token; the API key never reaches the app.
   Future<LiveTokenInfo> liveToken({

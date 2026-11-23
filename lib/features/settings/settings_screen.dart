@@ -583,6 +583,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     value: s.shakeReaction,
                     onChanged: (v) => _set((x) => x.copyWith(shakeReaction: v)),
                   ),
+                  SwitchListTile(
+                    key: const Key('robot_eyes_switch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.eyesSettingTitle),
+                    subtitle: Text(
+                      l.eyesSettingSubtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: s.robotEyes,
+                    onChanged: (v) => _set(
+                      (x) => x.copyWith(robotEyes: v, robotEyesAsked: true),
+                    ),
+                  ),
                 ],
               ),
             ),

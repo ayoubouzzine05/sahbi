@@ -176,6 +176,9 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       (c) => c.lensDirection == CameraLensDirection.back,
     );
     _camIndex = back < 0 ? 0 : back;
+    // The robot's eyes use the front camera on the face screen: let go of
+    // it first.
+    await ref.read(robotEyesProvider).setWanted(false);
     final camOk = await _openCamera();
     if (!camOk) {
       if (mounted) setState(() => phase = LivePhase.error);

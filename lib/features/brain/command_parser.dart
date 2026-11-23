@@ -167,6 +167,10 @@ class CommandParser {
   static final _cameraVerb = RegExp(
     r'(?:7el|hel|7al|7ell|open|ouvre|ouvrir|allume|cha3el|ch3el|chaal|حل|افتح|فتح|شعل)',
   );
+
+  /// The sentence names the camera itself ("7el camera").
+  static bool mentionsCamera(String normalized) => _camera.hasMatch(normalized);
+
   // "chouf hadi / chno hada / شوف هادي / شنو هادا" — show-and-explain.
   static final _lookAtThis = RegExp(
     r'^(?:(?:a|ya)\s+\S+\s+)?(?:chouf|chof|shouf|regarde|lo+k at|شوف)\s+(?:hadi|hada|hado|had chi|hadchi|this|ca|هادي|هادا|هاد|هادشي|هدا|هدي)(?:\s|$)',

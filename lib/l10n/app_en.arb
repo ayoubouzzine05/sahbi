@@ -589,5 +589,19 @@
     }
   },
   "shakeTitle": "Shake the phone",
-  "shakeSubtitle": "Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline."
+  "shakeSubtitle": "Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline.",
+  "eyesOpen": "Open his eyes (he can see)",
+  "eyesClose": "Close his eyes (he can’t see)",
+  "eyesRationaleTitle": "Can I see you?",
+  "eyesRationaleBody": "I want to see like a real robot: my eyes follow movement, and when you show me something I react (scared, happy, amazed…). I use the front camera only while my face is on screen. A small picture goes to the AI only when you show me something new; the app keeps nothing. You can close my eyes with the eye button.",
+  "eyesSettingTitle": "Robot eyes",
+  "eyesSettingSubtitle": "Front camera while the face is on screen: the eyes follow movement and he reacts to what you show him.",
+  "eyesDenied": "To see, he needs the camera. You can allow it in the phone settings.",
+  "@eyesOpen": {},
+  "@eyesClose": {},
+  "@eyesRationaleTitle": {},
+  "@eyesRationaleBody": {},
+  "@eyesSettingTitle": {},
+  "@eyesSettingSubtitle": {},
+  "@eyesDenied": {}
 }

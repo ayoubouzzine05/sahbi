@@ -874,4 +874,28 @@ class L10nAr extends L10n {
   @override
   String get shakeSubtitle =>
       'إلا حركتي التيليفون بزاف كيدوخ، وإلا عاودتي كيتقلق عليك. خدام بلا أنترنيت.';
+
+  @override
+  String get eyesOpen => 'حل عينيه (يشوف)';
+
+  @override
+  String get eyesClose => 'سد عينيه (ما يشوفش)';
+
+  @override
+  String get eyesRationaleTitle => 'نشوفك؟';
+
+  @override
+  String get eyesRationaleBody =>
+      'بغيت نشوف بحال روبو حقيقي: عينيا كيتبعو الحركة، وإلا وريتيني شي حاجة نتفاعل معاها (نتخلع، نفرح، نتعجب…). كنستعمل الكاميرا اللي قدام غير وقت ما وجهي باين. شي تصويرة صغيرة كتمشي للذكاء الاصطناعي غير ملي كتوريني شي حاجة جديدة، والتطبيق ما كيخزن والو. تقدر تسد عينيا بالزر ديال العين.';
+
+  @override
+  String get eyesSettingTitle => 'عينين الروبو';
+
+  @override
+  String get eyesSettingSubtitle =>
+      'الكاميرا اللي قدام وقت ما الوجه باين: العينين كيتبعو الحركة وكيتفاعل مع اللي كتوريه.';
+
+  @override
+  String get eyesDenied =>
+      'باش يشوف، خاصو الكاميرا. تقدر تسمح بيها من الإعدادات ديال التيليفون.';
 }

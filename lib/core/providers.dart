@@ -18,7 +18,9 @@ import '../features/personality/idle_behavior.dart';
 import '../features/personality/shake.dart';
 import '../features/personality/voice_state.dart';
 import '../features/robot_link/robot_link_controller.dart';
+import '../features/personality/emotion.dart';
 import '../features/settings/app_settings.dart';
+import '../features/vision/robot_eyes.dart';
 import '../features/voice/cloud_stt.dart';
 import '../features/voice/cloud_tts.dart';
 import '../features/voice/conversation_session.dart';
@@ -230,10 +232,82 @@ final ChangeNotifierProvider<ChatController> chatControllerProvider =
         hooks: ChatHooks(
           updateSettings: (f) => ref.read(settingsProvider.notifier).update(f),
           wakeBackend: () => ref.read(connectivityProvider).wake(),
+          currentView: () => ref.read(robotEyesProvider).latestFrame(),
+          userSpoke: () => ref.read(robotEyesProvider).userSpoke(),
         ),
       );
       ref.read(voiceControllerProvider).onFinalText = chat.send;
       return chat;
+    });
+
+/// The robot's eyes: the front camera on the face screen. Eyes follow
+/// movement; when it is shown something new it may react out loud (the AI
+/// decides, `/v1/vision/react`). Frames stay in memory.
+final ChangeNotifierProvider<RobotEyes> robotEyesProvider =
+    ChangeNotifierProvider<RobotEyes>((ref) {
+      final recent = <String>[];
+      bool busy() {
+        final voice = ref.read(voiceControllerProvider);
+        final c = ref.read(companionProvider);
+        return voice.state != VoiceState.idle ||
+            ref.read(musicControllerProvider).playing ||
+            ref.read(chatControllerProvider).robotTalking ||
+            c.acting ||
+            c.dizzy ||
+            c.idle.asleep;
+      }
+
+      final eyes = RobotEyes(
+        busy: busy,
+        onGaze: (g) => ref.read(companionProvider).glance(g),
+        onReact: (jpeg) async {
+          final s = ref.read(settingsProvider);
+          final net = ref.read(connectivityProvider).value;
+          if (!s.sendToAi || !net.hasNetwork) return;
+          final c = ref.read(companionProvider);
+          final r = await ref
+              .read(backendClientProvider)
+              .react(
+                image: jpeg,
+                replyLanguage: s.replyLanguage,
+                darijaScript: s.darijaScript,
+                robotName: s.robotName.isEmpty ? null : s.robotName,
+                userName: s.userName.trim().isEmpty ? null : s.userName.trim(),
+                recent: recent,
+                mood: c.temper.mood,
+              );
+          final text = r['display_text'];
+          if (r['react'] != true || text is! String || text.isEmpty) return;
+          // The user may have started talking meanwhile: their turn first.
+          if (busy()) return;
+          final subject = r['subject_en'];
+          if (subject is String && subject.isNotEmpty) {
+            recent.add(subject);
+            if (recent.length > 6) recent.removeAt(0);
+          }
+          final act = reactionAct(r['reaction']);
+          if (act != null) {
+            c.play(act);
+            c.temper.played(act);
+          }
+          final tts = r['tts_text'];
+          final i = r['intensity'];
+          await ref
+              .read(chatControllerProvider)
+              .sayFromEyes(
+                text: text,
+                tts: tts is String && tts.isNotEmpty ? tts : null,
+                emotion: Emotion.values.asNameMap()[r['emotion']],
+                intensity: i is num ? i.toDouble().clamp(0, 1) : 0.7,
+              );
+        },
+      );
+      final life = AppLifecycleListener(
+        onStateChange: (st) =>
+            eyes.setForeground(st == AppLifecycleState.resumed),
+      );
+      ref.onDispose(life.dispose);
+      return eyes;
     });
 
 /// Wake-by-name: listens for the robot's name while the app is open.

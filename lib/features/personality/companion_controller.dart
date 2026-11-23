@@ -110,6 +110,19 @@ class CompanionController extends ChangeNotifier {
     return r;
   }
 
+  /// Looks at [g] for a moment (the eyes follow movement it sees). Not
+  /// while sulking (it stays turned away) or asleep.
+  void glance(Offset g, {Duration hold = const Duration(milliseconds: 1500)}) {
+    if (temper.sulking || idle.asleep || dizzy) return;
+    lookAt = g;
+    _lookTimer?.cancel();
+    _lookTimer = Timer(hold, () {
+      lookAt = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
   /// Turned away with a pout until the sulk ends.
   void startSulkFace() {
     final until = temper.sulkUntil;

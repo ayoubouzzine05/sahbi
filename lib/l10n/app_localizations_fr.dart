@@ -881,4 +881,28 @@ class L10nFr extends L10n {
   @override
   String get shakeSubtitle =>
       'Si tu secoues le téléphone, il a le tournis ; si tu recommences, il se fâche. Fonctionne sans internet.';
+
+  @override
+  String get eyesOpen => 'Ouvrir ses yeux (il voit)';
+
+  @override
+  String get eyesClose => 'Fermer ses yeux (il ne voit plus)';
+
+  @override
+  String get eyesRationaleTitle => 'Je peux te voir ?';
+
+  @override
+  String get eyesRationaleBody =>
+      'Je veux voir comme un vrai robot : mes yeux suivent les mouvements, et si tu me montres quelque chose je réagis (peur, joie, surprise…). J’utilise la caméra avant seulement quand mon visage est affiché. Une petite image part vers l’IA seulement quand tu me montres quelque chose de nouveau ; l’app ne garde rien. Tu peux fermer mes yeux avec le bouton œil.';
+
+  @override
+  String get eyesSettingTitle => 'Les yeux du robot';
+
+  @override
+  String get eyesSettingSubtitle =>
+      'Caméra avant quand le visage est affiché : les yeux suivent les mouvements et il réagit à ce que tu lui montres.';
+
+  @override
+  String get eyesDenied =>
+      'Pour voir, il a besoin de la caméra. Tu peux l’autoriser dans les réglages du téléphone.';
 }

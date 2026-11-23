@@ -746,4 +746,44 @@ void main() {
       expect(state, contains('SULKING'));
     });
   });
+
+  group('robot eyes in the chat', () {
+    ChatController withEyes(Uint8List? view) => ChatController(
+      backend: chat.backend,
+      settings: () => settings,
+      net: () => net,
+      voice: chat.voice,
+      music: chat.music,
+      memory: memory,
+      companion: CompanionController(),
+      log: ErrorLog(),
+      hooks: ChatHooks(
+        updateSettings: (u) => settings = u(settings),
+        currentView: () => view,
+      ),
+    );
+
+    test('"chno hada?" sends what the eyes see to the AI', () async {
+      final c = withEyes(Uint8List.fromList(List.filled(300, 7)));
+      await c.send('chno hada?');
+      expect(calls, isNotEmpty);
+      expect(lastBody()['image'], isNotNull);
+    });
+
+    test(
+      '"chouf hadi" uses the eyes instead of opening the camera screen',
+      () async {
+        final c = withEyes(Uint8List.fromList(List.filled(300, 7)));
+        await c.send('chouf hadi');
+        expect(calls, isNotEmpty);
+        expect(lastBody()['image'], isNotNull);
+      },
+    );
+
+    test('eyes closed: no picture is sent', () async {
+      final c = withEyes(null);
+      await c.send('chno hiya 3asima dyal fransa?');
+      expect(lastBody()['image'], isNull);
+    });
+  });
 }

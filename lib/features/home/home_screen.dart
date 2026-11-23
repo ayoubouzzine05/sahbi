@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -12,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../chat/chat_models.dart';
 import '../face/face_act.dart';
 import '../face/robot_face.dart';
+import '../vision/robot_eyes.dart';
 import '../personality/personality_responses.dart';
 import '../personality/temper.dart';
 import '../personality/temper_lines.dart';
@@ -37,17 +39,113 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _fade;
   bool _wakelock = false;
 
+  /// Camera permission for the robot's eyes (null = unknown / unavailable).
+  bool? _camGranted;
+  bool _eyesWanted = false;
+  // Read in initState (not lazily): it is used in dispose().
+  late final RobotEyes _eyes;
+
   @override
   void initState() {
     super.initState();
+    _eyes = ref.read(robotEyesProvider);
     _poke();
+    unawaited(_checkCamera());
   }
 
   @override
   void dispose() {
     _fade?.cancel();
     _setWakelock(false);
+    _eyes.setFaceWants(false);
     super.dispose();
+  }
+
+  Future<void> _checkCamera() async {
+    PermissionStatus st;
+    try {
+      st = await Permission.camera.status;
+    } catch (_) {
+      return; // no permission plugin (tests): eyes stay closed
+    }
+    if (!mounted) return;
+    setState(() => _camGranted = st.isGranted);
+    final s = ref.read(settingsProvider);
+    if (!st.isGranted && s.robotEyes && !s.robotEyesAsked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_askEyes());
+      });
+    }
+  }
+
+  /// First time: explains the robot's eyes, then asks for the camera.
+  Future<void> _askEyes() async {
+    final l = L10n.of(context);
+    final notifier = ref.read(settingsProvider.notifier);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.eyesRationaleTitle),
+        content: Text(l.eyesRationaleBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.micNotNow),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.micAllow),
+          ),
+        ],
+      ),
+    );
+    notifier.update((x) => x.copyWith(robotEyesAsked: true));
+    if (ok != true) {
+      notifier.update((x) => x.copyWith(robotEyes: false));
+      return;
+    }
+    await _requestCamera();
+  }
+
+  Future<bool> _requestCamera() async {
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final notifier = ref.read(settingsProvider.notifier);
+    PermissionStatus st;
+    try {
+      st = await Permission.camera.request();
+    } catch (_) {
+      return false;
+    }
+    if (!mounted) return false;
+    setState(() => _camGranted = st.isGranted);
+    if (!st.isGranted) {
+      notifier.update((x) => x.copyWith(robotEyes: false));
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(l.eyesDenied),
+          action: st.isPermanentlyDenied
+              ? SnackBarAction(
+                  label: l.tabSettings,
+                  onPressed: () => unawaited(openAppSettings()),
+                )
+              : null,
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /// The eye button: close / open the robot's eyes.
+  Future<void> _toggleEyes() async {
+    final notifier = ref.read(settingsProvider.notifier);
+    if (ref.read(settingsProvider).robotEyes && _camGranted == true) {
+      notifier.update((x) => x.copyWith(robotEyes: false));
+      return;
+    }
+    if (_camGranted != true && !await _requestCamera()) return;
+    notifier.update((x) => x.copyWith(robotEyes: true, robotEyesAsked: true));
   }
 
   void _setWakelock(bool on) {
@@ -96,6 +194,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _setWakelock(settings.keepScreenOn && visible);
 
     final listening = voice.state == VoiceState.listening;
+
+    // The robot's eyes (front camera) are open while its face is on screen.
+    final eyesOn = settings.robotEyes && _camGranted == true;
+    final eyesWanted =
+        eyesOn && visible && !companion.idle.asleep && !wake.externallyBlocked;
+    if (eyesWanted != _eyesWanted) {
+      _eyesWanted = eyesWanted;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _eyes.setFaceWants(eyesWanted),
+      );
+    }
+
     final face = RobotFace(
       fullScreen: true,
       inputs: FaceInputs(
@@ -217,6 +327,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: const Icon(Icons.forum_outlined, size: 18),
               label: Text(l.conversationEnd),
             ),
+          IconButton(
+            key: const Key('eyes_toggle'),
+            tooltip: eyesOn ? l.eyesClose : l.eyesOpen,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              _poke();
+              unawaited(_toggleEyes());
+            },
+            icon: Icon(
+              eyesOn ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+              size: 20,
+              color: eyesOn ? SahbiColors.green : SahbiColors.textSecondary,
+            ),
+          ),
           MicIndicator(on: voice.micOpen),
         ],
       ),

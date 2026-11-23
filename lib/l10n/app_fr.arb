@@ -272,5 +272,12 @@
   "pointNotFound": "Je ne trouve rien là, touche l’objet directement",
   "pointQuestion": "C’est quoi, ce que je montre ({label}) ? Parle seulement de cet objet.",
   "shakeTitle": "Secouer le téléphone",
-  "shakeSubtitle": "Si tu secoues le téléphone, il a le tournis ; si tu recommences, il se fâche. Fonctionne sans internet."
+  "shakeSubtitle": "Si tu secoues le téléphone, il a le tournis ; si tu recommences, il se fâche. Fonctionne sans internet.",
+  "eyesOpen": "Ouvrir ses yeux (il voit)",
+  "eyesClose": "Fermer ses yeux (il ne voit plus)",
+  "eyesRationaleTitle": "Je peux te voir ?",
+  "eyesRationaleBody": "Je veux voir comme un vrai robot : mes yeux suivent les mouvements, et si tu me montres quelque chose je réagis (peur, joie, surprise…). J’utilise la caméra avant seulement quand mon visage est affiché. Une petite image part vers l’IA seulement quand tu me montres quelque chose de nouveau ; l’app ne garde rien. Tu peux fermer mes yeux avec le bouton œil.",
+  "eyesSettingTitle": "Les yeux du robot",
+  "eyesSettingSubtitle": "Caméra avant quand le visage est affiché : les yeux suivent les mouvements et il réagit à ce que tu lui montres.",
+  "eyesDenied": "Pour voir, il a besoin de la caméra. Tu peux l’autoriser dans les réglages du téléphone."
 }

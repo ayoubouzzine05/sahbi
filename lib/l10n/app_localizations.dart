@@ -1736,6 +1736,48 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Shake the phone and it gets dizzy; keep going and it gets annoyed with you. Works offline.'**
   String get shakeSubtitle;
+
+  /// No description provided for @eyesOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open his eyes (he can see)'**
+  String get eyesOpen;
+
+  /// No description provided for @eyesClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close his eyes (he can’t see)'**
+  String get eyesClose;
+
+  /// No description provided for @eyesRationaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can I see you?'**
+  String get eyesRationaleTitle;
+
+  /// No description provided for @eyesRationaleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'I want to see like a real robot: my eyes follow movement, and when you show me something I react (scared, happy, amazed…). I use the front camera only while my face is on screen. A small picture goes to the AI only when you show me something new; the app keeps nothing. You can close my eyes with the eye button.'**
+  String get eyesRationaleBody;
+
+  /// No description provided for @eyesSettingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Robot eyes'**
+  String get eyesSettingTitle;
+
+  /// No description provided for @eyesSettingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Front camera while the face is on screen: the eyes follow movement and he reacts to what you show him.'**
+  String get eyesSettingSubtitle;
+
+  /// No description provided for @eyesDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'To see, he needs the camera. You can allow it in the phone settings.'**
+  String get eyesDenied;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

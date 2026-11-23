@@ -35,6 +35,8 @@ class ChatHooks {
     this.openCamera,
     this.requestListen,
     this.wakeBackend,
+    this.currentView,
+    this.userSpoke,
   });
   final void Function(AppSettings Function(AppSettings) update) updateSettings;
   final VoidCallback? openSettings;
@@ -49,6 +51,13 @@ class ChatHooks {
   /// Re-checks a sleeping backend with a long timeout (free hosting wakes in
   /// about a minute). When null, an unreachable server means offline at once.
   final Future<void> Function()? wakeBackend;
+
+  /// The latest picture from the robot's eyes (front camera on the face
+  /// screen), or null when its eyes are off.
+  final Uint8List? Function()? currentView;
+
+  /// Tells the eyes the user just spoke (it waits before reacting).
+  final VoidCallback? userSpoke;
 }
 
 /// The single pipeline for typed AND spoken input:
@@ -153,6 +162,11 @@ class ChatController extends ChangeNotifier {
 
   String _nextId() => '${++_id}';
 
+  /// Questions about what the robot sees.
+  static final _seesRe = RegExp(
+    r'(?:^|\s)(?:chouf|chof|chofti|choufti|katchouf|katchof|kat?chouf|tchouf|tchof|chno hada|chnou hada|chno hadi|chnou hadi|chno hado|ach hada|ach hadi|achno hada|chno f yeddi|chno 3ndi|wach katchouf|wach katchof|wach kayban|regarde|tu vois|c est quoi ca|qu est ce que c est|what is this|whats this|what s this|can you see|do you see|look at|شوف|شفتي|كتشوف|تشوف|شنو هادا|شنو هادي|شنو هادو|اش هادا|اش هادي|اشنو هادا|شنو فيدي|شنو عندي)(?:\s|$|[?!.])',
+  );
+
   static final _rememberRe = RegExp(
     r'^(?:3[q9]el|aq[l]|3a9el|tfeker|tfkker|remember|retiens|souviens toi|n3qel|عقل|تفكر|تذكر)\s+(?:3la|3ela|bli|that|que|على|بلي|ان)?\s*(.+)$',
   );
@@ -193,6 +207,7 @@ class ChatController extends ChangeNotifier {
     shownImages = const []; // a new subject: the old photos leave the face
     shownImagesQuery = null;
     companion.interact();
+    hooks.userSpoke?.call();
     _wasSpeaking = voice.state == VoiceState.speaking;
     await voice.interrupt(); // new input interrupts speech
     _abandonBrain();
@@ -256,7 +271,21 @@ class ChatController extends ChangeNotifier {
     }
 
     // (1) Local deterministic commands.
-    final cmd = parser.parse(text);
+    var cmd = parser.parse(text);
+
+    // The robot's eyes are open: "chouf hadi" / "chno hada?" / "wach
+    // katchouf…" go to the AI with what it sees right now (no camera
+    // screen). "7el camera" still opens the camera screen.
+    final nt = normalizeText(text);
+    final view = hooks.currentView?.call();
+    if (view != null &&
+        ((cmd?.type == CommandType.openCamera &&
+                !CommandParser.mentionsCamera(nt)) ||
+            (cmd == null && _seesRe.hasMatch(nt)))) {
+      await _askBrain(text, image: view);
+      return;
+    }
+
     if (cmd != null && cmd.type == CommandType.faceAct) {
       final act = FaceActInfo.fromWire(cmd.query);
       if (act != null) {
@@ -300,6 +329,34 @@ class ChatController extends ChangeNotifier {
 
     // (2) AI brain or honest offline fallback.
     await _askBrain(text);
+  }
+
+  /// The robot reacts out loud to something its eyes saw (the AI wrote the
+  /// line). Not counted as the user being active.
+  Future<void> sayFromEyes({
+    required String text,
+    String? tts,
+    Emotion? emotion,
+    double intensity = 0.7,
+  }) async {
+    final s = settings();
+    robotTalking = true;
+    try {
+      await _say(
+        ChatMessage(
+          id: _nextId(),
+          role: ChatRole.sahbi,
+          text: text,
+          ttsText: tts ?? text,
+          language: s.replyLanguage,
+          kind: ChatKind.ai,
+        ),
+        emotion: emotion,
+        intensity: intensity,
+      );
+    } finally {
+      robotTalking = false;
+    }
   }
 
   /// Plays a skit asked by voice and says its line.
