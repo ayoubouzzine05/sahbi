@@ -16,6 +16,8 @@ import '../music/music_models.dart';
 import '../personality/companion_controller.dart';
 import '../personality/conversation_context.dart';
 import '../personality/emotion.dart';
+import '../personality/temper.dart';
+import '../personality/temper_lines.dart';
 import '../personality/emotion_detector.dart';
 import '../personality/personality_responses.dart';
 import '../personality/voice_state.dart';
@@ -210,6 +212,33 @@ class ChatController extends ChangeNotifier {
       companion.show(userTone, hold: const Duration(seconds: 4));
     }
 
+    // Character: an insult makes him sulk, sorry / "kanbghik" makes up.
+    switch (companion.temper.heard(text)) {
+      case TemperChange.insulted:
+        companion.startSulkFace();
+        voice.setThinking(false);
+        final line = TemperLines.pick(TemperLines.insulted);
+        await _say(_sahbi(line, ChatKind.command));
+        return;
+      case TemperChange.madeUp:
+        companion.madeUp();
+        if (text.split(RegExp(r'\s+')).length <= 4) {
+          voice.setThinking(false);
+          final line = TemperLines.pick(TemperLines.madeUp);
+          await _say(_sahbi(line, ChatKind.command));
+          return;
+        }
+      case TemperChange.none:
+        break;
+    }
+
+    // "3afak" right after he asked for the magic word: he does the skit.
+    final asked = companion.temper.pleaseFollowUp(text);
+    if (asked != null) {
+      await _playSkit(asked);
+      return;
+    }
+
     // Memory: "3qel 3la ..." / "remember that ..."
     final rem = _rememberRe.firstMatch(normalizeText(text, collapse: false));
     if (rem != null) {
@@ -228,6 +257,23 @@ class ChatController extends ChangeNotifier {
 
     // (1) Local deterministic commands.
     final cmd = parser.parse(text);
+    if (cmd != null && cmd.type == CommandType.faceAct) {
+      final act = FaceActInfo.fromWire(cmd.query);
+      if (act != null) {
+        final d = companion.temper.decide(act, text);
+        final no = TemperLines.forDecision(d);
+        if (no != null) {
+          voice.setThinking(false);
+          if (d == SkitDecision.refuseSulking) companion.startSulkFace();
+          await _say(
+            _sahbi(no, ChatKind.command),
+            emotion: no.emotion,
+            intensity: no.intensity,
+          );
+          return;
+        }
+      }
+    }
     if (cmd != null) {
       final r = await execute(cmd);
       final line = resultLine(r);
@@ -254,6 +300,18 @@ class ChatController extends ChangeNotifier {
 
     // (2) AI brain or honest offline fallback.
     await _askBrain(text);
+  }
+
+  /// Plays a skit asked by voice and says its line.
+  Future<void> _playSkit(FaceAct act) async {
+    final r = await execute(Command(CommandType.faceAct, query: act.wire));
+    final line = resultLine(r);
+    voice.setThinking(false);
+    await _say(
+      _sahbi(line, ChatKind.command, results: [r]),
+      emotion: line.emotion,
+      intensity: line.intensity,
+    );
   }
 
   /// Camera "photo mode": ask the AI about one picture. Used when the live
@@ -429,9 +487,12 @@ class ChatController extends ChangeNotifier {
         'memory': {'facts': memory.factsForBrain()},
       'client': {
         'local_time': now.toIso8601String(),
-        'app_state': music.playing
-            ? 'music playing: ${music.snapshot.current?.title ?? ''}'
-            : 'idle',
+        'app_state': [
+          music.playing
+              ? 'music playing: ${music.snapshot.current?.title ?? ''}'
+              : 'idle',
+          ?companion.temper.moodForBrain,
+        ].join('; '),
       },
     };
   }
@@ -579,7 +640,10 @@ class ChatController extends ChangeNotifier {
       if (a.type == 'face.play') {
         // Just a face animation: the AI says its own words.
         final act = FaceActInfo.fromWire(a.args['animation']);
-        if (act != null) companion.play(act);
+        if (act != null) {
+          companion.play(act);
+          companion.temper.played(act);
+        }
         continue;
       }
       if (proactive) continue; // a proactive line never changes anything
@@ -738,6 +802,7 @@ class ChatController extends ChangeNotifier {
           final a = FaceActInfo.fromWire(c.query);
           if (a == null) return const ActionResult.fail('unknown animation');
           companion.play(a);
+          companion.temper.played(a);
           return ActionResult.ok('Face:${a.wire}');
       }
     } catch (e) {

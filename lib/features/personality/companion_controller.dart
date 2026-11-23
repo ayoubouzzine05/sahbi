@@ -7,14 +7,25 @@ import '../face/face_act.dart';
 import 'emotion.dart';
 import 'emotion_detector.dart';
 import 'idle_behavior.dart';
+import 'temper.dart';
 
 /// Owns the conversational emotion shown on the face and the idle engine.
 class CompanionController extends ChangeNotifier {
-  CompanionController({IdleBehavior? idle, this.busy, math.Random? random})
-    : idle = idle ?? IdleBehavior(),
-      _r = random ?? math.Random();
+  CompanionController({
+    IdleBehavior? idle,
+    this.busy,
+    math.Random? random,
+    Temper? temper,
+  }) : idle = idle ?? IdleBehavior(),
+       _r = random ?? math.Random(),
+       temper = temper ?? Temper(random: random);
 
   final IdleBehavior idle;
+
+  /// Strong character: annoyed, sulking, making up (see [Temper]).
+  final Temper temper;
+  bool _wasSulking = false;
+  double _sulkSide = 1;
 
   /// Returns true while listening/speaking/music (no idle behaviour then).
   final bool Function()? busy;
@@ -54,13 +65,78 @@ class CompanionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Stroked on the face: heart eyes and a happy face.
-  void pet() {
+  /// Stroked on the face: heart eyes and a happy face. While sulking it
+  /// takes about two strokes; returns 'madeUp', 'stillSulking' or 'happy'.
+  String pet() {
     idle.interact();
     _resetSkit();
+    final wasSulking = temper.sulking;
+    if (!temper.pet()) {
+      show(
+        const DetectedEmotion(Emotion.sad, 0.4, source: 'touch'),
+        hold: const Duration(seconds: 3),
+      );
+      return 'stillSulking';
+    }
+    _endSulkFace();
     play(FaceAct.love);
     show(
       const DetectedEmotion(Emotion.happy, 0.9, source: 'touch'),
+      hold: const Duration(seconds: 4),
+    );
+    return wasSulking ? 'madeUp' : 'happy';
+  }
+
+  /// A finger poke on the face (not asleep): squish, grumble or sulk.
+  PokeReaction poke() {
+    idle.interact();
+    _resetSkit();
+    final r = temper.poke();
+    switch (r) {
+      case PokeReaction.squish:
+        play(FaceAct.squish);
+      case PokeReaction.annoyed:
+        play(FaceAct.squish);
+        show(
+          const DetectedEmotion(Emotion.angry, 0.45, source: 'touch'),
+          hold: const Duration(seconds: 4),
+        );
+      case PokeReaction.sulk:
+        startSulkFace();
+      case PokeReaction.ignore:
+        // Sulking: a small "hmph", stays turned away.
+        play(FaceAct.suspicious);
+    }
+    return r;
+  }
+
+  /// Turned away with a pout until the sulk ends.
+  void startSulkFace() {
+    final until = temper.sulkUntil;
+    if (until == null) return;
+    _wasSulking = true;
+    _sulkSide = _r.nextBool() ? 1 : -1;
+    lookAt = Offset(0.95 * _sulkSide, 0.15);
+    _lookTimer?.cancel();
+    show(
+      const DetectedEmotion(Emotion.angry, 0.35, source: 'temper'),
+      hold: until.difference(DateTime.now()),
+    );
+  }
+
+  void _endSulkFace() {
+    if (!_wasSulking) return;
+    _wasSulking = false;
+    lookAt = null;
+    notifyListeners();
+  }
+
+  /// Apology / sweet word: forgiven, heart eyes.
+  void madeUp() {
+    _endSulkFace();
+    play(FaceAct.love);
+    show(
+      const DetectedEmotion(Emotion.happy, 0.85, source: 'temper'),
       hold: const Duration(seconds: 4),
     );
   }
@@ -101,7 +177,17 @@ class CompanionController extends ChangeNotifier {
   void _tick() {
     final isBusy = busy?.call() ?? false;
     final a = idle.tick(busy: isBusy);
-    if (isBusy || idle.asleep || !idle.enabled || dizzy) {
+    final sulking = temper.sulking;
+    if (_wasSulking && !sulking) _endSulkFace();
+    if (sulking && _wasSulking) {
+      // Keeps the head turned away (the idle "look around" is skipped).
+      final want = Offset(0.95 * _sulkSide, 0.15);
+      if (lookAt != want) {
+        lookAt = want;
+        notifyListeners();
+      }
+    }
+    if (isBusy || idle.asleep || !idle.enabled || dizzy || sulking) {
       _resetSkit();
     } else if (a == IdleAction.none && !acting && --_skitIn <= 0) {
       _resetSkit();
@@ -109,6 +195,7 @@ class CompanionController extends ChangeNotifier {
     }
     switch (a) {
       case IdleAction.lookAround:
+        if (sulking) break;
         lookAt = Offset(_r.nextDouble() * 2 - 1, _r.nextDouble() - 0.5);
         _lookTimer?.cancel();
         _lookTimer = Timer(const Duration(milliseconds: 1400), () {

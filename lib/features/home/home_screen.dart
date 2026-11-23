@@ -12,6 +12,9 @@ import '../../l10n/app_localizations.dart';
 import '../chat/chat_models.dart';
 import '../face/face_act.dart';
 import '../face/robot_face.dart';
+import '../personality/personality_responses.dart';
+import '../personality/temper.dart';
+import '../personality/temper_lines.dart';
 import '../personality/voice_state.dart';
 import '../voice/mic_flow.dart';
 import '../chat/photo_strip.dart';
@@ -64,6 +67,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  /// Says a short temper line right away (offline).
+  void _react(Line line) {
+    final voice = ref.read(voiceControllerProvider);
+    final chat = ref.read(chatControllerProvider);
+    unawaited(() async {
+      await voice.interrupt();
+      await chat.sayLocal(line, robotInitiated: true, showEmotion: false);
+    }());
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
@@ -101,14 +114,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       semanticLabel: '$name — ${companion.emotion.name}',
       onPet: () {
         _poke();
-        companion.pet();
+        switch (companion.pet()) {
+          case 'madeUp':
+            _react(TemperLines.pick(TemperLines.madeUp));
+          case 'stillSulking':
+            _react(TemperLines.pick(TemperLines.stillSulking));
+        }
       },
       onTap: () {
         _poke();
-        // A finger poke squashes the eyes; asleep, it wakes him up grumpy.
-        companion.play(FaceAct.squish);
-        companion.interact(touch: true);
-        if (settings.tapFaceToTalk && !listening) {
+        if (companion.idle.asleep) {
+          // Woken up by a finger: grumpy.
+          companion.play(FaceAct.squish);
+          companion.interact(touch: true);
+        } else {
+          // A poke squashes the eyes; poking again and again annoys him,
+          // too much and he sulks (turns away).
+          switch (companion.poke()) {
+            case PokeReaction.annoyed:
+              _react(TemperLines.pick(TemperLines.annoyed));
+            case PokeReaction.sulk:
+              _react(TemperLines.pick(TemperLines.sulkStart));
+            case PokeReaction.squish:
+            case PokeReaction.ignore:
+              break;
+          }
+        }
+        // Rapid taps are pokes, not "tap to talk".
+        final poking = companion.temper.poking;
+        if (poking && listening) {
+          unawaited(ref.read(voiceControllerProvider).cancelListening());
+        }
+        if (settings.tapFaceToTalk && !listening && !poking) {
           startListeningFlow(
             context,
             ref,

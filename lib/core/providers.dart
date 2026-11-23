@@ -401,6 +401,9 @@ final shakeProvider = Provider<ShakeWatcher>((ref) {
       companion
         ..interact()
         ..makeDizzy(r.dizzyFor);
+      final wasSulking = companion.temper.sulking;
+      companion.temper.shaken();
+      if (!wasSulking && companion.temper.sulking) companion.startSulkFace();
       await voice.interrupt();
       await chat.sayLocal(r.line, robotInitiated: true);
     },

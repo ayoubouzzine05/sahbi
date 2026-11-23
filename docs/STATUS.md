@@ -125,6 +125,20 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 13 (2026-11-16): strong EMO-like character (user chose "b": sulks and does what it wants)
+
+| Behaviour | How | Status |
+|---|---|---|
+| Annoyed by pokes | Rapid taps on the face (3+ in 3 s) count as pokes, not tap-to-talk: squish, then "wa baraka! rah wejhi machi boutona!", then it sulks | DONE, NOT VERIFIED on a phone |
+| Sulking | Turns its eyes away with a grumpy face for 25–45 s; refuses skits ("goul sme7 li 3ad"); pokes only get a "hmph"; still answers real requests (pouty, the AI gets the mood in `app_state`) | DONE, NOT VERIFIED on a phone |
+| Insults | Only insults aimed at it ("nta 7mar", "ya bhim", "you are dumb", "نتا حمار"); "chft lkelb" or "lfilm khayb" are not insults. Instant offline reply, sulks | DONE (tests), NOT VERIFIED on a phone |
+| Making up | "sme7 li", "pardon", "sorry", "kanbghik", or two strokes on the face: forgives with heart eyes | DONE, NOT VERIFIED on a phone |
+| Does what it wants | Skits asked by voice: sometimes "w fin 3afak?" (then "3afak" alone makes it do it), refuses when annoyed unless asked politely, "chb3t" / "ba9i ghir chrebt" if it just ate/drank (3 min) | DONE (tests), NOT VERIFIED on a phone |
+| Shaking | Adds to the temper; shaking a lot makes it sulk after the dizzy spell | DONE, NOT VERIFIED on a phone |
+| AI personality | Prompt 1.7.0 + live camera prompt: ego, teasing, may refuse playful requests or ask for 3afak, sulks when insulted; never refuses real help, drops the attitude when the user is sad or needs help | DONE (backend tests), NOT VERIFIED live |
+
+Real help is never refused or delayed by the temper: it only changes skits, face and tone. Code: `lib/features/personality/temper.dart`, `temper_lines.dart`. Tests: `test/unit/temper_test.dart` (17) and 3 new chat tests (38 total).
+
 ## Follow-up 12 (2026-11-16): EMO-style face skits (eyes, eating, drinking, "haz ydik")
 
 The 7 EMO videos were watched frame by frame (contact sheets). No EMO/LivingAI drawing or asset is used: every prop (hands, ka3b ghzal, mint-tea glass, hearts, stars, notes) is drawn by our own CustomPainter code in `lib/features/face/face_act.dart`.
@@ -162,7 +176,7 @@ Tests: `test/unit/face_act_test.dart` (11: parser triggers and non-triggers, wir
 | "Gemini Live" showing in the camera | DONE | No "Gemini"/"Google" text is left in the camera screen: the "not configured" message and the permission explanation were reworded (ar/fr/en). The live and chat prompts (1.5.1) tell the robot never to talk about servers, APIs, Gemini, Google or models when it talks about itself. The Privacy screen still names the providers (honest disclosure) |
 | Tests | DONE | Flutter: connectivity, chat_controller, voice_controller, live_voice_tts, search_sources, robot_face pass; `flutter analyze` clean. Backend 128/128 |
 
-Android run 44957437402 (`93cf4e2`): tests, APK and emulator integration test passed; Release `latest` re-uploaded 2026-11-21 22:47 UTC. Backend sahbi-8jkp reports prompt 1.5.1.
+Android run 45095534914 (`fbc9403`, Follow-ups 11–12): tests, APK and emulator integration test passed; Release `latest` updated. Earlier: Android run 44957437402 (`93cf4e2`): tests, APK and emulator integration test passed; Release `latest` re-uploaded 2026-11-21 22:47 UTC. Backend sahbi-8jkp reports prompt 1.5.1.
 
 ## Follow-up 9 (2026-11-16): one Casablanca male voice, EMO-like personality
 

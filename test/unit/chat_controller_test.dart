@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sahbi/features/face/face_act.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sahbi/core/backend_client.dart';
@@ -707,6 +708,42 @@ void main() {
       expect(last().images, isEmpty);
       expect(last().results.single.ok, isFalse);
       expect(last().results.single.message, startsWith('images_not_found'));
+    });
+  });
+
+  group('strong character (temper)', () {
+    test('an insult: he sulks at once, no AI request', () async {
+      await chat.send('nta 7mar');
+      expect(calls, isEmpty);
+      expect(chat.companion.temper.sulking, isTrue);
+      expect(last().role, ChatRole.sahbi);
+      expect(last().text, isNotEmpty);
+      expect(chat.companion.lookAt, isNotNull, reason: 'turned away');
+    });
+
+    test(
+      'sulking: refuses a skit; "sme7 li" makes up; then he does it',
+      () async {
+        await chat.send('ya bhim');
+        await chat.send('haz ydik');
+        expect(calls, isEmpty);
+        expect(chat.companion.act, isNot(FaceAct.handsUp));
+        expect(last().text, isNotEmpty);
+        await chat.send('sme7 li');
+        expect(calls, isEmpty);
+        expect(chat.companion.temper.sulking, isFalse);
+        expect(chat.companion.act, FaceAct.love);
+        await chat.send('haz ydik 3afak');
+        expect(chat.companion.act, FaceAct.handsUp);
+      },
+    );
+
+    test('real requests still go to the AI, with the mood', () async {
+      await chat.send('nta 7mar');
+      await chat.send('chno hiya 3asima dyal lyaban?');
+      expect(calls, isNotEmpty);
+      final state = (lastBody()['client'] as Map)['app_state'] as String;
+      expect(state, contains('SULKING'));
     });
   });
 }
