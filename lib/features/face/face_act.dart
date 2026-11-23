@@ -45,6 +45,10 @@ enum FaceAct {
 
   /// Woken up by a touch: sleepy-angry orange eyes.
   grumpy,
+
+  /// Frightened by something it sees: small trembling eyes, worried brows,
+  /// a sweat drop.
+  scared,
 }
 
 extension FaceActInfo on FaceAct {
@@ -61,6 +65,7 @@ extension FaceActInfo on FaceAct {
     FaceAct.what => const Duration(milliseconds: 2400),
     FaceAct.squish => const Duration(milliseconds: 700),
     FaceAct.grumpy => const Duration(milliseconds: 3600),
+    FaceAct.scared => const Duration(milliseconds: 3000),
   };
 
   /// Name used by the brain action `face.play {animation}`.
@@ -211,6 +216,22 @@ FaceParams applyAct(FaceAct act, double t, double time, FaceParams p) {
         mouthCurve: -0.5,
         mouthOpen: 0,
       );
+    case FaceAct.scared:
+      // A jump back at first, then shivering.
+      final jump = _bump(t, 0, 0.06, 0.18, 0.3);
+      final shiver = math.sin(time * 42) * 0.07 * (1 - jump);
+      target = p.copyWith(
+        eyeOpen: 1,
+        eyeSmile: 0,
+        pupilSize: 0.15,
+        browLift: 0.9,
+        browAngle: -0.5,
+        mouthCurve: -0.7,
+        mouthOpen: 0.25 + 0.25 * jump,
+        mouthWidth: 0.5,
+        gazeX: shiver,
+        tilt: shiver * 0.6,
+      );
   }
   return FaceParams.lerp(p, target, env);
 }
@@ -245,6 +266,11 @@ ActEyes actEyes(FaceAct? act, double t) {
     ),
     FaceAct.squish => ActEyes(squashY: 1 - 0.5 * env),
     FaceAct.love => ActEyes(heart: env),
+    FaceAct.scared => ActEyes(
+      leftScale: 1 - 0.2 * env,
+      rightScale: 1 - 0.2 * env,
+      squashY: 1 + 0.12 * env,
+    ),
     _ => ActEyes.none,
   };
 }
@@ -384,6 +410,45 @@ void paintActProps(
           s * 0.03,
           const Color(0xFFFFFFFF).withValues(alpha: 0.95 * env),
         );
+      }
+    case FaceAct.scared:
+      // A sweat drop sliding down next to one eye.
+      final slide = _seg(t, 0.15, 0.95);
+      final c = Offset(
+        g.centerX + g.eyeDx * 1.75,
+        g.eyeY - s * 0.06 + s * 0.08 * slide,
+      );
+      final r = s * 0.028;
+      final drop = Path()
+        ..moveTo(c.dx, c.dy - r * 2.2)
+        ..quadraticBezierTo(c.dx + r * 1.1, c.dy - r * 0.2, c.dx, c.dy + r)
+        ..quadraticBezierTo(
+          c.dx - r * 1.1,
+          c.dy - r * 0.2,
+          c.dx,
+          c.dy - r * 2.2,
+        )
+        ..close();
+      canvas.drawPath(
+        drop,
+        Paint()..color = const Color(0xFF8FD8FF).withValues(alpha: 0.9 * env),
+      );
+      // Little shiver lines on both sides.
+      final shake = Paint()
+        ..color = accent.withValues(alpha: 0.55 * env)
+        ..strokeWidth = s * 0.008
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      for (final side in [-1.0, 1.0]) {
+        for (var i = 0; i < 3; i++) {
+          final x = g.centerX + side * (g.eyeDx * 2.3 + i * s * 0.022);
+          final w = math.sin(time * 40 + i) * s * 0.006;
+          canvas.drawLine(
+            Offset(x + w, g.eyeY - s * 0.04),
+            Offset(x - w, g.eyeY + s * 0.04),
+            shake,
+          );
+        }
       }
     case FaceAct.what:
     case FaceAct.squish:

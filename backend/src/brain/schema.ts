@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Face skits the app can play (`face.play`); keep in sync with the app's FaceAct wire names. */
-export const FACE_ANIMATIONS = ['eat', 'drink', 'hands_up', 'peekaboo', 'love', 'yawn', 'dance', 'sparkle', 'suspicious'] as const;
+export const FACE_ANIMATIONS = ['eat', 'drink', 'hands_up', 'peekaboo', 'love', 'yawn', 'dance', 'sparkle', 'suspicious', 'scared'] as const;
 
 /** A face animation is decoration: an unknown one is dropped instead of failing the whole reply. */
 export function dropUnknownFaceActions(candidate: unknown): unknown {

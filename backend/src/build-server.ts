@@ -7,6 +7,7 @@ import { ephemeralSecret, isValidInstallId, issueToken, verifyToken } from './au
 import { type ChatEvent, runChat, summarise } from './brain/chat.js';
 import { promptVersion } from './brain/context.js';
 import { locateObject, LocateRequestSchema } from './brain/locate.js';
+import { reactToFrame, ReactRequestSchema } from './brain/react.js';
 import { ChatRequestSchema, formatZodError, HistoryTurnSchema } from './brain/schema.js';
 import { type Config, isLlmConfigured, isSearchConfigured, isSttConfigured, isTtsConfigured } from './config.js';
 import { notConfigured, ServiceError } from './errors.js';
@@ -227,6 +228,22 @@ export function buildServer(deps: Deps): FastifyInstance {
         if (!deps.llm || !isLlmConfigured(config)) return sendError(reply, notConfigured('AI'));
         try {
           return await locateObject(deps.llm, parsed.data);
+        } catch (err) {
+          return sendError(reply, err);
+        }
+      },
+    );
+
+    // The robot's eyes: should it react to what the front camera sees? (image in memory only, never logged)
+    app.post(
+      '/v1/vision/react',
+      { preHandler: requireAuth, bodyLimit: config.chatBodyLimitBytes, config: { rateLimit: { max: 12, timeWindow: '1 minute' } } },
+      async (req, reply) => {
+        const parsed = ReactRequestSchema.safeParse(req.body);
+        if (!parsed.success) return reply.code(400).send({ error: { code: 'bad_request', message: formatZodError(parsed.error) } });
+        if (!deps.llm || !isLlmConfigured(config)) return sendError(reply, notConfigured('AI'));
+        try {
+          return await reactToFrame(deps.llm, parsed.data);
         } catch (err) {
           return sendError(reply, err);
         }
