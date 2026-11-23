@@ -123,6 +123,10 @@ class _SahbiAppState extends ConsumerState<SahbiApp>
     ref.read(conversationProvider);
     ref.read(proactiveProvider);
     ref.read(shakeProvider);
+    // Camera / mic owners and the one place that releases them.
+    ref.read(visionProvider);
+    ref.read(mimoWakeProvider);
+    ref.read(hardwareGuardProvider);
   }
 
   @override
@@ -133,9 +137,9 @@ class _SahbiAppState extends ConsumerState<SahbiApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    ref
-        .read(wakeNameProvider)
-        .setForeground(state == AppLifecycleState.resumed);
+    // Camera closed in the background, mic only if the toggle is on, all
+    // hardware released when the app closes (HardwareGuard).
+    unawaited(ref.read(hardwareGuardProvider).onLifecycle(state));
     // Opening the app again counts as the user being here (no goodnight
     // line the moment they come back after a long time).
     if (state == AppLifecycleState.resumed) {

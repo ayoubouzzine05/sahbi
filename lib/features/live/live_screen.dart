@@ -18,6 +18,9 @@ import '../chat/chat_models.dart';
 import '../face/robot_face.dart';
 import '../personality/emotion.dart';
 import '../personality/voice_state.dart';
+import '../settings/app_settings.dart';
+import '../vision/vision_controller.dart';
+import '../voice/mimo_wake.dart';
 import '../voice/wake_name.dart';
 import '../voice/live_voice_tts.dart';
 import 'live_player.dart';
@@ -115,6 +118,14 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final wake = ref.read(wakeNameProvider)..suspend();
+    // The offline wake word frees the microphone for this screen.
+    final mimo = ref.read(mimoWakeProvider)..suspend();
+    _mimo = mimo;
+    _vision = ref.read(visionProvider);
+    // Mic or camera toggled off while live: stop at once.
+    _toggles = ref.listenManual<AppSettings>(settingsProvider, (a, b) {
+      if (!b.micEnabled || !b.cameraEnabled) _hardwareOff();
+    });
     // The camera session owns the speaker: close the speaking-voice session.
     unawaited(ref.read(liveVoiceTtsProvider).close());
     _wake = wake;
@@ -131,11 +142,66 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     unawaited(WakelockPlus.disable().catchError((_) {}));
     // ref is unusable after dispose; resume wake listening via the container.
     _wake?.resume();
+    _mimo?.resume();
+    _toggles?.close();
     _rec.dispose();
     super.dispose();
   }
 
   WakeNameController? _wake;
+  MimoWakeController? _mimo;
+  late VisionController _vision;
+  ProviderSubscription<AppSettings>? _toggles;
+
+  /// The camera was taken away (toggle off, app in background).
+  void _onCameraRevoked() {
+    _cam = null;
+    if (phase == LivePhase.live || phase == LivePhase.reconnecting) {
+      unawaited(_teardown());
+    }
+    if (mounted) setState(() => phase = LivePhase.ended);
+  }
+
+  /// Mic or camera toggle switched off: release everything now.
+  void _hardwareOff() {
+    unawaited(_teardown());
+    if (mounted) setState(() => phase = LivePhase.ended);
+  }
+
+  /// Both toggles must be on; offer to switch them on (no dead screen).
+  Future<bool> _togglesOn() async {
+    final s = ref.read(settingsProvider);
+    if (s.micEnabled && s.cameraEnabled) return true;
+    final l = L10n.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(!s.cameraEnabled ? l.cameraOffTitle : l.micOffTitle),
+        content: Text(!s.cameraEnabled ? l.cameraOffBody : l.micOffBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(!s.cameraEnabled ? l.cameraTurnOn : l.micTurnOn),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return false;
+    ref
+        .read(settingsProvider.notifier)
+        .update(
+          (x) => x.copyWith(
+            micEnabled: true,
+            robotEyes: true,
+            robotEyesAsked: true,
+          ),
+        );
+    return true;
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -162,6 +228,10 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
       setState(() => phase = LivePhase.offline);
       return;
     }
+    if (!await _togglesOn()) {
+      if (mounted) setState(() => phase = LivePhase.ended);
+      return;
+    }
     if (!await _permissions()) return;
     try {
       _cameras = await availableCameras();
@@ -177,7 +247,7 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     );
     _camIndex = back < 0 ? 0 : back;
     // The robot's eyes use the front camera on the face screen: let go of
-    // it first.
+    // it first (VisionController also closes it before opening ours).
     await ref.read(robotEyesProvider).setWanted(false);
     final camOk = await _openCamera();
     if (!camOk) {
@@ -267,26 +337,24 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     return false;
   }
 
+  /// Opens the chosen camera through [VisionController] (the only owner:
+  /// the previous camera is always closed first, never two streams).
   Future<bool> _openCamera() async {
-    final old = _cam;
     _cam = null;
     if (mounted) setState(() {});
-    await old?.dispose();
-    final c = CameraController(
-      _cameras[_camIndex],
-      ResolutionPreset.medium,
-      enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.jpeg,
+    final v = await _vision.acquire(
+      VisionOwner.live,
+      description: _cameras[_camIndex],
+      preset: ResolutionPreset.medium,
+      onRevoked: _onCameraRevoked,
     );
-    try {
-      await c.initialize();
-    } catch (e) {
-      ref.read(errorLogProvider).add('live.camera', '$e');
-      await c.dispose();
+    final c = v?.controller;
+    if (c == null) {
+      ref.read(errorLogProvider).add('live.camera', 'camera unavailable');
       return false;
     }
     if (!mounted) {
-      await c.dispose();
+      await _vision.release(VisionOwner.live);
       return false;
     }
     setState(() => _cam = c);
@@ -732,9 +800,8 @@ class _LiveScreenState extends ConsumerState<LiveScreen>
     }
     _speaking = false;
     if (!keepCamera) {
-      final c = _cam;
       _cam = null;
-      await c?.dispose();
+      await _vision.release(VisionOwner.live);
     }
   }
 

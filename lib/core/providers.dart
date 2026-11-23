@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:material_ui/material_ui.dart'
-    show AppLifecycleListener, AppLifecycleState, WidgetsBinding;
+    show AppLifecycleListener, AppLifecycleState, Locale, WidgetsBinding;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,6 +22,11 @@ import '../features/robot_link/robot_link_controller.dart';
 import '../features/personality/emotion.dart';
 import '../features/settings/app_settings.dart';
 import '../features/vision/robot_eyes.dart';
+import '../features/vision/vision_controller.dart';
+import '../features/voice/mimo_wake.dart';
+import '../features/voice/wake_model_manager.dart';
+import '../features/voice/wake_word_engine.dart';
+import '../l10n/app_localizations.dart';
 import '../features/voice/cloud_stt.dart';
 import '../features/voice/cloud_tts.dart';
 import '../features/voice/conversation_session.dart';
@@ -34,6 +40,7 @@ import '../features/voice/wake_name.dart';
 import 'backend_client.dart';
 import 'connectivity.dart';
 import 'error_log.dart';
+import 'hardware_guard.dart';
 import 'platform_bridge.dart';
 
 /// Must be overridden in main() / tests.
@@ -234,6 +241,7 @@ final ChangeNotifierProvider<ChatController> chatControllerProvider =
           wakeBackend: () => ref.read(connectivityProvider).wake(),
           currentView: () => ref.read(robotEyesProvider).latestFrame(),
           userSpoke: () => ref.read(robotEyesProvider).userSpoke(),
+          lookAround: () => ref.read(robotEyesProvider).inspect(),
         ),
       );
       ref.read(voiceControllerProvider).onFinalText = chat.send;
@@ -257,7 +265,9 @@ final ChangeNotifierProvider<RobotEyes> robotEyesProvider =
             c.idle.asleep;
       }
 
+      final vision = ref.read(visionProvider);
       final eyes = RobotEyes(
+        camera: VisionEyeCamera(vision),
         busy: busy,
         onGaze: (g) => ref.read(companionProvider).glance(g),
         onReact: (jpeg) async {
@@ -302,11 +312,22 @@ final ChangeNotifierProvider<RobotEyes> robotEyesProvider =
               );
         },
       );
-      final life = AppLifecycleListener(
-        onStateChange: (st) =>
-            eyes.setForeground(st == AppLifecycleState.resumed),
-      );
-      ref.onDispose(life.dispose);
+      // Lifecycle (background = camera closed) comes from HardwareGuard.
+      // The camera became free again (live screen closed, toggle on).
+      void onVision() {
+        if (vision.allowed && !vision.isOpen) eyes.retry();
+      }
+
+      vision.addListener(onVision);
+      // A hot phone or battery saver rests the camera (checked each minute).
+      final heat = Timer.periodic(const Duration(minutes: 1), (_) async {
+        final t = await readThermal();
+        eyes.setHot(t.cameraShouldRest);
+      });
+      ref.onDispose(() {
+        heat.cancel();
+        vision.removeListener(onVision);
+      });
       return eyes;
     });
 
@@ -338,11 +359,17 @@ final ChangeNotifierProvider<WakeNameController> wakeNameProvider =
           unawaited(ref.read(chatControllerProvider).send(text));
         },
         musicPlaying: () => ref.read(musicControllerProvider).playing,
+        replacedBy: () => ref.read(mimoWakeProvider).available,
         localeFor: (lang) async =>
             pickLocale(await stt.supportedLocales(), lang) ?? 'ar-MA',
         log: ref.read(errorLogProvider),
       );
-      voice.beforeListen = w.yieldMic;
+      // Before the conversation recogniser opens the mic, both wake
+      // listeners let go of it.
+      voice.beforeListen = () async {
+        await w.yieldMic();
+        await ref.read(mimoWakeProvider).yieldMic();
+      };
       void onVoice() => w.refresh();
       voice.addListener(onVoice);
       // Music on/off changes whether the name is listened for.
@@ -360,7 +387,9 @@ final ChangeNotifierProvider<WakeNameController> wakeNameProvider =
       ref.read(youtubeControllerProvider).canAutoResume = () =>
           voice.state != VoiceState.listening && !w.active;
       ref.listen(settingsProvider, (a, b) {
-        if (a?.wakeByName != b.wakeByName || a?.robotName != b.robotName) {
+        if (a?.wakeByName != b.wakeByName ||
+            a?.robotName != b.robotName ||
+            a?.micEnabled != b.micEnabled) {
           w.refresh();
         }
       });
@@ -393,7 +422,11 @@ final ChangeNotifierProvider<ConversationSession> conversationProvider =
         },
         chatBusy: () => chat.busy,
         musicPlaying: () => music.playing,
-        blocked: () => wake().externallyBlocked,
+        // Only another screen with its own mic ends it (the app being
+        // minimised does not: "MIMO" works in the background too).
+        blocked: () => wake().suspendedByScreen,
+        silenceTimeout: () =>
+            Duration(seconds: ref.read(settingsProvider).silenceTimeoutSec),
         onActiveChanged: (on) => wake().setConversation(on),
         onGoodbye: () => chat.sayLocal(CompanionLines.goodbye),
       );
@@ -492,4 +525,161 @@ final shakeProvider = Provider<ShakeWatcher>((ref) {
     w.stop();
   });
   return w;
+});
+
+/// The single owner of the camera (front eyes, back look, live screen).
+final ChangeNotifierProvider<VisionController> visionProvider =
+    ChangeNotifierProvider<VisionController>((ref) {
+      final v = VisionController(
+        enabled: () => ref.read(settingsProvider).cameraEnabled,
+      );
+      ref.listen(settingsProvider, (a, b) {
+        if (a?.robotEyes != b.robotEyes) v.refresh();
+      });
+      return v;
+    });
+
+/// Native offline wake-word engine (overridden in tests).
+final wakeEngineProvider = Provider<WakeWordEngine>(
+  (ref) => NativeWakeEngine(),
+);
+
+/// The offline "MIMO" model (downloaded once).
+final ChangeNotifierProvider<WakeModelManager> wakeModelProvider =
+    ChangeNotifierProvider<WakeModelManager>((ref) => WakeModelManager());
+
+/// "Na3am?" / "Ana hna!" clips in MIMO's voice, cached on the phone.
+final ackClipsProvider = Provider<AckClips>((ref) {
+  final a = AckClips(
+    synthesize: (text) => ref
+        .read(backendClientProvider)
+        .synthesize(text: text, language: 'ar-MA', gender: sahbiVoiceGender),
+  );
+  ref.onDispose(() => unawaited(a.stop()));
+  return a;
+});
+
+L10n _l10nFor(AppSettings s) {
+  try {
+    return lookupL10n(Locale(s.uiLocale));
+  } catch (_) {
+    return lookupL10n(const Locale('en'));
+  }
+}
+
+/// Offline "MIMO" wake word (foreground service while the mic is on).
+final ChangeNotifierProvider<MimoWakeController> mimoWakeProvider =
+    ChangeNotifierProvider<MimoWakeController>((ref) {
+      final voice = ref.read(voiceControllerProvider);
+      final own = RegExp(r'mimo|ميمو|mimou', caseSensitive: false);
+      final m = MimoWakeController(
+        engine: ref.read(wakeEngineProvider),
+        models: ref.read(wakeModelProvider),
+        settings: () => ref.read(settingsProvider),
+        micGranted: () async =>
+            await ref.read(micPermissionProvider).status() == MicStatus.granted,
+        notice: () {
+          final l = _l10nFor(ref.read(settingsProvider));
+          return WakeNotice(
+            title: l.wakeNoticeTitle,
+            text: l.wakeNoticeText,
+            stopLabel: l.wakeNoticeStop,
+            openLabel: l.wakeNoticeOpen,
+            channelName: l.wakeChannelName,
+          );
+        },
+        onWake: () => ref.read(wakeResponderProvider)(),
+        onUserStopped: () => ref
+            .read(settingsProvider.notifier)
+            .update((s) => s.copyWith(micEnabled: false)),
+        isOwnSpeech: () =>
+            voice.state == VoiceState.speaking &&
+            own.hasMatch(voice.speakingText),
+        ensureNotifications: () async {
+          try {
+            if (await Permission.notification.isDenied) {
+              await Permission.notification.request();
+            }
+          } catch (_) {
+            // No plugin (tests): the service still shows its notification
+            // where Android allows it.
+          }
+        },
+        log: ref.read(errorLogProvider),
+      );
+      m.init();
+      // The conversation recogniser finished: the wake word listens again
+      // (also while MIMO talks, so "MIMO" can interrupt it).
+      void onVoice() {
+        if (voice.state != VoiceState.listening) m.setMicBusy(false);
+      }
+
+      voice.addListener(onVoice);
+      ref.listen(settingsProvider, (a, b) {
+        if (a?.micEnabled != b.micEnabled || a?.wakeByName != b.wakeByName) {
+          m.refresh();
+        }
+      });
+      ref.onDispose(() => voice.removeListener(onVoice));
+      return m;
+    });
+
+/// What happens when "MIMO" is heard: interrupt (barge-in), eyes snap to
+/// the user, a short "Na3am?", then the mic opens for the sentence.
+final wakeResponderProvider = Provider<Future<void> Function()>((ref) {
+  var busy = false;
+  return () async {
+    if (busy) return;
+    final voice = ref.read(voiceControllerProvider);
+    if (voice.state == VoiceState.listening) return;
+    busy = true;
+    try {
+      final companion = ref.read(companionProvider);
+      if (voice.state == VoiceState.speaking) await voice.interrupt();
+      ref.read(robotEyesProvider).noteSomeone();
+      companion.heardName();
+      final said = await ref.read(ackClipsProvider).play();
+      if (said == null) {
+        // No clip yet (first run / offline): the eyes answered; make the
+        // clips quietly for next time.
+        unawaited(ref.read(ackClipsProvider).prepare());
+      }
+      if (!ref.read(settingsProvider).micEnabled) return;
+      ref.read(conversationProvider).start();
+      await voice.startListening();
+    } finally {
+      busy = false;
+    }
+  };
+});
+
+/// Every "release the hardware" path (see [HardwareGuard]).
+final hardwareGuardProvider = Provider<HardwareGuard>((ref) {
+  final g = HardwareGuard(
+    HardwareActions(
+      setCameraForeground: (v) {
+        ref.read(visionProvider).setForeground(v);
+        ref.read(robotEyesProvider).setForeground(v);
+      },
+      closeCamera: () => ref.read(visionProvider).releaseAll(),
+      setMicForeground: (v) {
+        ref.read(wakeNameProvider).setForeground(v);
+        ref.read(mimoWakeProvider).setForeground(v);
+      },
+      stopMic: () async {
+        ref.read(conversationProvider).end();
+        await ref.read(voiceControllerProvider).cancelListening();
+        ref.read(wakeNameProvider).refresh();
+        await ref.read(mimoWakeProvider).stop();
+      },
+      stopBackgroundListening: () => ref.read(wakeEngineProvider).stop(),
+      micEnabled: () => ref.read(settingsProvider).micEnabled,
+      onError: (w, e) => ref.read(errorLogProvider).add('hardware.$w', '$e'),
+    ),
+  );
+  ref.listen(settingsProvider, (a, b) {
+    if (a?.micEnabled != b.micEnabled) unawaited(g.onMicToggle(b.micEnabled));
+    if (a?.robotEyes != b.robotEyes) unawaited(g.onCameraToggle(b.robotEyes));
+  });
+  return g;
 });

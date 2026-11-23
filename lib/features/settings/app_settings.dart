@@ -41,6 +41,11 @@ class AppSettings {
     this.shakeReaction = true,
     this.robotEyes = true,
     this.robotEyesAsked = false,
+    this.micEnabled = true,
+    this.quietStartHour = 23,
+    this.quietEndHour = 8,
+    this.silenceTimeoutSec = 20,
+    this.mimoMigrated = false,
   });
 
   final String uiLocale; // ar | fr | en
@@ -101,6 +106,32 @@ class AppSettings {
   /// The camera explanation for the robot's eyes was shown once.
   final bool robotEyesAsked;
 
+  /// Master microphone toggle: off = no wake word, no listening at all,
+  /// nothing records (the robot can still be typed to).
+  final bool micEnabled;
+
+  /// Quiet hours (local time, 0..23): the robot never starts talking by
+  /// itself between [quietStartHour] and [quietEndHour].
+  final int quietStartHour;
+  final int quietEndHour;
+
+  /// A conversation ends after this many seconds without the user saying
+  /// anything (or at "safi sir").
+  final int silenceTimeoutSec;
+
+  /// The one-time SAHBI → MIMO rename was applied.
+  final bool mimoMigrated;
+
+  /// The camera toggle (the robot's eyes, rear look, live camera).
+  bool get cameraEnabled => robotEyes;
+
+  /// True at [hour] (0..23) inside the quiet hours (may wrap midnight).
+  bool isQuietHour(int hour) {
+    final a = quietStartHour, b = quietEndHour;
+    if (a == b) return false;
+    return a < b ? hour >= a && hour < b : hour >= a || hour < b;
+  }
+
   /// Keep the screen awake while the face dashboard is visible.
   final bool keepScreenOn;
 
@@ -143,6 +174,11 @@ class AppSettings {
     bool? shakeReaction,
     bool? robotEyes,
     bool? robotEyesAsked,
+    bool? micEnabled,
+    int? quietStartHour,
+    int? quietEndHour,
+    int? silenceTimeoutSec,
+    bool? mimoMigrated,
     bool? cameraRationaleSeen,
     bool? keepScreenOn,
     bool clearDeviceVoice = false,
@@ -182,6 +218,14 @@ class AppSettings {
       shakeReaction: shakeReaction ?? this.shakeReaction,
       robotEyes: robotEyes ?? this.robotEyes,
       robotEyesAsked: robotEyesAsked ?? this.robotEyesAsked,
+      micEnabled: micEnabled ?? this.micEnabled,
+      quietStartHour: (quietStartHour ?? this.quietStartHour).clamp(0, 23),
+      quietEndHour: (quietEndHour ?? this.quietEndHour).clamp(0, 23),
+      silenceTimeoutSec: (silenceTimeoutSec ?? this.silenceTimeoutSec).clamp(
+        5,
+        120,
+      ),
+      mimoMigrated: mimoMigrated ?? this.mimoMigrated,
       cameraRationaleSeen: cameraRationaleSeen ?? this.cameraRationaleSeen,
       keepScreenOn: keepScreenOn ?? this.keepScreenOn,
     );
@@ -221,6 +265,11 @@ class AppSettings {
     'shakeReaction': shakeReaction,
     'robotEyes': robotEyes,
     'robotEyesAsked': robotEyesAsked,
+    'micEnabled': micEnabled,
+    'quietStartHour': quietStartHour,
+    'quietEndHour': quietEndHour,
+    'silenceTimeoutSec': silenceTimeoutSec,
+    'mimoMigrated': mimoMigrated,
   };
 
   /// Trims, collapses whitespace, drops control/markup characters, caps length.
@@ -285,6 +334,14 @@ class AppSettings {
       shakeReaction: pick('shakeReaction', d.shakeReaction),
       robotEyes: pick('robotEyes', d.robotEyes),
       robotEyesAsked: pick('robotEyesAsked', d.robotEyesAsked),
+      micEnabled: pick('micEnabled', d.micEnabled),
+      quietStartHour: pick('quietStartHour', d.quietStartHour).clamp(0, 23),
+      quietEndHour: pick('quietEndHour', d.quietEndHour).clamp(0, 23),
+      silenceTimeoutSec: pick(
+        'silenceTimeoutSec',
+        d.silenceTimeoutSec,
+      ).clamp(5, 120),
+      mimoMigrated: pick('mimoMigrated', d.mimoMigrated),
     );
   }
 

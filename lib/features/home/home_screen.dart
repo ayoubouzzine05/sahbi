@@ -19,6 +19,8 @@ import '../personality/temper.dart';
 import '../personality/temper_lines.dart';
 import '../personality/voice_state.dart';
 import '../voice/mic_flow.dart';
+import '../voice/mic_permission.dart';
+import '../voice/wake_model_manager.dart';
 import '../chat/photo_strip.dart';
 import 'talk_controls.dart';
 
@@ -72,10 +74,52 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() => _camGranted = st.isGranted);
     final s = ref.read(settingsProvider);
     if (!st.isGranted && s.robotEyes && !s.robotEyesAsked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (mounted) await _askEyes();
+        if (mounted) await _offerWakeModel();
+      });
+    } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_askEyes());
+        if (mounted) unawaited(_offerWakeModel());
       });
     }
+  }
+
+  /// Once: offers the 42 MB offline "MIMO" model (needed to hear its name
+  /// while minimised). Progress and retry live in Settings.
+  Future<void> _offerWakeModel() async {
+    final prefs = ref.read(sharedPrefsProvider);
+    if (prefs.getBool('wake_model_offered') ?? false) return;
+    final s = ref.read(settingsProvider);
+    final models = ref.read(wakeModelProvider);
+    await models.check();
+    if (!mounted ||
+        !s.micEnabled ||
+        !s.wakeByName ||
+        models.status != WakeModelStatus.missing) {
+      return;
+    }
+    await prefs.setBool('wake_model_offered', true);
+    if (!mounted) return;
+    final l = L10n.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.wakeModelTitle),
+        content: Text(l.wakeModelMissing),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.micNotNow),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.wakeModelDownload),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) unawaited(models.download());
   }
 
   /// First time: explains the robot's eyes, then asks for the camera.
@@ -148,6 +192,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     notifier.update((x) => x.copyWith(robotEyes: true, robotEyesAsked: true));
   }
 
+  /// The microphone button: off = nothing listens at all (no wake word,
+  /// no conversation); on = asks for the permission first if needed.
+  Future<void> _toggleMic() async {
+    final notifier = ref.read(settingsProvider.notifier);
+    if (ref.read(settingsProvider).micEnabled) {
+      notifier.update((x) => x.copyWith(micEnabled: false));
+      return;
+    }
+    final perm = ref.read(micPermissionProvider);
+    var st = await perm.status();
+    if (!mounted) return;
+    if (st != MicStatus.granted) {
+      if (st == MicStatus.permanentlyDenied || st == MicStatus.restricted) {
+        final l = L10n.of(context);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(l.micPermanentlyDenied),
+            action: SnackBarAction(
+              label: l.openAppSettings,
+              onPressed: () => unawaited(perm.openSettings()),
+            ),
+          ),
+        );
+        return;
+      }
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => const MicRationaleDialog(),
+      );
+      if (ok != true) return;
+      st = await perm.request();
+      if (st != MicStatus.granted) return;
+    }
+    notifier.update((x) => x.copyWith(micEnabled: true));
+  }
+
   void _setWakelock(bool on) {
     if (on == _wakelock) return;
     _wakelock = on;
@@ -185,6 +265,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final net = ref.watch(connectivityProvider).value;
     final settings = ref.watch(settingsProvider);
     final wake = ref.watch(wakeNameProvider);
+    final mimo = ref.watch(mimoWakeProvider);
+    final hearing = wake.active || mimo.active;
     final convo = ref.watch(conversationProvider);
     final backend = ref.read(backendClientProvider);
     final name = settings.displayRobotName(l.appTitle);
@@ -280,7 +362,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       VoiceState.idle =>
         convo.active
             ? l.conversationOn
-            : _controlsVisible && wake.active
+            : _controlsVisible && hearing
             ? l.wakeListening(name)
             : null,
     };
@@ -309,7 +391,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: SahbiColors.amber,
               semanticLabel: l.offline,
             ),
-          if (wake.active)
+          if (hearing)
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 8),
               child: Icon(
@@ -327,16 +409,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: const Icon(Icons.forum_outlined, size: 18),
               label: Text(l.conversationEnd),
             ),
+          // Hardware toggles: the user decides at any time what MIMO may
+          // hear and see.
           IconButton(
-            key: const Key('eyes_toggle'),
-            tooltip: eyesOn ? l.eyesClose : l.eyesOpen,
+            key: const Key('mic_toggle'),
+            tooltip: settings.micEnabled ? l.micOnTip : l.micOffTip,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              _poke();
+              unawaited(_toggleMic());
+            },
+            icon: Icon(
+              settings.micEnabled
+                  ? Icons.mic_none_rounded
+                  : Icons.mic_off_rounded,
+              size: 20,
+              color: settings.micEnabled
+                  ? SahbiColors.green
+                  : SahbiColors.textSecondary,
+            ),
+          ),
+          IconButton(
+            key: const Key('camera_toggle'),
+            tooltip: eyesOn ? l.cameraOnTip : l.cameraOffTip,
             visualDensity: VisualDensity.compact,
             onPressed: () {
               _poke();
               unawaited(_toggleEyes());
             },
             icon: Icon(
-              eyesOn ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+              eyesOn ? Icons.videocam_outlined : Icons.videocam_off_outlined,
               size: 20,
               color: eyesOn ? SahbiColors.green : SahbiColors.textSecondary,
             ),

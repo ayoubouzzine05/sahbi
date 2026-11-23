@@ -898,4 +898,142 @@ class L10nAr extends L10n {
   @override
   String get eyesDenied =>
       'باش يشوف، خاصو الكاميرا. تقدر تسمح بيها من الإعدادات ديال التيليفون.';
+
+  @override
+  String get micOnTip => 'الميكرو خدام — كليكي باش تطفيه';
+
+  @override
+  String get micOffTip => 'الميكرو مطفي — كليكي باش تشعلو';
+
+  @override
+  String get cameraOnTip => 'الكاميرا خدامة — كليكي باش تطفيها';
+
+  @override
+  String get cameraOffTip => 'الكاميرا مطفية — كليكي باش تشعلها';
+
+  @override
+  String get micOffTitle => 'الميكرو مطفي';
+
+  @override
+  String get micOffBody => 'MIMO ما كيسمعك والو دابا. نشعلو الميكرو؟';
+
+  @override
+  String get micTurnOn => 'شعل الميكرو';
+
+  @override
+  String get cameraOffTitle => 'الكاميرا مطفية';
+
+  @override
+  String get cameraOffBody => 'MIMO ما كيشوف والو دابا. نشعلو الكاميرا؟';
+
+  @override
+  String get cameraTurnOn => 'شعل الكاميرا';
+
+  @override
+  String get wakeNoticeTitle => 'MIMO كيسمع';
+
+  @override
+  String get wakeNoticeText => 'عيّط «ميمو» باش يجاوبك. الصوت ما كيتسجلش.';
+
+  @override
+  String get wakeNoticeStop => 'وقف MIMO';
+
+  @override
+  String get wakeNoticeOpen => 'حل';
+
+  @override
+  String get wakeChannelName => 'MIMO كيسمع لسميتو';
+
+  @override
+  String get settingsMicTitle => 'الميكروفون';
+
+  @override
+  String get settingsMicSubtitle =>
+      'مطفي = ما كيسمع والو: لا «ميمو» لا هضرة. تقدر تكتب ليه.';
+
+  @override
+  String get settingsCameraTitle => 'الكاميرا';
+
+  @override
+  String get wakeModelTitle => '«ميمو» بلا انترنيت';
+
+  @override
+  String get wakeModelMissing =>
+      'باش يسمع سميتو حتى والتطبيق صغير، خاص تحميل مرة وحدة (42 MB). من بعد كيخدم بلا انترنيت.';
+
+  @override
+  String get wakeModelDownload => 'حمّل (42 MB)';
+
+  @override
+  String wakeModelDownloading(int percent) {
+    return 'كيتحمل… $percent%';
+  }
+
+  @override
+  String get wakeModelReady =>
+      'واجد: كيسمع «ميمو» بلا انترنيت، حتى والتطبيق صغير.';
+
+  @override
+  String get wakeModelFailed => 'ما تحملش. شوف الانترنيت وعاود.';
+
+  @override
+  String get wakeModelRetry => 'عاود';
+
+  @override
+  String get wakeStartFailed => 'ما قدرش يبدا يسمع. حل التطبيق وعاود.';
+
+  @override
+  String get wakeStoppedNotice => 'وقفتي MIMO من الإشعار: الميكرو تطفى.';
+
+  @override
+  String get quietHoursTitle => 'ساعات الهدوء';
+
+  @override
+  String quietHoursValue(String start, String end) {
+    return 'من $start حتى $end: ما كيبداش الهضرة بوحدو';
+  }
+
+  @override
+  String get silenceTitle => 'السكات اللي كيسالي الهضرة';
+
+  @override
+  String silenceValue(int seconds) {
+    return '$seconds ثانية (ولا «صافي سير»)';
+  }
+
+  @override
+  String get gamesTitle => 'لعب مع MIMO';
+
+  @override
+  String get gameRiddle => 'حجيتك';
+
+  @override
+  String get gameTrivia => 'سؤال';
+
+  @override
+  String get gameReaction => 'الزربة';
+
+  @override
+  String get reactionWait => 'تسنا حتى يخضارو عينيا…';
+
+  @override
+  String get reactionNow => 'دابا! كليكي!';
+
+  @override
+  String get reactionEarly => 'زربتي! عاود';
+
+  @override
+  String reactionResult(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get gameClose => 'سالي اللعب';
+
+  @override
+  String get behaviorTitle => 'كيبدا الهضرة بوحدو';
+
+  @override
+  String get behaviorSubtitle =>
+      'ملاحظات قصيرة، حجايات وألعاب، بالمهل (ماشي فساعات الهدوء).';
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +11,7 @@ import '../../core/zellige.dart';
 import '../../l10n/app_localizations.dart';
 import '../voice/mic_permission.dart';
 import '../voice/voice_types.dart';
+import '../voice/wake_model_manager.dart';
 import 'app_settings.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -80,6 +83,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       messenger.showSnackBar(SnackBar(content: Text(l.wakeByNameNoMic)));
     }
   }
+
+  /// Master microphone toggle (asks for the permission when switched on).
+  Future<void> _setMic(bool on) async {
+    if (!on) {
+      _set((x) => x.copyWith(micEnabled: false));
+      return;
+    }
+    final l = L10n.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final perm = ref.read(micPermissionProvider);
+    var st = await perm.status();
+    if (st != MicStatus.granted && st != MicStatus.permanentlyDenied) {
+      st = await perm.request();
+    }
+    if (st == MicStatus.granted) {
+      _set((x) => x.copyWith(micEnabled: true));
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text(l.wakeByNameNoMic)));
+    }
+  }
+
+  String _hour(int h) => '${h.toString().padLeft(2, '0')}:00';
+
+  Widget _hourPicker(int value, ValueChanged<int> onChanged) =>
+      DropdownButton<int>(
+        value: value,
+        items: [
+          for (var h = 0; h < 24; h++)
+            DropdownMenuItem(value: h, child: Text(_hour(h))),
+        ],
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+      );
 
   Widget _section(String title) => Padding(
     padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
@@ -359,6 +396,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onChanged: _setWakeByName,
                   ),
                   SwitchListTile(
+                    key: const Key('mic_switch'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l.settingsMicTitle),
+                    subtitle: Text(
+                      l.settingsMicSubtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    value: s.micEnabled,
+                    onChanged: _setMic,
+                  ),
+                  const WakeModelTile(),
+                  const SizedBox(height: 8),
+                  Text(l.silenceTitle),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          key: const Key('silence_slider'),
+                          value: s.silenceTimeoutSec.toDouble().clamp(5, 60),
+                          min: 5,
+                          max: 60,
+                          divisions: 11,
+                          onChanged: (v) => _set(
+                            (x) => x.copyWith(silenceTimeoutSec: v.round()),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        l.silenceValue(s.silenceTimeoutSec),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l.keepScreenOn),
                     value: s.keepScreenOn,
@@ -572,6 +643,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     value: s.proactiveTalk,
                     onChanged: (v) => _set((x) => x.copyWith(proactiveTalk: v)),
                   ),
+                  const SizedBox(height: 4),
+                  Text(l.quietHoursTitle),
+                  Row(
+                    children: [
+                      _hourPicker(
+                        s.quietStartHour,
+                        (h) => _set((x) => x.copyWith(quietStartHour: h)),
+                      ),
+                      const Text('  →  '),
+                      _hourPicker(
+                        s.quietEndHour,
+                        (h) => _set((x) => x.copyWith(quietEndHour: h)),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    l.quietHoursValue(
+                      _hour(s.quietStartHour),
+                      _hour(s.quietEndHour),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SahbiColors.textSecondary,
+                    ),
+                  ),
                   SwitchListTile(
                     key: const Key('shake_switch'),
                     contentPadding: EdgeInsets.zero,
@@ -586,7 +682,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     key: const Key('robot_eyes_switch'),
                     contentPadding: EdgeInsets.zero,
-                    title: Text(l.eyesSettingTitle),
+                    title: Text(l.settingsCameraTitle),
                     subtitle: Text(
                       l.eyesSettingSubtitle,
                       style: const TextStyle(fontSize: 12),
@@ -667,6 +763,78 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Offline "MIMO" wake model: one-time download with progress, then it
+/// works without internet (and while the app is minimised).
+class WakeModelTile extends ConsumerWidget {
+  const WakeModelTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = L10n.of(context);
+    final m = ref.watch(wakeModelProvider);
+    final (String text, Widget? action) = switch (m.status) {
+      WakeModelStatus.ready => (l.wakeModelReady, null),
+      WakeModelStatus.downloading => (
+        l.wakeModelDownloading((m.progress * 100).round()),
+        TextButton(onPressed: m.cancel, child: Text(l.cancel)),
+      ),
+      WakeModelStatus.failed => (
+        l.wakeModelFailed,
+        FilledButton.tonal(
+          key: const Key('wake_model_retry'),
+          onPressed: () => unawaited(m.download()),
+          child: Text(l.wakeModelRetry),
+        ),
+      ),
+      WakeModelStatus.missing => (
+        l.wakeModelMissing,
+        FilledButton.tonal(
+          key: const Key('wake_model_download'),
+          onPressed: () => unawaited(m.download()),
+          child: Text(l.wakeModelDownload),
+        ),
+      ),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                m.status == WakeModelStatus.ready
+                    ? Icons.offline_bolt_rounded
+                    : Icons.download_rounded,
+                size: 20,
+                color: m.status == WakeModelStatus.ready
+                    ? SahbiColors.green
+                    : SahbiColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l.wakeModelTitle)),
+              ?action,
+            ],
+          ),
+          if (m.status == WakeModelStatus.downloading)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: LinearProgressIndicator(value: m.progress),
+            ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              color: SahbiColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

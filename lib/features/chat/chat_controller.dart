@@ -37,6 +37,7 @@ class ChatHooks {
     this.wakeBackend,
     this.currentView,
     this.userSpoke,
+    this.lookAround,
   });
   final void Function(AppSettings Function(AppSettings) update) updateSettings;
   final VoidCallback? openSettings;
@@ -58,6 +59,10 @@ class ChatHooks {
 
   /// Tells the eyes the user just spoke (it waits before reacting).
   final VoidCallback? userSpoke;
+
+  /// One picture from the BACK camera ("chouf chno kayn 9damek", "look
+  /// around"), then back to the front eyes. Null when the camera is off.
+  final Future<Uint8List?> Function()? lookAround;
 }
 
 /// The single pipeline for typed AND spoken input:
@@ -165,6 +170,10 @@ class ChatController extends ChangeNotifier {
   /// Questions about what the robot sees.
   static final _seesRe = RegExp(
     r'(?:^|\s)(?:chouf|chof|chofti|choufti|katchouf|katchof|kat?chouf|tchouf|tchof|chno hada|chnou hada|chno hadi|chnou hadi|chno hado|ach hada|ach hadi|achno hada|chno f yeddi|chno 3ndi|wach katchouf|wach katchof|wach kayban|regarde|tu vois|c est quoi ca|qu est ce que c est|what is this|whats this|what s this|can you see|do you see|look at|شوف|شفتي|كتشوف|تشوف|شنو هادا|شنو هادي|شنو هادو|اش هادا|اش هادي|اشنو هادا|شنو فيدي|شنو عندي)(?:\s|$|[?!.])',
+  );
+
+  static final _aroundRe = RegExp(
+    r'(?:chouf|chof|tchouf|tchof|chno kayn|achno kayn|ach kayn|chno kain)\s+(?:chno kayn\s+|ach kayn\s+)?(?:9damek|qodamek|9damk|dork|dorr|7dak|hdak|lbit|l bit|lbayt|lte7t|lt7t|lfo9|mn lor|lor|lkhelf|f lbit|f dar)|(?:lcamera|camera|lkamira)\s+(?:lor|dyal lor|lkhelfiya|lkhalfiya)|look around|what s in front of you|whats in front of you|what is in front of you|look behind|regarde autour|regarde devant toi|qu est ce qu il y a devant toi|derriere toi|شوف شنو كاين قدامك|شوف قدامك|شنو كاين قدامك|شوف البيت|دور شوف|شوف اللور|الكاميرا اللورانية|الكاميرا اللي لور',
   );
 
   static final _rememberRe = RegExp(
@@ -277,6 +286,16 @@ class ChatController extends ChangeNotifier {
     // katchouf…" go to the AI with what it sees right now (no camera
     // screen). "7el camera" still opens the camera screen.
     final nt = normalizeText(text);
+    // "Look around / what's in front of you": one picture from the back
+    // camera (the phone's other side), then the eyes come back.
+    final look = hooks.lookAround;
+    if (look != null && _aroundRe.hasMatch(nt)) {
+      final rear = await look();
+      if (rear != null) {
+        await _askBrain(text, image: rear);
+        return;
+      }
+    }
     final view = hooks.currentView?.call();
     if (view != null &&
         ((cmd?.type == CommandType.openCamera &&

@@ -62,6 +62,10 @@ class VoiceController extends ChangeNotifier {
   VoiceState get state => _sm.state;
 
   String partial = '';
+
+  /// What the robot is saying right now ('' when quiet): lets the wake
+  /// word ignore MIMO saying its own name.
+  String speakingText = '';
   double level = 0;
   bool micOpen = false;
   String? lastError;
@@ -149,6 +153,12 @@ class VoiceController extends ChangeNotifier {
   /// recogniser is available (the UI then focuses the text field).
   /// The caller must have obtained RECORD_AUDIO permission first.
   Future<String> startListening() async {
+    // Microphone toggle off: nothing may record.
+    if (!settings().micEnabled) {
+      lastError = 'mic_off';
+      notifyListeners();
+      return 'mic_off';
+    }
     if (state == VoiceState.speaking) await interrupt();
     if (state == VoiceState.listening) return activeStt;
     await beforeListen?.call();
@@ -257,6 +267,7 @@ class VoiceController extends ChangeNotifier {
     }
     await _stopTts();
     final gen = _ttsGeneration;
+    speakingText = text;
     final which = await resolveTts();
     if (which == 'off' || gen != _ttsGeneration) {
       setThinking(false);
@@ -296,6 +307,7 @@ class VoiceController extends ChangeNotifier {
   }
 
   void _settleIdle() {
+    speakingText = '';
     if (state == VoiceState.speaking || state == VoiceState.thinking) {
       _go(VoiceState.idle);
     }

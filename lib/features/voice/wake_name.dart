@@ -192,6 +192,7 @@ class WakeNameController extends ChangeNotifier {
     required this.log,
     this.localeFor,
     this.musicPlaying,
+    this.replacedBy,
     Duration? restartDelay,
   }) : restartDelay = restartDelay ?? const Duration(milliseconds: 400);
 
@@ -208,6 +209,11 @@ class WakeNameController extends ChangeNotifier {
   /// session takes Android's audio focus, which paused YouTube songs after a
   /// few seconds (and the song drowns the voice anyway).
   final bool Function()? musicPlaying;
+
+  /// True while the offline "MIMO" wake word runs: this older recogniser
+  /// (Android SpeechRecognizer, foreground only) then stays off so the two
+  /// never fight over the microphone.
+  final bool Function()? replacedBy;
   final ErrorLog log;
   final Duration restartDelay;
 
@@ -226,6 +232,8 @@ class WakeNameController extends ChangeNotifier {
 
   bool get _shouldRun =>
       settings().wakeByName &&
+      settings().micEnabled &&
+      !(replacedBy?.call() ?? false) &&
       _foreground &&
       _suspended == 0 &&
       !_inConversation &&
@@ -234,6 +242,9 @@ class WakeNameController extends ChangeNotifier {
 
   /// Another screen owns the mic (live camera) or the app is not visible.
   bool get externallyBlocked => _suspended > 0 || !_foreground;
+
+  /// Another screen (live camera) owns the microphone.
+  bool get suspendedByScreen => _suspended > 0;
   bool get foreground => _foreground;
 
   /// During a conversation the mic opens by itself after each answer, so

@@ -144,6 +144,19 @@ class CompanionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Called by name ("MIMO"): the eyes snap wide and look straight at the
+  /// user (woken up first if asleep).
+  void heardName() {
+    interact();
+    if (temper.sulking) {
+      // Still sulking: a quick side glance, then turned away again.
+      glance(Offset.zero, hold: const Duration(milliseconds: 700));
+      return;
+    }
+    play(FaceAct.what);
+    glance(Offset.zero, hold: const Duration(milliseconds: 2500));
+  }
+
   /// Apology / sweet word: forgiven, heart eyes.
   void madeUp() {
     _endSulkFace();

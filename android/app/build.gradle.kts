@@ -80,8 +80,17 @@ android {
                 // Lets `flutter build apk --release` work without secrets. NOT for stores.
                 signingConfigs.getByName("debug")
             }
+            // Keeps Vosk/JNA (looked up by name from native code) under R8.
+            proguardFiles("proguard-rules.pro")
         }
     }
+}
+
+dependencies {
+    // Offline "MIMO" wake word (Apache-2.0). @aar: JNA must come as its
+    // Android AAR (native libjnidispatch), not the desktop JAR.
+    implementation("com.alphacephei:vosk-android:0.3.75@aar")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 }
 
 kotlin {

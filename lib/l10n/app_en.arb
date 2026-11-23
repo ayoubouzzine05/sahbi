@@ -603,5 +603,116 @@
   "@eyesRationaleBody": {},
   "@eyesSettingTitle": {},
   "@eyesSettingSubtitle": {},
-  "@eyesDenied": {}
+  "@eyesDenied": {},
+  "micOnTip": "Microphone on — tap to turn off",
+  "@micOnTip": {},
+  "micOffTip": "Microphone off — tap to turn on",
+  "@micOffTip": {},
+  "cameraOnTip": "Camera on — tap to turn off",
+  "@cameraOnTip": {},
+  "cameraOffTip": "Camera off — tap to turn on",
+  "@cameraOffTip": {},
+  "micOffTitle": "Microphone is off",
+  "@micOffTitle": {},
+  "micOffBody": "MIMO can't hear anything right now. Turn the microphone on?",
+  "@micOffBody": {},
+  "micTurnOn": "Turn microphone on",
+  "@micTurnOn": {},
+  "cameraOffTitle": "Camera is off",
+  "@cameraOffTitle": {},
+  "cameraOffBody": "MIMO can't see anything right now. Turn the camera on?",
+  "@cameraOffBody": {},
+  "cameraTurnOn": "Turn camera on",
+  "@cameraTurnOn": {},
+  "wakeNoticeTitle": "MIMO is listening",
+  "@wakeNoticeTitle": {},
+  "wakeNoticeText": "Say \"MIMO\" to talk to it. Nothing is recorded.",
+  "@wakeNoticeText": {},
+  "wakeNoticeStop": "Stop MIMO",
+  "@wakeNoticeStop": {},
+  "wakeNoticeOpen": "Open",
+  "@wakeNoticeOpen": {},
+  "wakeChannelName": "MIMO listening for its name",
+  "@wakeChannelName": {},
+  "settingsMicTitle": "Microphone",
+  "@settingsMicTitle": {},
+  "settingsMicSubtitle": "Off = it hears nothing: no \"MIMO\", no talking. You can still type.",
+  "@settingsMicSubtitle": {},
+  "settingsCameraTitle": "Camera",
+  "@settingsCameraTitle": {},
+  "wakeModelTitle": "Offline \"MIMO\" wake word",
+  "@wakeModelTitle": {},
+  "wakeModelMissing": "To hear its name even when minimised: one-time download (42 MB), then it works offline.",
+  "@wakeModelMissing": {},
+  "wakeModelDownload": "Download (42 MB)",
+  "@wakeModelDownload": {},
+  "wakeModelDownloading": "Downloading… {percent}%",
+  "@wakeModelDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeModelReady": "Ready: hears \"MIMO\" offline, even when minimised.",
+  "@wakeModelReady": {},
+  "wakeModelFailed": "Download failed. Check the internet and try again.",
+  "@wakeModelFailed": {},
+  "wakeModelRetry": "Try again",
+  "@wakeModelRetry": {},
+  "wakeStartFailed": "Could not start listening. Open the app and try again.",
+  "@wakeStartFailed": {},
+  "wakeStoppedNotice": "MIMO stopped from the notification: microphone turned off.",
+  "@wakeStoppedNotice": {},
+  "quietHoursTitle": "Quiet hours",
+  "@quietHoursTitle": {},
+  "quietHoursValue": "{start} to {end}: it won't start talking by itself",
+  "@quietHoursValue": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "silenceTitle": "Silence that ends a conversation",
+  "@silenceTitle": {},
+  "silenceValue": "{seconds} s (or \"safi sir\")",
+  "@silenceValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "gamesTitle": "Play with MIMO",
+  "@gamesTitle": {},
+  "gameRiddle": "Riddle",
+  "@gameRiddle": {},
+  "gameTrivia": "Trivia",
+  "@gameTrivia": {},
+  "gameReaction": "Reaction game",
+  "@gameReaction": {},
+  "reactionWait": "Wait until my eyes turn green…",
+  "@reactionWait": {},
+  "reactionNow": "Now! Tap!",
+  "@reactionNow": {},
+  "reactionEarly": "Too early! Again",
+  "@reactionEarly": {},
+  "reactionResult": "{ms} ms",
+  "@reactionResult": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "gameClose": "Stop the game",
+  "@gameClose": {},
+  "behaviorTitle": "Talks on its own",
+  "@behaviorTitle": {},
+  "behaviorSubtitle": "Short remarks, riddles and games, with cooldowns (never in quiet hours).",
+  "@behaviorSubtitle": {}
 }

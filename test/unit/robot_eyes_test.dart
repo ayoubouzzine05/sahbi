@@ -44,10 +44,19 @@ class FakeCam implements EyeCamera {
   final List<Uint8List> frames;
   int i = 0, opens = 0, closes = 0;
   bool canOpen = true;
+  int snapshots = 0;
+  VoidCallback? lost;
   @override
-  Future<bool> open() async {
+  Future<bool> open({VoidCallback? onLost}) async {
     opens++;
+    lost = onLost;
     return canOpen;
+  }
+
+  @override
+  Future<Uint8List?> snapshot(CameraLens lens) async {
+    snapshots++;
+    return frames.first;
   }
 
   @override

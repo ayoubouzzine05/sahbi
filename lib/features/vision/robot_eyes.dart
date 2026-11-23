@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui' show Offset;
 
 import 'package:camera/camera.dart';
@@ -7,6 +6,9 @@ import 'package:flutter/foundation.dart';
 
 import '../face/face_act.dart';
 import '../live/scene_watcher.dart';
+import 'vision_controller.dart';
+
+export 'vision_controller.dart' show CameraLens;
 
 /// Where movement is in the picture, as a gaze for the face: x and y in
 /// -1..1 from the robot's point of view (front camera, not mirrored, so
@@ -64,63 +66,66 @@ FaceAct? reactionAct(Object? reaction) => switch (reaction) {
 
 /// Small camera wrapper (injectable for tests).
 abstract class EyeCamera {
-  Future<bool> open();
+  /// Opens the front camera. [onLost] fires if the camera is taken away
+  /// later (camera toggle off, app in background, live screen).
+  Future<bool> open({VoidCallback? onLost});
   Future<Uint8List?> grab();
   Future<void> close();
+
+  /// One picture from [lens] right now (opens and closes it); the front
+  /// "eyes" camera, if open, is closed first and must be reopened.
+  Future<Uint8List?> snapshot(CameraLens lens);
 }
 
-/// Front camera, low resolution, JPEG stills (no preview on screen: the
-/// face stays the whole screen; Android shows its own camera indicator).
-class FrontEyeCamera implements EyeCamera {
-  CameraController? _c;
+/// The eyes' camera, always through [VisionController] (never a second
+/// stream).
+class VisionEyeCamera implements EyeCamera {
+  VisionEyeCamera(this.vision);
+  final VisionController vision;
+  VisionCamera? _c;
 
   @override
-  Future<bool> open() async {
-    if (_c != null) return true;
-    final cams = await availableCameras();
-    if (cams.isEmpty) return false;
-    final front = cams.firstWhere(
-      (c) => c.lensDirection == CameraLensDirection.front,
-      orElse: () => cams.first,
+  Future<bool> open({VoidCallback? onLost}) async {
+    if (_c != null && vision.owner == VisionOwner.eyes) return true;
+    _c = await vision.acquire(
+      VisionOwner.eyes,
+      onRevoked: () {
+        _c = null;
+        onLost?.call();
+      },
     );
-    final c = CameraController(
-      front,
-      ResolutionPreset.low,
-      enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.jpeg,
-    );
-    try {
-      await c.initialize();
-      try {
-        await c.setFlashMode(FlashMode.off);
-      } catch (_) {}
-    } catch (_) {
-      await c.dispose();
-      return false;
-    }
-    _c = c;
-    return true;
+    return _c != null;
   }
 
   @override
-  Future<Uint8List?> grab() async {
-    final c = _c;
-    if (c == null || !c.value.isInitialized || c.value.isTakingPicture) {
-      return null;
-    }
-    final x = await c.takePicture();
-    final bytes = await x.readAsBytes();
-    try {
-      await File(x.path).delete();
-    } catch (_) {}
-    return bytes;
-  }
+  Future<Uint8List?> grab() async => _c?.grab();
 
   @override
   Future<void> close() async {
-    final c = _c;
     _c = null;
-    await c?.dispose();
+    await vision.release(VisionOwner.eyes);
+  }
+
+  @override
+  Future<Uint8List?> snapshot(CameraLens lens) async {
+    _c = null;
+    // Close the eyes quietly first (not a "lost" camera).
+    await vision.release(VisionOwner.eyes);
+    final cam = await vision.acquire(
+      VisionOwner.inspect,
+      lens: lens,
+      preset: ResolutionPreset.medium,
+    );
+    if (cam == null) return null;
+    try {
+      // Let auto-exposure / focus settle on the new camera.
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      return await cam.grab();
+    } catch (_) {
+      return null;
+    } finally {
+      await vision.release(VisionOwner.inspect);
+    }
   }
 }
 
@@ -134,12 +139,13 @@ class RobotEyes extends ChangeNotifier {
     required this.busy,
     required this.onGaze,
     required this.onReact,
-    EyeCamera? camera,
+    required EyeCamera camera,
     SceneWatcher? watcher,
     DateTime Function()? clock,
     this.interval = const Duration(milliseconds: 900),
     this.dailyLimit = 150,
-  }) : _camera = camera ?? FrontEyeCamera(),
+    this.restAfterNobody = const Duration(minutes: 30),
+  }) : _camera = camera,
        _clock = clock ?? DateTime.now,
        watcher =
            watcher ??
@@ -160,6 +166,10 @@ class RobotEyes extends ChangeNotifier {
 
   /// Reactions asked per day at most (saves the free AI quota).
   final int dailyLimit;
+
+  /// No movement, voice or touch for this long: the eyes rest (camera
+  /// closed) until the user comes back (touch, voice, "MIMO").
+  final Duration restAfterNobody;
 
   final EyeCamera _camera;
   final DateTime Function() _clock;
@@ -189,22 +199,58 @@ class RobotEyes extends ChangeNotifier {
   }
 
   /// The user spoke: their words come first.
-  void userSpoke() => watcher.userSpoke();
+  void userSpoke() {
+    watcher.userSpoke();
+    noteSomeone();
+  }
 
   bool _face = false;
   bool _foreground = true;
+  bool _hot = false;
+  bool _nobodyRest = false;
+  DateTime? _lastSomeone;
+
+  /// Resting: hot phone / battery saver, or nobody around for a long time.
+  bool get resting => _hot || _nobodyRest;
+
+  bool get _shouldLook => _face && _foreground && !resting;
 
   /// The face screen is visible and the eyes may open (setting on,
   /// permission granted, not asleep, camera not used elsewhere).
   void setFaceWants(bool on) {
     _face = on;
-    unawaited(setWanted(_face && _foreground));
+    if (on) _lastSomeone ??= _clock();
+    unawaited(setWanted(_shouldLook));
   }
 
   /// The app went to the background / came back.
   void setForeground(bool on) {
     _foreground = on;
-    unawaited(setWanted(_face && _foreground));
+    unawaited(setWanted(_shouldLook));
+  }
+
+  /// Hot phone (battery ≥ 42 °C) or battery saver: rest the camera.
+  void setHot(bool hot) {
+    if (_hot == hot) return;
+    _hot = hot;
+    unawaited(setWanted(_shouldLook));
+    notifyListeners();
+  }
+
+  /// Someone is here (movement seen, voice, touch, "MIMO"): wakes resting
+  /// eyes.
+  void noteSomeone() {
+    _lastSomeone = _clock();
+    if (_nobodyRest) {
+      _nobodyRest = false;
+      unawaited(setWanted(_shouldLook));
+      notifyListeners();
+    }
+  }
+
+  /// The camera became available again (e.g. the live screen closed).
+  void retry() {
+    if (_wanted && !_open && !_opening && !_inspecting) unawaited(_start());
   }
 
   /// Turns the eyes on/off.
@@ -223,7 +269,7 @@ class RobotEyes extends ChangeNotifier {
     _opening = true;
     bool ok;
     try {
-      ok = await _camera.open();
+      ok = await _camera.open(onLost: _onLost);
     } catch (_) {
       ok = false;
     }
@@ -241,6 +287,47 @@ class RobotEyes extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  /// The camera was taken away (toggle off, background, live screen).
+  void _onLost() {
+    _timer?.cancel();
+    _timer = null;
+    _open = false;
+    _prev = null;
+    _last = null;
+    _lastAt = null;
+    // Still wanted (face visible): try again when the camera is free.
+    _wanted = false;
+    notifyListeners();
+  }
+
+  /// A picture from the back camera (looking at the room / an object the
+  /// user points the phone at), then back to the front eyes. Null when the
+  /// camera is off or busy.
+  Future<Uint8List?> inspect({CameraLens lens = CameraLens.back}) async {
+    if (_inspecting) return null;
+    _inspecting = true;
+    final wasWanted = _wanted;
+    _timer?.cancel();
+    _timer = null;
+    _open = false;
+    notifyListeners();
+    try {
+      final jpeg = await _camera.snapshot(lens);
+      if (jpeg != null) {
+        _last = jpeg;
+        _lastAt = _clock();
+      }
+      return jpeg;
+    } finally {
+      _inspecting = false;
+      if (wasWanted && _wanted) {
+        await _start();
+      }
+    }
+  }
+
+  bool _inspecting = false;
 
   Future<void> _stop() async {
     _timer?.cancel();
@@ -270,7 +357,17 @@ class RobotEyes extends ChangeNotifier {
       final isBusy = busy();
       if (prev != null) {
         final g = motionGaze(prev, sig);
-        if (g != null) onGaze(g);
+        if (g != null) {
+          onGaze(g);
+          _lastSomeone = _clock();
+        }
+      }
+      final seen = _lastSomeone;
+      if (seen != null && _clock().difference(seen) >= restAfterNobody) {
+        _nobodyRest = true;
+        unawaited(setWanted(false));
+        notifyListeners();
+        return;
       }
       final look = watcher.onFrame(sig, robotBusy: isBusy || _reacting);
       _prev = sig;

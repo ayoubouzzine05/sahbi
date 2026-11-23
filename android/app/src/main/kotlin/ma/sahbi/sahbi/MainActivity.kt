@@ -3,6 +3,9 @@ package ma.sahbi.sahbi
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.PowerManager
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -17,9 +20,12 @@ import android.provider.OpenableColumns
 import android.provider.Settings
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipInputStream
 import java.security.MessageDigest
 import java.util.concurrent.Executors
 
@@ -55,6 +61,18 @@ class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
             .setMethodCallHandler { call, result -> handle(call, result) }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "ma.sahbi/mimo")
+            .setMethodCallHandler { call, result -> handleMimo(call, result) }
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "ma.sahbi/mimo_events")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                    MimoWakeService.events = { sink.success(it) }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    MimoWakeService.events = null
+                }
+            })
     }
 
     private fun handle(call: MethodCall, result: MethodChannel.Result) {
@@ -366,7 +384,111 @@ class MainActivity : AudioServiceActivity() {
         return am.getStreamVolume(AudioManager.STREAM_MUSIC).toDouble() / max
     }
 
+    /** Channel `ma.sahbi/mimo`: wake-word service, model unzip, heat. */
+    private fun handleMimo(call: MethodCall, result: MethodChannel.Result) {
+        try {
+            when (call.method) {
+                "start" -> {
+                    val i = Intent(this, MimoWakeService::class.java)
+                        .setAction(MimoWakeService.ACTION_START)
+                        .putExtra(MimoWakeService.EXTRA_MODEL, call.argument<String>("model"))
+                        .putExtra(MimoWakeService.EXTRA_GRAMMAR, call.argument<String>("grammar"))
+                        .putExtra(
+                            MimoWakeService.EXTRA_WORDS,
+                            (call.argument<List<String>>("words") ?: listOf("mimo")).toTypedArray(),
+                        )
+                        .putExtra(MimoWakeService.EXTRA_PAUSED, call.argument<Boolean>("paused") ?: false)
+                        .putExtra(MimoWakeService.EXTRA_TITLE, call.argument<String>("title"))
+                        .putExtra(MimoWakeService.EXTRA_TEXT, call.argument<String>("text"))
+                        .putExtra(MimoWakeService.EXTRA_STOP, call.argument<String>("stopLabel"))
+                        .putExtra(MimoWakeService.EXTRA_OPEN, call.argument<String>("openLabel"))
+                        .putExtra(MimoWakeService.EXTRA_CHANNEL, call.argument<String>("channelName"))
+                    try {
+                        startForegroundService(i)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        // Android 12+: not allowed from the background.
+                        result.error("fgs_not_allowed", e.message, null)
+                    }
+                }
+                "stop" -> {
+                    MimoWakeService.instance?.shutdown()
+                    stopService(Intent(this, MimoWakeService::class.java))
+                    result.success(true)
+                }
+                "pause" -> {
+                    MimoWakeService.instance?.pause()
+                    result.success(MimoWakeService.instance != null)
+                }
+                "resume" -> {
+                    MimoWakeService.instance?.resume()
+                    result.success(MimoWakeService.instance != null)
+                }
+                "isRunning" -> result.success(MimoWakeService.running)
+                "unzip" -> {
+                    val zip = call.argument<String>("zip")
+                    val dest = call.argument<String>("dest")
+                    if (zip == null || dest == null) {
+                        result.error("bad_args", "zip and dest required", null)
+                        return
+                    }
+                    io.execute {
+                        try {
+                            unzip(File(zip), File(dest))
+                            main.post { result.success(true) }
+                        } catch (e: Exception) {
+                            main.post { result.error("unzip", e.message, null) }
+                        }
+                    }
+                }
+                "thermal" -> result.success(thermal())
+                else -> result.notImplemented()
+            }
+        } catch (e: Exception) {
+            result.error("mimo", e.message, null)
+        }
+    }
+
+    /** Unzips with a path-traversal check (entries must stay inside dest). */
+    private fun unzip(zip: File, dest: File) {
+        dest.mkdirs()
+        val root = dest.canonicalPath + File.separator
+        ZipInputStream(zip.inputStream().buffered()).use { zin ->
+            while (true) {
+                val e = zin.nextEntry ?: break
+                val out = File(dest, e.name)
+                if (!out.canonicalPath.startsWith(root)) throw SecurityException("bad entry ${e.name}")
+                if (e.isDirectory) {
+                    out.mkdirs()
+                } else {
+                    out.parentFile?.mkdirs()
+                    FileOutputStream(out).use { zin.copyTo(it) }
+                }
+                zin.closeEntry()
+            }
+        }
+    }
+
+    /** Battery temperature (°C) and battery saver, to rest the camera. */
+    private fun thermal(): Map<String, Any?> {
+        val b = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val t = b?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE) ?: Int.MIN_VALUE
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        return mapOf(
+            "batteryC" to (if (t == Int.MIN_VALUE) null else t / 10.0),
+            "powerSave" to pm.isPowerSaveMode,
+        )
+    }
+
     override fun onDestroy() {
+        // The app is closing (not a rotation): never leave MIMO listening.
+        if (isFinishing) {
+            MimoWakeService.instance?.shutdown()
+            try {
+                stopService(Intent(this, MimoWakeService::class.java))
+            } catch (_: Exception) {}
+        }
+        MimoWakeService.events = null
         io.shutdown()
         super.onDestroy()
     }

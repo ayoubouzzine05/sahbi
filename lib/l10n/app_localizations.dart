@@ -1778,6 +1778,258 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'To see, he needs the camera. You can allow it in the phone settings.'**
   String get eyesDenied;
+
+  /// No description provided for @micOnTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone on — tap to turn off'**
+  String get micOnTip;
+
+  /// No description provided for @micOffTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone off — tap to turn on'**
+  String get micOffTip;
+
+  /// No description provided for @cameraOnTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera on — tap to turn off'**
+  String get cameraOnTip;
+
+  /// No description provided for @cameraOffTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera off — tap to turn on'**
+  String get cameraOffTip;
+
+  /// No description provided for @micOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone is off'**
+  String get micOffTitle;
+
+  /// No description provided for @micOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'MIMO can\'t hear anything right now. Turn the microphone on?'**
+  String get micOffBody;
+
+  /// No description provided for @micTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn microphone on'**
+  String get micTurnOn;
+
+  /// No description provided for @cameraOffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera is off'**
+  String get cameraOffTitle;
+
+  /// No description provided for @cameraOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'MIMO can\'t see anything right now. Turn the camera on?'**
+  String get cameraOffBody;
+
+  /// No description provided for @cameraTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn camera on'**
+  String get cameraTurnOn;
+
+  /// No description provided for @wakeNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'MIMO is listening'**
+  String get wakeNoticeTitle;
+
+  /// No description provided for @wakeNoticeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Say \"MIMO\" to talk to it. Nothing is recorded.'**
+  String get wakeNoticeText;
+
+  /// No description provided for @wakeNoticeStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop MIMO'**
+  String get wakeNoticeStop;
+
+  /// No description provided for @wakeNoticeOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get wakeNoticeOpen;
+
+  /// No description provided for @wakeChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'MIMO listening for its name'**
+  String get wakeChannelName;
+
+  /// No description provided for @settingsMicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone'**
+  String get settingsMicTitle;
+
+  /// No description provided for @settingsMicSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Off = it hears nothing: no \"MIMO\", no talking. You can still type.'**
+  String get settingsMicSubtitle;
+
+  /// No description provided for @settingsCameraTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get settingsCameraTitle;
+
+  /// No description provided for @wakeModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline \"MIMO\" wake word'**
+  String get wakeModelTitle;
+
+  /// No description provided for @wakeModelMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'To hear its name even when minimised: one-time download (42 MB), then it works offline.'**
+  String get wakeModelMissing;
+
+  /// No description provided for @wakeModelDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download (42 MB)'**
+  String get wakeModelDownload;
+
+  /// No description provided for @wakeModelDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading… {percent}%'**
+  String wakeModelDownloading(int percent);
+
+  /// No description provided for @wakeModelReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready: hears \"MIMO\" offline, even when minimised.'**
+  String get wakeModelReady;
+
+  /// No description provided for @wakeModelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed. Check the internet and try again.'**
+  String get wakeModelFailed;
+
+  /// No description provided for @wakeModelRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get wakeModelRetry;
+
+  /// No description provided for @wakeStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start listening. Open the app and try again.'**
+  String get wakeStartFailed;
+
+  /// No description provided for @wakeStoppedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'MIMO stopped from the notification: microphone turned off.'**
+  String get wakeStoppedNotice;
+
+  /// No description provided for @quietHoursTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHoursTitle;
+
+  /// No description provided for @quietHoursValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} to {end}: it won\'t start talking by itself'**
+  String quietHoursValue(String start, String end);
+
+  /// No description provided for @silenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence that ends a conversation'**
+  String get silenceTitle;
+
+  /// No description provided for @silenceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s (or \"safi sir\")'**
+  String silenceValue(int seconds);
+
+  /// No description provided for @gamesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Play with MIMO'**
+  String get gamesTitle;
+
+  /// No description provided for @gameRiddle.
+  ///
+  /// In en, this message translates to:
+  /// **'Riddle'**
+  String get gameRiddle;
+
+  /// No description provided for @gameTrivia.
+  ///
+  /// In en, this message translates to:
+  /// **'Trivia'**
+  String get gameTrivia;
+
+  /// No description provided for @gameReaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaction game'**
+  String get gameReaction;
+
+  /// No description provided for @reactionWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait until my eyes turn green…'**
+  String get reactionWait;
+
+  /// No description provided for @reactionNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now! Tap!'**
+  String get reactionNow;
+
+  /// No description provided for @reactionEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Too early! Again'**
+  String get reactionEarly;
+
+  /// No description provided for @reactionResult.
+  ///
+  /// In en, this message translates to:
+  /// **'{ms} ms'**
+  String reactionResult(int ms);
+
+  /// No description provided for @gameClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop the game'**
+  String get gameClose;
+
+  /// No description provided for @behaviorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Talks on its own'**
+  String get behaviorTitle;
+
+  /// No description provided for @behaviorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Short remarks, riddles and games, with cooldowns (never in quiet hours).'**
+  String get behaviorSubtitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

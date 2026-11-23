@@ -5,9 +5,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Microphone: push-to-talk only. Requested at runtime after a rationale screen. -->
+    <!-- Microphone: talking to MIMO and the offline "MIMO" wake word (only
+         while the mic toggle is ON). Requested at runtime after a rationale. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Live camera mode (show-and-explain). -->
+    <!-- Camera: MIMO's eyes (front), a look with the back camera, live mode.
+         Never used in the background. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -20,6 +22,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- MimoWakeService: wake word while minimised, with a visible notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Declared as requested for a future robot body; NOT used at runtime: the
+         camera is always closed when the app is not visible. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <!-- Android 13+: media notification. Requested before first playback. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -64,6 +71,13 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>
+
+        <!-- Offline "MIMO" wake word while the app is open or minimised. Stops
+             with the task (swiped away) and from the notification. -->
+        <service android:name=".MimoWakeService"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="microphone" />
 
         <meta-data
             android:name="flutterEmbedding"

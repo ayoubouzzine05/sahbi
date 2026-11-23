@@ -147,7 +147,9 @@ class ConversationSession extends ChangeNotifier {
     this.onGoodbye,
     this.maxSilentTurns = 2,
     this.followUpDelay = const Duration(milliseconds: 450),
-  }) {
+    this.silenceTimeout,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now {
     voiceChanges.addListener(_onVoice);
     _prev = voiceState();
   }
@@ -166,8 +168,16 @@ class ConversationSession extends ChangeNotifier {
 
   /// Says a short goodbye after a stop phrase.
   final Future<void> Function()? onGoodbye;
+
+  /// Used only when [silenceTimeout] is null: silent listens in a row.
   final int maxSilentTurns;
   final Duration followUpDelay;
+
+  /// The conversation ends when the user has said nothing for this long
+  /// (or says "safi sir"). Null = count silent listens ([maxSilentTurns]).
+  final Duration Function()? silenceTimeout;
+  final DateTime Function() _clock;
+  DateTime _lastHeard = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool _active = false;
   bool _robotInitiated = false;
@@ -194,6 +204,7 @@ class ConversationSession extends ChangeNotifier {
       _robotInitiated = robotInitiated;
       _silent = 0;
       _listenEndedEmpty = false;
+      _lastHeard = _clock();
       onActiveChanged?.call(true);
       notifyListeners();
     }
@@ -214,6 +225,7 @@ class ConversationSession extends ChangeNotifier {
   /// goodbye that ended the conversation (it is then not sent to the AI).
   bool handleFinalText(String text, {String robotName = ''}) {
     if (!_active) return false;
+    _lastHeard = _clock();
     if (!isStopPhrase(text, robotName: robotName)) {
       // The user answered: a robot-started moment becomes a conversation.
       _robotInitiated = false;
@@ -244,7 +256,13 @@ class ConversationSession extends ChangeNotifier {
     if (_listenEndedEmpty) {
       _listenEndedEmpty = false;
       _silent++;
-      if (_silent >= (_robotInitiated ? 1 : maxSilentTurns)) {
+      final timeout = silenceTimeout?.call();
+      final over = _robotInitiated
+          ? _silent >= 1
+          : timeout != null
+          ? _clock().difference(_lastHeard) >= timeout
+          : _silent >= maxSilentTurns;
+      if (over) {
         end();
         return;
       }

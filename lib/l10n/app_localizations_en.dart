@@ -899,4 +899,148 @@ class L10nEn extends L10n {
   @override
   String get eyesDenied =>
       'To see, he needs the camera. You can allow it in the phone settings.';
+
+  @override
+  String get micOnTip => 'Microphone on — tap to turn off';
+
+  @override
+  String get micOffTip => 'Microphone off — tap to turn on';
+
+  @override
+  String get cameraOnTip => 'Camera on — tap to turn off';
+
+  @override
+  String get cameraOffTip => 'Camera off — tap to turn on';
+
+  @override
+  String get micOffTitle => 'Microphone is off';
+
+  @override
+  String get micOffBody =>
+      'MIMO can\'t hear anything right now. Turn the microphone on?';
+
+  @override
+  String get micTurnOn => 'Turn microphone on';
+
+  @override
+  String get cameraOffTitle => 'Camera is off';
+
+  @override
+  String get cameraOffBody =>
+      'MIMO can\'t see anything right now. Turn the camera on?';
+
+  @override
+  String get cameraTurnOn => 'Turn camera on';
+
+  @override
+  String get wakeNoticeTitle => 'MIMO is listening';
+
+  @override
+  String get wakeNoticeText =>
+      'Say \"MIMO\" to talk to it. Nothing is recorded.';
+
+  @override
+  String get wakeNoticeStop => 'Stop MIMO';
+
+  @override
+  String get wakeNoticeOpen => 'Open';
+
+  @override
+  String get wakeChannelName => 'MIMO listening for its name';
+
+  @override
+  String get settingsMicTitle => 'Microphone';
+
+  @override
+  String get settingsMicSubtitle =>
+      'Off = it hears nothing: no \"MIMO\", no talking. You can still type.';
+
+  @override
+  String get settingsCameraTitle => 'Camera';
+
+  @override
+  String get wakeModelTitle => 'Offline \"MIMO\" wake word';
+
+  @override
+  String get wakeModelMissing =>
+      'To hear its name even when minimised: one-time download (42 MB), then it works offline.';
+
+  @override
+  String get wakeModelDownload => 'Download (42 MB)';
+
+  @override
+  String wakeModelDownloading(int percent) {
+    return 'Downloading… $percent%';
+  }
+
+  @override
+  String get wakeModelReady =>
+      'Ready: hears \"MIMO\" offline, even when minimised.';
+
+  @override
+  String get wakeModelFailed =>
+      'Download failed. Check the internet and try again.';
+
+  @override
+  String get wakeModelRetry => 'Try again';
+
+  @override
+  String get wakeStartFailed =>
+      'Could not start listening. Open the app and try again.';
+
+  @override
+  String get wakeStoppedNotice =>
+      'MIMO stopped from the notification: microphone turned off.';
+
+  @override
+  String get quietHoursTitle => 'Quiet hours';
+
+  @override
+  String quietHoursValue(String start, String end) {
+    return '$start to $end: it won\'t start talking by itself';
+  }
+
+  @override
+  String get silenceTitle => 'Silence that ends a conversation';
+
+  @override
+  String silenceValue(int seconds) {
+    return '$seconds s (or \"safi sir\")';
+  }
+
+  @override
+  String get gamesTitle => 'Play with MIMO';
+
+  @override
+  String get gameRiddle => 'Riddle';
+
+  @override
+  String get gameTrivia => 'Trivia';
+
+  @override
+  String get gameReaction => 'Reaction game';
+
+  @override
+  String get reactionWait => 'Wait until my eyes turn green…';
+
+  @override
+  String get reactionNow => 'Now! Tap!';
+
+  @override
+  String get reactionEarly => 'Too early! Again';
+
+  @override
+  String reactionResult(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get gameClose => 'Stop the game';
+
+  @override
+  String get behaviorTitle => 'Talks on its own';
+
+  @override
+  String get behaviorSubtitle =>
+      'Short remarks, riddles and games, with cooldowns (never in quiet hours).';
 }

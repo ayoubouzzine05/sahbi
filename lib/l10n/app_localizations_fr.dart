@@ -905,4 +905,148 @@ class L10nFr extends L10n {
   @override
   String get eyesDenied =>
       'Pour voir, il a besoin de la caméra. Tu peux l’autoriser dans les réglages du téléphone.';
+
+  @override
+  String get micOnTip => 'Micro activé — touchez pour couper';
+
+  @override
+  String get micOffTip => 'Micro coupé — touchez pour activer';
+
+  @override
+  String get cameraOnTip => 'Caméra activée — touchez pour couper';
+
+  @override
+  String get cameraOffTip => 'Caméra coupée — touchez pour activer';
+
+  @override
+  String get micOffTitle => 'Micro coupé';
+
+  @override
+  String get micOffBody =>
+      'MIMO n\'entend rien pour l\'instant. Activer le micro ?';
+
+  @override
+  String get micTurnOn => 'Activer le micro';
+
+  @override
+  String get cameraOffTitle => 'Caméra coupée';
+
+  @override
+  String get cameraOffBody =>
+      'MIMO ne voit rien pour l\'instant. Activer la caméra ?';
+
+  @override
+  String get cameraTurnOn => 'Activer la caméra';
+
+  @override
+  String get wakeNoticeTitle => 'MIMO écoute';
+
+  @override
+  String get wakeNoticeText =>
+      'Dites « MIMO » pour lui parler. Rien n\'est enregistré.';
+
+  @override
+  String get wakeNoticeStop => 'Arrêter MIMO';
+
+  @override
+  String get wakeNoticeOpen => 'Ouvrir';
+
+  @override
+  String get wakeChannelName => 'MIMO écoute son nom';
+
+  @override
+  String get settingsMicTitle => 'Microphone';
+
+  @override
+  String get settingsMicSubtitle =>
+      'Coupé = il n\'entend rien : ni « MIMO » ni la parole. Vous pouvez écrire.';
+
+  @override
+  String get settingsCameraTitle => 'Caméra';
+
+  @override
+  String get wakeModelTitle => '« MIMO » hors ligne';
+
+  @override
+  String get wakeModelMissing =>
+      'Pour entendre son nom même application réduite : téléchargement unique (42 Mo), ensuite hors ligne.';
+
+  @override
+  String get wakeModelDownload => 'Télécharger (42 Mo)';
+
+  @override
+  String wakeModelDownloading(int percent) {
+    return 'Téléchargement… $percent %';
+  }
+
+  @override
+  String get wakeModelReady =>
+      'Prêt : entend « MIMO » hors ligne, même réduit.';
+
+  @override
+  String get wakeModelFailed =>
+      'Échec du téléchargement. Vérifiez internet et réessayez.';
+
+  @override
+  String get wakeModelRetry => 'Réessayer';
+
+  @override
+  String get wakeStartFailed =>
+      'Impossible de démarrer l\'écoute. Ouvrez l\'application et réessayez.';
+
+  @override
+  String get wakeStoppedNotice =>
+      'MIMO arrêté depuis la notification : micro coupé.';
+
+  @override
+  String get quietHoursTitle => 'Heures calmes';
+
+  @override
+  String quietHoursValue(String start, String end) {
+    return 'De $start à $end : il ne parle pas de lui-même';
+  }
+
+  @override
+  String get silenceTitle => 'Silence qui termine la conversation';
+
+  @override
+  String silenceValue(int seconds) {
+    return '$seconds s (ou « safi sir »)';
+  }
+
+  @override
+  String get gamesTitle => 'Jouer avec MIMO';
+
+  @override
+  String get gameRiddle => 'Devinette';
+
+  @override
+  String get gameTrivia => 'Quiz';
+
+  @override
+  String get gameReaction => 'Réflexes';
+
+  @override
+  String get reactionWait => 'Attendez que mes yeux deviennent verts…';
+
+  @override
+  String get reactionNow => 'Maintenant ! Touchez !';
+
+  @override
+  String get reactionEarly => 'Trop tôt ! Encore';
+
+  @override
+  String reactionResult(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get gameClose => 'Arrêter le jeu';
+
+  @override
+  String get behaviorTitle => 'Prend l\'initiative';
+
+  @override
+  String get behaviorSubtitle =>
+      'Petites remarques, devinettes et jeux, avec modération (pas aux heures calmes).';
 }

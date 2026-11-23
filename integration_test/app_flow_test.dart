@@ -32,10 +32,12 @@ void main() {
 
       // First launch: the robot's eyes explain the camera once. Answer
       // "not now" like a user (its eyes stay closed).
-      final eyesDialog = find.byType(AlertDialog);
-      if (eyesDialog.evaluate().isNotEmpty) {
+      // Then the one-time offer of the offline "MIMO" wake model.
+      for (var i = 0; i < 3; i++) {
+        final dialog = find.byType(AlertDialog);
+        if (dialog.evaluate().isEmpty) break;
         await t.tap(
-          find.descendant(of: eyesDialog, matching: find.byType(TextButton)),
+          find.descendant(of: dialog, matching: find.byType(TextButton)).first,
         );
         await frames(10);
       }

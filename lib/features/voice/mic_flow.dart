@@ -23,6 +23,14 @@ Future<bool> startListeningFlow(
     onTypedFallback?.call();
     return false;
   }
+  // Microphone toggle off: offer to turn it on (never a dead button).
+  if (!settings.micEnabled) {
+    if (!await askTurnOnMic(context, ref)) {
+      onTypedFallback?.call();
+      return false;
+    }
+    if (!context.mounted) return false;
+  }
   final perm = ref.read(micPermissionProvider);
   var status = await perm.status();
   if (status != MicStatus.granted) {
@@ -56,11 +64,40 @@ Future<bool> startListeningFlow(
     }
   }
   final which = await ref.read(voiceControllerProvider).startListening();
+  if (which == 'mic_off') return false;
   if (which == 'typed') {
     messenger.showSnackBar(SnackBar(content: Text(l.noRecognizer)));
     onTypedFallback?.call();
     return false;
   }
+  return true;
+}
+
+/// "The microphone is off — turn it on?" Returns true when turned on.
+Future<bool> askTurnOnMic(BuildContext context, WidgetRef ref) async {
+  final l = L10n.of(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l.micOffTitle),
+      content: Text(l.micOffBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l.cancel),
+        ),
+        FilledButton(
+          key: const Key('mic_turn_on'),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l.micTurnOn),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  ref
+      .read(settingsProvider.notifier)
+      .update((s) => s.copyWith(micEnabled: true));
   return true;
 }
 
