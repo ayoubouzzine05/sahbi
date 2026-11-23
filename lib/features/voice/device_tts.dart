@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'robot_voice_fx.dart';
 import 'voice_types.dart';
 
 /// Android TextToSpeech via flutter_tts. Uses installed voices only.
@@ -103,7 +104,6 @@ class DeviceTts implements TtsProvider {
         }
         await _tts.setLanguage(locale);
         final vn = voiceName();
-        var pitchFactor = 1.0;
         if (vn != null) {
           final all = await voices();
           final match = all.where((v) => v.name == vn).toList();
@@ -118,12 +118,11 @@ class DeviceTts implements TtsProvider {
           final pick = pickGenderVoice(await voices(), locale, g);
           if (pick != null) {
             await _tts.setVoice({'name': pick.name, 'locale': pick.locale});
-          } else if (g == 'male') {
-            pitchFactor = maleFallbackPitch;
           }
         }
         await _tts.setSpeechRate(rate());
-        await _tts.setPitch((pitch() * pitchFactor).clamp(0.5, 2.0));
+        // Higher, like the small-robot voice of the main engine.
+        await _tts.setPitch((pitch() * robotDevicePitch).clamp(0.5, 2.0));
         await _tts.awaitSpeakCompletion(false);
         final r = await _tts.speak(text);
         if (r != 1 && r != null) {

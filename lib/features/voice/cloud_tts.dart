@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/backend_client.dart';
+import 'robot_voice_fx.dart';
 import 'voice_types.dart';
 
 /// Backend `/v1/tts` (Gemini TTS male/female voices, or Azure ar-MA
@@ -62,7 +63,7 @@ class CloudTts implements TtsProvider {
       File? file;
       try {
         final locale = _azureLocale(language);
-        final bytes = await _client.synthesize(
+        var bytes = await _client.synthesize(
           text: text,
           language: locale,
           // The backend picks a voice for this gender (Gemini prebuilt voice
@@ -77,6 +78,8 @@ class CloudTts implements TtsProvider {
         final isWav =
             bytes.length > 4 &&
             String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF';
+        // Same small-robot voice as the main one.
+        if (isWav) bytes = RobotVoiceFx.processWav(bytes);
         file = File(
           '${dir.path}/sahbi_tts_${DateTime.now().millisecondsSinceEpoch}'
           '${isWav ? '.wav' : '.mp3'}',

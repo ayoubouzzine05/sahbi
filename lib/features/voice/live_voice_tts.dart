@@ -6,6 +6,7 @@ import 'package:flutter_pcm_sound/flutter_pcm_sound.dart';
 import '../../core/backend_client.dart';
 import '../live/live_player.dart';
 import '../live/live_session.dart';
+import 'robot_voice_fx.dart';
 import 'voice_types.dart';
 
 /// Gemini Live output: 24 kHz mono 16-bit PCM.
@@ -155,6 +156,8 @@ class LiveVoiceTts implements TtsProvider {
           sampleRate: liveVoiceOutputRate,
         );
         _player = player;
+        // The small-robot voice, applied as the audio streams in.
+        final fx = RobotVoiceFx(sampleRate: liveVoiceSampleRate);
         final firstAudio = Completer<void>();
         final turnDone = Completer<void>();
         _turnSub = s.events.listen((e) {
@@ -165,7 +168,7 @@ class LiveVoiceTts implements TtsProvider {
                 firstAudio.complete();
                 if (!ctrl.isClosed) ctrl.add(const TtsStarted());
               }
-              player.add(pcm);
+              player.add(fx.process(pcm));
             case LiveTurnComplete():
               player.turnComplete();
               if (!turnDone.isCompleted) turnDone.complete();
