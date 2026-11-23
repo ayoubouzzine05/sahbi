@@ -145,7 +145,7 @@ The 7 EMO videos were watched frame by frame (contact sheets). No EMO/LivingAI d
 
 Voice-command skits are handled offline (no AI call, no quota) and answer with a short line in the reply language (`face_act_lines.dart`), spoken with the same voice.
 
-Tests: `test/unit/face_act_test.dart` (11: parser triggers and non-triggers, wire names, envelope, lines, companion, animated face plays every skit). Re-run: command_parser 68, chat_controller 35, personality 52, robot_face 5, face_golden 13, shake 12, followup6 24 – all pass. Backend 129/129. `flutter analyze`: no issues. Preview video of the real painter: `sahbi_skits_preview.mp4` (workspace, not in the repo).
+Tests: `test/unit/face_act_test.dart` (11: parser triggers and non-triggers, wire names, envelope, lines, companion, animated face plays every skit). Re-run: command_parser 68, chat_controller 35, personality 52, robot_face 5, face_golden 13, shake 12, followup6 24 – all pass. Backend 129/129. `flutter analyze`: no issues. CI run 45094104961 caught a Follow-up 11 bug (Settings created the hidden backend-URL controller lazily in dispose() → "ref after unmount"); fixed by creating the controllers in initState, and the app_shell tests pass one by one locally. Preview video of the real painter: `sahbi_skits_preview.mp4` (workspace, not in the repo).
 
 ## Follow-up 11 (2026-11-16): hide the technical part of Settings
 

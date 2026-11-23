@@ -19,15 +19,12 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late final TextEditingController _url = TextEditingController(
-    text: ref.read(settingsProvider).backendUrl,
-  );
-  late final TextEditingController _name = TextEditingController(
-    text: ref.read(settingsProvider).userName,
-  );
-  late final TextEditingController _robot = TextEditingController(
-    text: ref.read(settingsProvider).robotName,
-  );
+  // Created in initState (not lazily): the backend field is usually hidden,
+  // and a lazy controller would first be built in dispose(), after `ref` is
+  // no longer usable.
+  late final TextEditingController _url;
+  late final TextEditingController _name;
+  late final TextEditingController _robot;
   List<TtsVoice>? _voices;
   int _versionTaps = 0;
 
@@ -38,6 +35,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    final st = ref.read(settingsProvider);
+    _url = TextEditingController(text: st.backendUrl);
+    _name = TextEditingController(text: st.userName);
+    _robot = TextEditingController(text: st.robotName);
     ref
         .read(deviceTtsProvider)
         .voices()
