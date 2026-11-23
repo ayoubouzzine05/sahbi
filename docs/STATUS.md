@@ -125,6 +125,10 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Fix (2026-11-23): "Application non installée"
+
+Cause found: the arm64 APK had versionCode 2000 + run number and the universal APK only the run number (e.g. 2028 vs 28), so the universal APK over an arm64 install was a downgrade and Android refused it. All APKs were checked to have the same signing certificate (not the cause). Now both get 3000 + run number (`force-version-code-ignoring-abi=true`), above every APK published before. Android run 45182359635 (`dcc1691`) passed; release APKs verified: both versionCode 3029, same certificate. NOT VERIFIED on the user's phone.
+
 ## Follow-up 14 (2026-11-16): robot eyes (sees and reacts like EMO) + small-robot voice
 
 | Request | How | Status |
