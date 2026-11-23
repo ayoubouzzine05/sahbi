@@ -25,7 +25,7 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 | shared_preferences | 2.5.6 | BSD-3-Clause | settings, music library index |
 | cryptography | 2.9.0 | Apache-2.0 | AES-256-GCM for the memory store |
 | path_provider | 2.1.6 | BSD-3-Clause | app documents dir for the encrypted memory blob |
-| camera | 0.12.2 | BSD-3-Clause | live camera mode: preview + ~1 JPEG/s sent to Gemini Live |
+| camera | 0.12.2 | BSD-3-Clause | live camera mode: preview + ~1 JPEG/s sent to Gemini Live; robot eyes on the face screen (front camera stills, no preview) |
 | web_socket_channel | 3.0.3 | BSD-3-Clause | Gemini Live WebSocket (ephemeral token, BidiGenerateContentConstrained) |
 | flutter_pcm_sound | 3.3.3 | Unlicense (public domain) | plays the PCM voice that Gemini Live streams back (live camera and, since Follow-up 9, the normal speaking voice at 25680 Hz) |
 | wakelock_plus | 1.8.2 | BSD-3-Clause | keeps the screen on while the face dashboard / live camera is visible |

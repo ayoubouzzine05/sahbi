@@ -125,6 +125,18 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 14 (2026-11-16): robot eyes (sees and reacts like EMO) + small-robot voice
+
+| Request | How | Status |
+|---|---|---|
+| Sees all the time, with a button to turn it off | Front camera, low resolution, about one still per second, only while the face screen is visible, the app is in the foreground, the robot is awake and the camera screen is not open. Eye button at the top of the face screen (green = sees) + Settings switch "Robot eyes". One-time explanation then the Android camera permission; refused = eyes off. No preview: the face stays the whole screen (Android shows its own camera dot) | DONE, NOT VERIFIED on a phone |
+| Eyes follow you | Movement between two stills (16×12 grey, exposure change removed) → gaze; a light change or the phone moving is ignored; not while sulking/asleep | DONE (tests), NOT VERIFIED on a phone |
+| Show it something → reaction (scared, happy, wow…) | When the view settles on something new (and nobody is talking, no music, robot free, ≥15 s since the last one, max 150/day) one small JPEG goes to new `POST /v1/vision/react` (in memory only, never logged). The AI answers `react:false` for boring frames, or a reaction + one short line: hello (waves), scared (new "scared" face: trembling, sweat drop), love (heart eyes), wow (stars), yummy (eats), drink, funny, curious, yuck (grumpy), surprised. Spoken with the robot voice. Tested live with real photos: spider → scared "aaaa! b3ed menni dak chi, khla3tini!", kitten → love "Mmmm, qeta sghira! 7noucha dyali!", empty wall → no reaction | DONE (backend live), NOT VERIFIED on a phone |
+| Talk about what it sees | With its eyes open, "chno hada?", "chouf hadi", "wach katchouf…" send the current view with the question to the AI (no camera screen). "7el camera" still opens the camera screen | DONE (tests), NOT VERIFIED on a phone |
+| Voice like a small robot, not a big man | User picked sample "C": the same voice, pitched ×1.55 with a light metallic ring, streaming on the device (Live voice, backup server voice; the phone's own TTS gets pitch 1.6) | DONE (tests), NOT VERIFIED on a phone |
+
+Android run 45173998184 (`cdb4487`): all tests, APK and emulator integration test passed (the emulator test now answers the one-time eyes dialog); Release `latest` updated 2026-11-23 12:35 UTC. Prompt 1.8.0 adds `scared` to face.play. Privacy: the react prompt forbids identifying people or commenting on looks; frames are not stored. Quota: reactions use the same free Gemini key (Flash-Lite first); the 150/day cap keeps it inside the free tier.
+
 ## Follow-up 13 (2026-11-16): strong EMO-like character (user chose "b": sulks and does what it wants)
 
 | Behaviour | How | Status |
