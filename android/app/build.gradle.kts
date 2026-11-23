@@ -39,9 +39,13 @@ android {
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
         // flag during build.
-        // CI builds get the run number so every new APK installs over the
-        // previous one (Android refuses a lower or equal versionCode on update).
-        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: flutter.versionCode
+        // CI builds: 3000 + run number, the SAME for the universal and the
+        // arm64 APK (gradle.properties sets force-version-code-ignoring-abi).
+        // Before, the arm64 APK got 2000 + run and the universal only the run
+        // number, so installing the universal over an arm64 build was a
+        // "downgrade" and Android said "App not installed". 3000+ is above
+        // every APK published so far (max 2028), so any old install updates.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(3000) ?: flutter.versionCode
         versionName = flutter.versionName
     }
 
