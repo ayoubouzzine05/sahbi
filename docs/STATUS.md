@@ -146,6 +146,8 @@ Commits `2ff4ff2` (1+2), `e42aecf` (3), `b5da471` (4) and the rename/docs commit
 
 Local checks here: `flutter analyze` 0 issues; unit tests run one file at a time (vision_controller 7, hardware_guard 10, mimo_wake 9, conversation_silence 3, mimo_behavior 8, games 9, mimo_name 3, robot_eyes 8, followup3 21, followup6 24, chat_controller 41, temper 17, face_act 11, robot_face 5) all passed; backend 135/135. `app_shell_test` does not compile in this sandbox (memory), so CI runs it. The Kotlin/Gradle/Vosk code is only checked by the CI build.
 
+Android run 45290722709 (`8266cf4`): all Flutter tests (including `app_shell_test`), release APKs and the emulator integration test passed (so the Kotlin service, Vosk and JNA compile and the app starts); Release `latest` updated 2026-11-23 23:50 UTC (arm64 35.6 MB, universal 97.1 MB). The wake word, the background service and the notification need a real phone: NOT VERIFIED.
+
 ## Fix (2026-11-23): "Application non installée"
 
 Cause found: the arm64 APK had versionCode 2000 + run number and the universal APK only the run number (e.g. 2028 vs 28), so the universal APK over an arm64 install was a downgrade and Android refused it. All APKs were checked to have the same signing certificate (not the cause). Now both get 3000 + run number (`force-version-code-ignoring-abi=true`), above every APK published before. Android run 45182359635 (`dcc1691`) passed; release APKs verified: both versionCode 3029, same certificate. NOT VERIFIED on the user's phone.
