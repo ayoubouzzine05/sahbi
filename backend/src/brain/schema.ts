@@ -1,5 +1,21 @@
 import { z } from 'zod';
 
+/** Face skits the app can play (`face.play`); keep in sync with the app's FaceAct wire names. */
+export const FACE_ANIMATIONS = ['eat', 'drink', 'hands_up', 'peekaboo', 'love', 'yawn', 'dance', 'sparkle', 'suspicious'] as const;
+
+/** A face animation is decoration: an unknown one is dropped instead of failing the whole reply. */
+export function dropUnknownFaceActions(candidate: unknown): unknown {
+  if (!candidate || typeof candidate !== 'object') return candidate;
+  const c = candidate as { actions?: unknown };
+  if (!Array.isArray(c.actions)) return candidate;
+  const known: readonly string[] = FACE_ANIMATIONS;
+  const actions = c.actions.filter((a: unknown) => {
+    const x = a as { type?: unknown; animation?: unknown } | null;
+    return !(x && x.type === 'face.play' && !(typeof x.animation === 'string' && known.includes(x.animation)));
+  });
+  return { ...c, actions };
+}
+
 export const EMOTIONS = ['neutral', 'happy', 'sad', 'curious', 'surprised', 'sleepy', 'angry'] as const;
 export const LANGUAGES = ['darija', 'ar', 'fr', 'en'] as const;
 
@@ -14,6 +30,7 @@ export const ActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('translate'), source_text: z.string().max(1000), target_language: z.string().max(20), translation: z.string().max(2000) }),
   z.object({ type: z.literal('set_reply_language'), language: z.enum(LANGUAGES) }),
   z.object({ type: z.literal('image.show'), query: z.string().trim().min(1).max(120) }),
+  z.object({ type: z.literal('face.play'), animation: z.enum(FACE_ANIMATIONS) }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -47,7 +64,8 @@ export const REPLY_TOOL_JSON_SCHEMA = {
         type: 'object',
         required: ['type'],
         properties: {
-          type: { type: 'string', enum: ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language', 'image.show'] },
+          type: { type: 'string', enum: ['music.play', 'music.pause', 'music.resume', 'music.stop', 'music.next', 'music.previous', 'set_volume', 'translate', 'set_reply_language', 'image.show', 'face.play'] },
+          animation: { type: 'string', enum: [...FACE_ANIMATIONS] },
           query: { type: 'string' },
           source: { type: 'string', enum: ['local', 'spotify', 'youtube', 'youtube_music'] },
           level: { type: 'number', minimum: 0, maximum: 1 },

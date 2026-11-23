@@ -24,6 +24,10 @@ enum CommandType {
 
   /// Live camera: "7el camera", "chouf hadi", "شوف هادي".
   openCamera,
+
+  /// Face skit asked by voice: "haz ydik", "kol", "chrob atay", "ghmed
+  /// 3inik", "kanbghik", "chte7"... [Command.query] = FaceAct wire name.
+  faceAct,
 }
 
 /// `youtube` = played inside the app (embedded YouTube player).
@@ -168,6 +172,35 @@ class CommandParser {
     r'^(?:(?:a|ya)\s+\S+\s+)?(?:chouf|chof|shouf|regarde|lo+k at|شوف)\s+(?:hadi|hada|hado|had chi|hadchi|this|ca|هادي|هادا|هاد|هادشي|هدا|هدي)(?:\s|$)',
   );
 
+  // ---- face skits ("haz ydik", "kol", "chrob atay"...) --------------------
+  static const _who =
+      r'^(?:(?:a|ya|wa|يا|ا)\s+\S+\s+)?(?:(?:yallah|yalah|yala|sir|aji|يالاه|سير|اجي)\s+)?';
+  static const _please =
+      r'(?:\s+(?:3afak|afak|3fak|عافاك|please|stp|svp|s il te plait|daba|دابا|a sahbi|ا صاحبي))?\s*[!?.]*$';
+  static final _faceActs = <String, RegExp>{
+    'hands_up': RegExp(
+      '$_who(?:(?:hez|haz|hz|rfe3|rfa3|rf3|9le3|lev|leve|levez|raise|put|هز|ارفع|رفع|طلع)\\s+(?:(?:lia|liya|ليا)\\s+)?(?:ydik|yedik|idik|yidik|ydek|yedek|ydiyk|lydin|les mains|tes mains|your hands|hands|يديك|يدك|ايديك|ايدك)(?:\\s+up)?|hands up|haut les mains|mains en l ?air)$_please',
+    ),
+    'eat': RegExp(
+      '$_who(?:(?:kol|koul|kul|kuli|mange|manger|eat|كول|كل|كولي)(?:\\s+(?:chi|chwiya|شي|شويه|something|quelque chose|un peu|ka3b ghzal|كعب غزال|chi haja|شي حاجه|ch?i 7aja))?|(?:wach|واش)\\s+(?:(?:nta|nti|انت|نتا)\\s+)?(?:ji3an|jiw3an|jou3an|ji3an|جيعان)|tu as faim|t as faim|tas faim|are you hungry)$_please',
+    ),
+    'drink': RegExp(
+      '$_who(?:(?:chrb|chreb|cherb|chrob|chorb|ochrob|ochreb|ochrb|shrb|shreb|bois|drink|اشرب|شرب|تشرب)(?:\\s+(?:chi|chwiya|شي|شويه|kas|كاس|un|du|some))?(?:\\s+(?:atay|atai|tay|lma|ma|lme|اتاي|الما|ما|the|thé|tea|water|eau|d atay|dyal atay))?|(?:wach|واش)\\s+(?:(?:nta|nti|انت|نتا)\\s+)?(?:3tchan|3atchan|3tchane|عطشان)|tu as soif|t as soif|tas soif|are you thirsty)$_please',
+    ),
+    'peekaboo': RegExp(
+      '$_who(?:(?:ghmed|ghemd|ghmd|ghamed|ghmmed|sed|خبي|غمض|سد)\\s+(?:3inik|3ynik|3inek|عينيك|عينك)|cache[- ]?cache|peek ?a ?boo|peka ?bo|pek a bo|cache tes yeux|cover your eyes|tkhba|تخبا|bouh|بوه)$_please',
+    ),
+    'love': RegExp(
+      '$_who(?:(?:ana\\s+|انا\\s+)?(?:kanbghik|kanbghik bzaf|kanbrik|kan7mek|kan7bek|kan7ebek|n7ebek|n7bek|كنبغيك|كنحبك|نبغيك|je t aime|je taime|je t adore|je tadore|i love you|love you|kanmout 3lik|كنموت عليك)(?:\\s+(?:bzaf|بزاف|a sahbi|ا صاحبي|so much|beaucoup|\\S+))?|(?:3tini\\s+)?(?:bousa|بوسه))$_please',
+    ),
+    'dance': RegExp(
+      '$_who(?:chte7|chta7|chet7|chat7|cht7|ochte7|danse|dance|شطح|اشطح|ترقص|ارقص|r9es|r9s)(?:\\s+(?:chwiya|شويه|m3aya|معايا|avec moi|with me))?$_please',
+    ),
+    'yawn': RegExp(
+      '$_who(?:(?:wach|واش)\\s+(?:(?:nta|nti|انت|نتا)\\s+)?(?:na3s|n3as|ne3san|n3san|3iyan|3yan|ناعس|عيان)|t3ayiti|ta3ayiti|عييتي|tu es fatigue|t es fatigue|tes fatigue|are you tired|are you sleepy)$_please',
+    ),
+  };
+
   // ---- API ----------------------------------------------------------------
   Command? parse(String raw) {
     final t = normalizeText(raw);
@@ -229,6 +262,12 @@ class CommandParser {
       final (query, source) = _splitQuery(' $rest');
       if (source != MusicSource.any || query != null) {
         return Command(CommandType.musicPlay, query: query, source: source);
+      }
+    }
+
+    for (final e in _faceActs.entries) {
+      if (e.value.hasMatch(t)) {
+        return Command(CommandType.faceAct, query: e.key);
       }
     }
 

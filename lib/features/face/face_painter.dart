@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/theme.dart';
 import '../../core/zellige.dart';
+import 'face_act.dart';
 import 'face_params.dart';
 
 /// Everything that changes per frame on top of [FaceParams].
@@ -18,6 +19,8 @@ class FaceFrame {
     this.musicNotes = false,
     this.fullScreen = false,
     this.dizzy = 0,
+    this.act,
+    this.actT = 0,
   });
 
   final FaceParams params;
@@ -40,6 +43,10 @@ class FaceFrame {
 
   /// 0..1: spiral eyes after the phone was shaken.
   final double dizzy;
+
+  /// One-shot skit playing now (eat, drink, hands up...) and its progress.
+  final FaceAct? act;
+  final double actT;
 }
 
 /// Draws SAHBI: a white rounded body, a dark glossy visor and glowing eyes.
@@ -190,10 +197,26 @@ class FacePainter extends CustomPainter {
     final eyeY = visorRect.center.dy - s * 0.035;
     final gaze = Offset(p.gazeX * s * 0.05, p.gazeY * s * 0.035);
     final open = (p.eyeOpen * (1 - frame.blink)).clamp(0.0, 1.0);
+    final ae = actEyes(frame.act, frame.actT);
     for (final side in [-1.0, 1.0]) {
       final c = Offset(visorRect.center.dx + side * s * 0.15, eyeY) + gaze;
-      if (frame.dizzy < 0.5) {
-        _eye(canvas, c, eyeW, eyeH, open * (1 - frame.dizzy * 1.6), p, side, s);
+      final k = side < 0 ? ae.leftScale : ae.rightScale;
+      final w = eyeW * k * (1 + (1 - ae.squashY) * 0.5);
+      final h = eyeH * k * ae.squashY;
+      if (frame.dizzy < 0.5 && ae.heart < 1) {
+        _eye(
+          canvas,
+          c,
+          w * (1 - ae.heart),
+          h * (1 - ae.heart),
+          open * (1 - frame.dizzy * 1.6),
+          p,
+          side,
+          s,
+        );
+      }
+      if (ae.heart > 0 && frame.dizzy < 0.5) {
+        _heartEye(canvas, c, eyeW * ae.heart, p, s);
       }
       if (frame.dizzy > 0) _spiralEye(canvas, c, eyeW, p, side, s);
     }
@@ -244,6 +267,50 @@ class FacePainter extends CustomPainter {
       ),
       p,
       s,
+    );
+
+    // ---- skit props (hands, tea glass, cookie, hearts, stars) ---------------
+    final act = frame.act;
+    if (act != null) {
+      paintActProps(
+        canvas,
+        act,
+        frame.actT,
+        frame.time,
+        FaceLayout(
+          centerX: visorRect.center.dx,
+          eyeY: eyeY,
+          mouthY: visorRect.center.dy + s * 0.15,
+          eyeDx: s * 0.15,
+          s: s,
+          halfWidth: visorRect.width / 2,
+        ),
+        p.accent,
+      );
+    }
+  }
+
+  /// Heart-shaped eye (love), gently pulsing.
+  void _heartEye(Canvas canvas, Offset c, double w, FaceParams p, double s) {
+    if (w <= 0) return;
+    final r = w * 0.62 * (1 + 0.08 * math.sin(frame.time * 10));
+    final path = heartPath(c, r);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = p.accent.withValues(alpha: 0.4)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.025),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.2, -0.3),
+          colors: [
+            Color.lerp(p.accent, const Color(0xFFFFFFFF), 0.45)!,
+            p.accent,
+          ],
+        ).createShader(Rect.fromCircle(center: c, radius: r * 1.4)),
     );
   }
 

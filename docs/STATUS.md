@@ -125,6 +125,34 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
 
+## Follow-up 12 (2026-11-16): EMO-style face skits (eyes, eating, drinking, "haz ydik")
+
+The 7 EMO videos were watched frame by frame (contact sheets). No EMO/LivingAI drawing or asset is used: every prop (hands, ka3b ghzal, mint-tea glass, hearts, stars, notes) is drawn by our own CustomPainter code in `lib/features/face/face_act.dart`.
+
+| Behaviour seen in the videos | SAHBI version | Status |
+|---|---|---|
+| Little hands, "hands up" | `hands_up`: two cartoon hands come up and wave next to the eyes. Voice: "haz ydik", "هز يديك", "ارفع يديك", "lève les mains", "hands up" | DONE, NOT VERIFIED on a phone |
+| Eating (food as eyes, chewing) | `eat`: ka3b ghzal comes in, bites disappear, cheeks chew, "mmm" squint. Voice: "kol", "wach ji3an", "mange" | DONE, NOT VERIFIED on a phone |
+| Drinking with a hand | `drink`: a hand brings a mint-tea glass, the tea level goes down, happy eyes. Voice: "chrob atay", "wach 3tchan" | DONE, NOT VERIFIED on a phone |
+| Hiding / peek | `peekaboo`: hands cover the eyes, then "bouh!". Voice: "ghmed 3inik", "bouh" | DONE, NOT VERIFIED on a phone |
+| Petting → love | Stroke the face back and forth (3 direction changes in 1.5 s) or say "kanbghik": heart eyes + floating hearts | DONE, NOT VERIFIED on a phone |
+| Poke squish | Tap the face: eyes squash and bounce back | DONE, NOT VERIFIED on a phone |
+| Asymmetric surprise | `what`: one eye big, one small, on a real surprise (AI emotion surprised ≥ 0.5) | DONE, NOT VERIFIED on a phone |
+| Woken up by a touch → angry | Tap while asleep: grumpy slanted eyes + angry colour (calling it by name still wakes it up surprised) | DONE, NOT VERIFIED on a phone |
+| Dancing to music, yawning, sparkle, suspicious | `dance` (notes, bouncing eyes; "chte7"), `yawn` ("wach na3s"), `sparkle`, `suspicious` | DONE, NOT VERIFIED on a phone |
+| Doing things alone when ignored | Every 45–105 s of calm it plays a random skit (eat, drink, sparkle, suspicious, dance; yawn only after 5 min idle). Not while busy, asleep, dizzy or with the companion switch off | DONE, NOT VERIFIED on a phone |
+| The AI choosing a skit | New brain action `face.play {animation}` (backend schema + prompt 1.6.0). An unknown animation is dropped, not an error. Allowed in proactive lines too | DONE (backend tests), NOT VERIFIED live |
+
+Voice-command skits are handled offline (no AI call, no quota) and answer with a short line in the reply language (`face_act_lines.dart`), spoken with the same voice.
+
+Tests: `test/unit/face_act_test.dart` (11: parser triggers and non-triggers, wire names, envelope, lines, companion, animated face plays every skit). Re-run: command_parser 68, chat_controller 35, personality 52, robot_face 5, face_golden 13, shake 12, followup6 24 – all pass. Backend 129/129. `flutter analyze`: no issues. Preview video of the real painter: `sahbi_skits_preview.mp4` (workspace, not in the repo).
+
+## Follow-up 11 (2026-11-16): hide the technical part of Settings
+
+| Item | Status | Evidence |
+|---|---|---|
+| "الذكاء الاصطناعي" card (backend address, last check, prompt version, gemini/free/open-meteo service list) | DONE (code), NOT VERIFIED on a phone | Hidden from Settings by default. 7 taps on "Version" show it (and the Debug entry) until Settings is closed; it is hidden again next time. No feature depends on it: the backend address is built into the APK. `flutter analyze` clean |
+
 ## Follow-up 10 (2026-11-16): keep the voice; hide the "server"; no "Gemini" in the camera
 
 | Item | Status | Evidence |

@@ -1,4 +1,6 @@
+import '../face/face_act.dart';
 import '../music/music_models.dart';
+import '../personality/face_act_lines.dart';
 import '../personality/emotion.dart';
 import '../personality/personality_responses.dart';
 
@@ -6,6 +8,11 @@ import '../personality/personality_responses.dart';
 /// are only produced for ok results; failures say what went wrong.
 Line resultLine(ActionResult r) {
   final m = r.message;
+  if (r.ok && m.startsWith('Face:')) {
+    final act = FaceActInfo.fromWire(m.substring(5));
+    final line = act == null ? null : FaceActLines.lineFor(act);
+    if (line != null) return line;
+  }
   if (r.ok) {
     if (m.startsWith('Playing "')) {
       final t = m.substring(9, m.length - 1);

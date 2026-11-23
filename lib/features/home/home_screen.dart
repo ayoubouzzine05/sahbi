@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../core/ui_helpers.dart';
 import '../../l10n/app_localizations.dart';
 import '../chat/chat_models.dart';
+import '../face/face_act.dart';
 import '../face/robot_face.dart';
 import '../personality/voice_state.dart';
 import '../voice/mic_flow.dart';
@@ -93,12 +94,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         music: music.playing,
         lookAt: companion.lookAt,
         dizzy: companion.dizzy,
+        act: companion.act,
+        actSeq: companion.actSeq,
       ),
       wordPulse: voice.wordPulse,
       semanticLabel: '$name — ${companion.emotion.name}',
+      onPet: () {
+        _poke();
+        companion.pet();
+      },
       onTap: () {
         _poke();
-        companion.interact();
+        // A finger poke squashes the eyes; asleep, it wakes him up grumpy.
+        companion.play(FaceAct.squish);
+        companion.interact(touch: true);
         if (settings.tapFaceToTalk && !listening) {
           startListeningFlow(
             context,

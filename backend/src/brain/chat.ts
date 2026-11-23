@@ -3,7 +3,7 @@ import type { Block, LlmMessage, LlmProvider } from '../providers/llm/types.js';
 import type { SearchProvider } from '../providers/search/types.js';
 import type { WeatherReport } from '../tools/weather.js';
 import { fillPrompt, trimHistory } from './context.js';
-import { type ChatRequest, formatZodError, type Reply, ReplySchema } from './schema.js';
+import { type ChatRequest, dropUnknownFaceActions, formatZodError, type Reply, ReplySchema } from './schema.js';
 import { REPLY_TOOL, WEATHER_TOOL, WEB_SEARCH_TOOL } from './tools.js';
 
 export interface Source {
@@ -76,7 +76,7 @@ export const PROACTIVE_INSTRUCTION = [
   '## Proactive turn',
   'The user has not said anything for a while; the app is open next to them. YOU start a short moment together, like a friend sitting nearby, to keep a good vibe.',
   'Pick ONE, different from your previous turns in the history: a short Moroccan-style joke or nokta, a light riddle (give the answer next time), a fun fact (Morocco, animals, space, food), a playful comment about the time of day, a question about their day, their plans or what they like, or a small challenge or game.',
-  'One or two short sentences, warm and funny, never pushy. Never mention that the user is quiet, silent or absent (no "sakt", "ساكت", "fin nta", "wach nta hna", "are you there?") and do not say you are bored or alone: just start the joke, fact, riddle or question directly. No actions except image.show when a photo makes a fun fact better.',
+  'One or two short sentences, warm and funny, never pushy. Never mention that the user is quiet, silent or absent (no "sakt", "ساكت", "fin nta", "wach nta hna", "are you there?") and do not say you are bored or alone: just start the joke, fact, riddle or question directly. No actions except image.show when a photo makes a fun fact better, or one face.play (e.g. dance, sparkle, suspicious) when it fits the line.',
 ].join('\n');
 
 /** Stand-in user turn for a proactive request (the app sends no user words). */
@@ -133,7 +133,7 @@ export async function* runChat(req: ChatRequest, deps: BrainDeps): AsyncGenerato
     }
 
     if (candidate !== undefined) {
-      const parsed = ReplySchema.safeParse(candidate);
+      const parsed = ReplySchema.safeParse(dropUnknownFaceActions(candidate));
       if (parsed.success) {
         const reply = parsed.data;
         const cited = reply.source_ids.map((id) => sources.get(id)).filter((s): s is Source => !!s);

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../face/face_act.dart';
 import 'emotion.dart';
 import 'emotion_detector.dart';
 import 'idle_behavior.dart';
@@ -31,6 +32,55 @@ class CompanionController extends ChangeNotifier {
   /// Spiral eyes after the phone was shaken.
   bool dizzy = false;
 
+  /// Current face skit (eat, drink, hands up...); restarts when [actSeq]
+  /// changes. The face ends it by itself after its duration.
+  FaceAct? act;
+  int actSeq = 0;
+  DateTime? _actUntil;
+
+  /// Seconds of calm before the robot acts out a little scene by itself.
+  int _skitIn = 60;
+
+  bool get acting {
+    final u = _actUntil;
+    return u != null && DateTime.now().isBefore(u);
+  }
+
+  /// Plays a skit now (replaces the one playing).
+  void play(FaceAct a) {
+    act = a;
+    actSeq++;
+    _actUntil = DateTime.now().add(a.duration);
+    notifyListeners();
+  }
+
+  /// Stroked on the face: heart eyes and a happy face.
+  void pet() {
+    idle.interact();
+    _resetSkit();
+    play(FaceAct.love);
+    show(
+      const DetectedEmotion(Emotion.happy, 0.9, source: 'touch'),
+      hold: const Duration(seconds: 4),
+    );
+  }
+
+  void _resetSkit() => _skitIn = 45 + _r.nextInt(60);
+
+  /// Idle scenes, chosen at random, silent and offline.
+  FaceAct _randomSkit() {
+    final long = idle.idleFor >= const Duration(minutes: 5);
+    final pool = [
+      FaceAct.eat,
+      FaceAct.drink,
+      FaceAct.sparkle,
+      FaceAct.suspicious,
+      FaceAct.dance,
+      if (long) FaceAct.yawn,
+    ];
+    return pool[_r.nextInt(pool.length)];
+  }
+
   void makeDizzy(Duration d) {
     dizzy = true;
     _dizzyTimer?.cancel();
@@ -49,7 +99,14 @@ class CompanionController extends ChangeNotifier {
   }
 
   void _tick() {
-    final a = idle.tick(busy: busy?.call() ?? false);
+    final isBusy = busy?.call() ?? false;
+    final a = idle.tick(busy: isBusy);
+    if (isBusy || idle.asleep || !idle.enabled || dizzy) {
+      _resetSkit();
+    } else if (a == IdleAction.none && !acting && --_skitIn <= 0) {
+      _resetSkit();
+      play(_randomSkit());
+    }
     switch (a) {
       case IdleAction.lookAround:
         lookAt = Offset(_r.nextDouble() * 2 - 1, _r.nextDouble() - 0.5);
@@ -82,10 +139,20 @@ class CompanionController extends ChangeNotifier {
     if (a != IdleAction.none) onIdleAction?.call(a);
   }
 
-  /// Touch / voice / chat input.
-  void interact() {
+  /// Touch / voice / chat input. Woken up by a [touch] while asleep, the
+  /// robot is grumpy for a moment (orange, then a short angry flash).
+  void interact({bool touch = false}) {
     final a = idle.interact();
+    _resetSkit();
     if (a == IdleAction.wakeUp) {
+      if (touch) {
+        play(FaceAct.grumpy);
+        show(
+          const DetectedEmotion(Emotion.angry, 0.4, source: 'touch'),
+          hold: FaceAct.grumpy.duration,
+        );
+        return;
+      }
       show(
         const DetectedEmotion(Emotion.surprised, 0.5, source: 'idle'),
         hold: const Duration(milliseconds: 1200),
@@ -95,6 +162,14 @@ class CompanionController extends ChangeNotifier {
 
   /// Show an emotion, then ease back to neutral after [hold].
   void show(DetectedEmotion d, {Duration hold = const Duration(seconds: 8)}) {
+    // A real surprise (not waking up) gets the "what?!" eyes.
+    if (d.emotion == Emotion.surprised &&
+        d.source != 'idle' &&
+        d.intensity >= 0.5 &&
+        !dizzy &&
+        !acting) {
+      play(FaceAct.what);
+    }
     emotion = d.emotion;
     intensity = d.intensity;
     source = d.source;

@@ -31,6 +31,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   List<TtsVoice>? _voices;
   int _versionTaps = 0;
 
+  /// The technical part (backend address, service checks, debug) is hidden;
+  /// 7 taps on the version show it until the screen is left.
+  bool _showTech = false;
+
   @override
   void initState() {
     super.initState();
@@ -370,58 +374,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
 
-            // ---- AI / backend
-            _section(l.secAi),
-            ZelligeCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _url,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: l.backendUrl,
-                      hintText: 'https://sahbi.example.com',
+            // ---- AI / backend (hidden unless unlocked, see _showTech)
+            if (_showTech) _section(l.secAi),
+            if (_showTech)
+              ZelligeCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _url,
+                      keyboardType: TextInputType.url,
+                      decoration: InputDecoration(
+                        labelText: l.backendUrl,
+                        hintText: 'https://sahbi.example.com',
+                      ),
+                      onSubmitted: (v) {
+                        _set((x) => x.copyWith(backendUrl: v.trim()));
+                        ref.read(connectivityProvider).check();
+                      },
                     ),
-                    onSubmitted: (v) {
-                      _set((x) => x.copyWith(backendUrl: v.trim()));
-                      ref.read(connectivityProvider).check();
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${l.lastHealthCheck}: ${net.lastCheck == null ? l.never : TimeOfDay.fromDateTime(net.lastCheck!).format(context)}'
-                          '${health != null ? ' · v${health.version} · prompt ${health.promptVersion}' : ''}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: SahbiColors.textSecondary,
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${l.lastHealthCheck}: ${net.lastCheck == null ? l.never : TimeOfDay.fromDateTime(net.lastCheck!).format(context)}'
+                            '${health != null ? ' · v${health.version} · prompt ${health.promptVersion}' : ''}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: SahbiColors.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          if (_url.text.trim() != s.backendUrl) {
-                            _set(
-                              (x) => x.copyWith(backendUrl: _url.text.trim()),
-                            );
-                          }
-                          ref.read(connectivityProvider).check();
-                        },
-                        child: Text(l.checkNow),
-                      ),
-                    ],
-                  ),
-                  svc('llm', l.serviceLlm),
-                  svc('search', l.serviceSearch),
-                  svc('weather', l.serviceWeather),
-                  svc('stt', l.serviceStt),
-                  svc('tts', l.serviceTts),
-                ],
+                        TextButton(
+                          onPressed: () {
+                            if (_url.text.trim() != s.backendUrl) {
+                              _set(
+                                (x) => x.copyWith(backendUrl: _url.text.trim()),
+                              );
+                            }
+                            ref.read(connectivityProvider).check();
+                          },
+                          child: Text(l.checkNow),
+                        ),
+                      ],
+                    ),
+                    svc('llm', l.serviceLlm),
+                    svc('search', l.serviceSearch),
+                    svc('weather', l.serviceWeather),
+                    svc('stt', l.serviceStt),
+                    svc('tts', l.serviceTts),
+                  ],
+                ),
               ),
-            ),
 
             // ---- Internet
             _section(l.secInternet),
@@ -615,19 +620,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: Text(l.version),
                     trailing: Text(AppConfig.appVersion),
                     onTap: () {
-                      if (s.debugUnlocked) {
-                        context.push('/settings/debug');
-                        return;
-                      }
-                      if (++_versionTaps >= 7) {
+                      if (_showTech || ++_versionTaps < 7) return;
+                      setState(() => _showTech = true);
+                      if (!s.debugUnlocked) {
                         _set((x) => x.copyWith(debugUnlocked: true));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l.debugUnlocked)),
-                        );
                       }
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(l.debugUnlocked)));
                     },
                   ),
-                  if (s.debugUnlocked)
+                  if (_showTech)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.bug_report_outlined),

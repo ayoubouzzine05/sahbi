@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../personality/emotion.dart';
 import '../personality/emotion_animation_mapper.dart';
+import 'face_act.dart';
 import 'face_painter.dart';
 import 'face_params.dart';
 
@@ -20,6 +21,8 @@ class FaceInputs {
     this.music = false,
     this.lookAt,
     this.dizzy = false,
+    this.act,
+    this.actSeq = 0,
   });
 
   final Emotion emotion;
@@ -34,6 +37,10 @@ class FaceInputs {
 
   /// The phone was shaken: spiral eyes and a wobbling head.
   final bool dizzy;
+
+  /// Skit to play; it (re)starts whenever [actSeq] changes.
+  final FaceAct? act;
+  final int actSeq;
 }
 
 /// The animated face: blinking at random intervals, gaze (automatic or
@@ -47,6 +54,7 @@ class RobotFace extends StatefulWidget {
     this.wordPulse,
     this.onTap,
     this.onLongPress,
+    this.onPet,
     this.animate = true,
     this.fullScreen = false,
     this.semanticLabel,
@@ -56,6 +64,9 @@ class RobotFace extends StatefulWidget {
   final ValueListenable<int>? wordPulse;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
+  /// Stroking the face back and forth (3 direction changes within 1.5 s).
+  final VoidCallback? onPet;
 
   /// false = static frame (golden tests).
   final bool animate;
@@ -93,6 +104,17 @@ class _RobotFaceState extends State<RobotFace>
   /// 0..1, eases in/out so the spirals never pop.
   double _dizzy = 0;
   double _lastPulseT = -10;
+
+  // skit
+  int _actSeq = 0;
+  FaceAct? _act;
+  double _actStart = 0;
+  double _actT = 0;
+
+  // petting
+  double _petDir = 0;
+  final List<double> _petFlips = [];
+  double _lastPet = -10;
   int _lastPulse = 0;
 
   final ValueNotifier<int> _repaint = ValueNotifier(0);
@@ -113,6 +135,7 @@ class _RobotFaceState extends State<RobotFace>
   void initState() {
     super.initState();
     _current = _spec.params;
+    _actSeq = widget.inputs.actSeq;
     _ticker = createTicker(_tick);
     if (widget.animate) _ticker.start();
     widget.wordPulse?.addListener(_onPulse);
@@ -234,11 +257,30 @@ class _RobotFaceState extends State<RobotFace>
             0.75,
           )!
         : _current.accent;
-    _frameParams = _current.copyWith(
-      mouthOpen: mouth,
-      tilt: tilt,
-      accent: accent,
-    );
+    var frame = _current.copyWith(mouthOpen: mouth, tilt: tilt, accent: accent);
+    // Skit: (re)start on a new sequence number, end after its duration.
+    if (i.actSeq != _actSeq) {
+      _actSeq = i.actSeq;
+      _act = i.act;
+      _actStart = _t;
+    }
+    final act = _act;
+    if (act != null) {
+      _actT = (_t - _actStart) / (act.duration.inMilliseconds / 1000);
+      if (_actT >= 1) {
+        _act = null;
+        _actT = 0;
+      } else {
+        final speakingMouth = frame.mouthOpen;
+        frame = applyAct(act, _actT, _t, frame);
+        if (i.speaking) {
+          frame = frame.copyWith(
+            mouthOpen: math.max(frame.mouthOpen, speakingMouth),
+          );
+        }
+      }
+    }
+    _frameParams = frame;
     _repaint.value++;
   }
 
@@ -248,6 +290,22 @@ class _RobotFaceState extends State<RobotFace>
     if (_blinkStart < 0) return 0;
     final x = ((_t - _blinkStart) / 0.16).clamp(0.0, 1.0);
     return math.sin(x * math.pi);
+  }
+
+  void _trackPet(double dx) {
+    if (widget.onPet == null || dx.abs() < 2) return;
+    final dir = dx.sign;
+    if (_petDir != 0 && dir != _petDir) {
+      _petFlips
+        ..add(_t)
+        ..removeWhere((x) => _t - x > 1.5);
+      if (_petFlips.length >= 3 && _t - _lastPet > 3) {
+        _lastPet = _t;
+        _petFlips.clear();
+        widget.onPet!();
+      }
+    }
+    _petDir = dir;
   }
 
   void _updateTouch(Offset local, Size size) {
@@ -288,7 +346,10 @@ class _RobotFaceState extends State<RobotFace>
             onTap: widget.onTap,
             onLongPress: widget.onLongPress,
             onPanStart: (d) => _updateTouch(d.localPosition, size),
-            onPanUpdate: (d) => _updateTouch(d.localPosition, size),
+            onPanUpdate: (d) {
+              _trackPet(d.delta.dx);
+              _updateTouch(d.localPosition, size);
+            },
             onPanEnd: (_) => setState(() => _touch = null),
             onPanCancel: () => setState(() => _touch = null),
             child: RepaintBoundary(
@@ -312,6 +373,8 @@ class _RobotFaceState extends State<RobotFace>
                           widget.inputs.music && !widget.inputs.speaking,
                       fullScreen: widget.fullScreen,
                       dizzy: widget.animate ? _dizzy : 0,
+                      act: widget.animate ? _act : null,
+                      actT: _actT,
                     ),
                   ),
                 ),

@@ -8,6 +8,7 @@ import '../../core/connectivity.dart';
 import '../../core/error_log.dart';
 import '../brain/brain_models.dart';
 import '../brain/command_parser.dart';
+import '../face/face_act.dart';
 import '../brain/text_normalizer.dart';
 import '../memory/memory_store.dart';
 import '../music/music_controller.dart';
@@ -575,6 +576,12 @@ class ChatController extends ChangeNotifier {
         results.add(await _showImages(m, a.args['query']));
         continue;
       }
+      if (a.type == 'face.play') {
+        // Just a face animation: the AI says its own words.
+        final act = FaceActInfo.fromWire(a.args['animation']);
+        if (act != null) companion.play(act);
+        continue;
+      }
       if (proactive) continue; // a proactive line never changes anything
       final cmd = actionToCommand(a);
       if (cmd != null) results.add(await execute(cmd));
@@ -727,6 +734,11 @@ class ChatController extends ChangeNotifier {
           }
           hooks.openCamera!.call();
           return const ActionResult.ok('Opened camera');
+        case CommandType.faceAct:
+          final a = FaceActInfo.fromWire(c.query);
+          if (a == null) return const ActionResult.fail('unknown animation');
+          companion.play(a);
+          return ActionResult.ok('Face:${a.wire}');
       }
     } catch (e) {
       log.add('action', '${c.type.name}: $e');
