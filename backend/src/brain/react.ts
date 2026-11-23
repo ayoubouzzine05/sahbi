@@ -112,7 +112,9 @@ export function parseReact(text: string): ReactResult {
   const display = typeof o.display_text === 'string' ? o.display_text.trim().slice(0, 160) : '';
   if (!reaction || !display) return { react: false };
   const tts = typeof o.tts_text === 'string' && o.tts_text.trim() ? o.tts_text.trim().slice(0, 200) : display;
-  const emotion = EMOTIONS.find((e) => e === o.emotion) ?? DEFAULT_EMOTION[reaction];
+  // Fear is not in the face's emotions: a scared robot looks surprised, never angry.
+  const picked = EMOTIONS.find((e) => e === o.emotion) ?? DEFAULT_EMOTION[reaction];
+  const emotion = reaction === 'scared' && picked !== 'sad' ? 'surprised' : picked;
   const n = typeof o.intensity === 'number' ? o.intensity : Number(o.intensity);
   const intensity = Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.7;
   const subject = typeof o.subject_en === 'string' ? o.subject_en.trim().slice(0, 60) : '';

@@ -9,6 +9,10 @@ describe('vision react', () => {
     expect(r).toMatchObject({ react: true, reaction: 'scared', subject_en: 'spider', emotion: 'surprised', intensity: 0.7 });
   });
 
+  it('scared never shows an angry face', () => {
+    expect(parseReact('{"react": true, "reaction": "scared", "display_text": "aaa!", "emotion": "angry"}').emotion).toBe('surprised');
+  });
+
   it('anything unclear means no reaction', () => {
     expect(parseReact('{"react": false}')).toEqual({ react: false });
     expect(parseReact('{"react": true, "reaction": "dance", "display_text": "x"}')).toEqual({ react: false });
