@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../behavior/behavior_models.dart';
 import '../personality/emotion.dart';
 import '../personality/emotion_animation_mapper.dart';
 import 'face_act.dart';
@@ -23,6 +24,7 @@ class FaceInputs {
     this.dizzy = false,
     this.act,
     this.actSeq = 0,
+    this.eyes,
   });
 
   final Emotion emotion;
@@ -41,6 +43,10 @@ class FaceInputs {
   /// Skit to play; it (re)starts whenever [actSeq] changes.
   final FaceAct? act;
   final int actSeq;
+
+  /// MIMO's mood eye style (blink rhythm, droopy / wide lids, how often it
+  /// glances around). Null = the classic rhythm.
+  final EyeStyle? eyes;
 }
 
 /// The animated face: blinking at random intervals, gaze (automatic or
@@ -91,6 +97,8 @@ class _RobotFaceState extends State<RobotFace>
   // blink
   double _nextBlink = 2.5;
   double _blinkStart = -1;
+  double _lid = 0;
+  double _widen = 0;
 
   // gaze
   Offset _gazeTarget = Offset.zero;
@@ -173,18 +181,28 @@ class _RobotFaceState extends State<RobotFace>
     _current = FaceParams.lerp(_current, target, k);
 
     // Blink at randomised intervals (not while sleeping/closed eyes).
-    if (_blinkStart < 0 && _t >= _nextBlink && target.eyeOpen > 0.3) {
+    final i = widget.inputs;
+    final style = i.eyes;
+    final blinks = style?.blinks ?? true;
+    if (_blinkStart < 0 &&
+        _t >= _nextBlink &&
+        target.eyeOpen > 0.3 &&
+        (blinks || _t >= _nextBlink + 4)) {
       _blinkStart = _t;
     }
     if (_blinkStart >= 0 && _t - _blinkStart > 0.16) {
       _blinkStart = -1;
-      // Occasional double blink.
+      // Occasional double blink; the rhythm follows MIMO's mood.
+      final lo = style?.blinkMin ?? 2.0;
+      final hi = style?.blinkMax ?? 6.0;
       _nextBlink =
-          _t + (_rand.nextDouble() < 0.15 ? 0.25 : 2 + _rand.nextDouble() * 4);
+          _t +
+          (_rand.nextDouble() < (style?.doubleBlink ?? 0.15)
+              ? 0.25
+              : lo + _rand.nextDouble() * (hi - lo));
     }
 
     // Gaze.
-    final i = widget.inputs;
     if (_touch != null) {
       _gazeTarget = _touch!;
     } else if (i.lookAt != null) {
@@ -192,8 +210,8 @@ class _RobotFaceState extends State<RobotFace>
     } else if (_t >= _nextGaze) {
       _gazeTarget = switch (spec.gaze) {
         GazeBehavior.wander => Offset(
-          _rand.nextDouble() * 1.6 - 0.8,
-          _rand.nextDouble() * 0.8 - 0.4,
+          (_rand.nextDouble() * 2 - 1) * (style?.lookRange ?? 0.8),
+          (_rand.nextDouble() - 0.5) * (style?.lookRange ?? 0.8),
         ),
         GazeBehavior.focus => Offset(
           _rand.nextDouble() * 0.3 - 0.15,
@@ -212,6 +230,9 @@ class _RobotFaceState extends State<RobotFace>
           switch (spec.gaze) {
             GazeBehavior.dart => 0.4 + _rand.nextDouble() * 0.6,
             GazeBehavior.focus => 1.2 + _rand.nextDouble() * 1.5,
+            GazeBehavior.wander when style != null =>
+              style.lookMin +
+                  _rand.nextDouble() * (style.lookMax - style.lookMin),
             _ => 1.5 + _rand.nextDouble() * 2.5,
           };
     }
@@ -258,6 +279,19 @@ class _RobotFaceState extends State<RobotFace>
           )!
         : _current.accent;
     var frame = _current.copyWith(mouthOpen: mouth, tilt: tilt, accent: accent);
+    // Mood lids: full effect on the calm face, light under an emotion.
+    _lid += ((style?.lid ?? 0) - _lid) * (1 - math.exp(-dt * 2));
+    _widen += ((style?.widen ?? 0) - _widen) * (1 - math.exp(-dt * 5));
+    if (_lid > 0.01 || _widen > 0.01) {
+      final calm = i.emotion == Emotion.neutral ? 1.0 : 0.4;
+      frame = frame.copyWith(
+        eyeOpen:
+            (frame.eyeOpen * (1 - 0.55 * _lid * calm) + 0.12 * _widen * calm)
+                .clamp(0.0, 1.0),
+        eyeScale: frame.eyeScale * (1 + 0.07 * _widen * calm),
+        pupilSize: frame.pupilSize * (1 + 0.12 * _widen * calm),
+      );
+    }
     // Skit: (re)start on a new sequence number, end after its duration.
     if (i.actSeq != _actSeq) {
       _actSeq = i.actSeq;

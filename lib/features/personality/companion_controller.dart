@@ -3,6 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../behavior/behavior_models.dart';
+import '../behavior/initiative_scheduler.dart';
+import '../behavior/mimo_behavior_engine.dart';
 import '../face/face_act.dart';
 import 'emotion.dart';
 import 'emotion_detector.dart';
@@ -16,11 +19,55 @@ class CompanionController extends ChangeNotifier {
     this.busy,
     math.Random? random,
     Temper? temper,
+    MimoBehaviorEngine? behavior,
   }) : idle = idle ?? IdleBehavior(),
        _r = random ?? math.Random(),
-       temper = temper ?? Temper(random: random);
+       temper = temper ?? Temper(random: random),
+       behavior =
+           behavior ??
+           MimoBehaviorEngine(
+             scheduler: InitiativeScheduler(isQuiet: _defaultQuiet),
+             random: random,
+           );
+
+  static bool _defaultQuiet(int h) => h >= 23 || h < 8;
 
   final IdleBehavior idle;
+
+  /// MIMO's autonomous moods (idle, curious, playful, bored, sleepy,
+  /// listening) and initiatives. Hardware-neutral: the phone face applies
+  /// its commands here; a robot body can apply the same ones.
+  final MimoBehaviorEngine behavior;
+
+  /// Current autonomous mood and how the eyes behave in it.
+  MimoState get mood => behavior.state;
+  EyeStyle get eyes => behavior.eyes;
+
+  /// MIMO decided to say / play something by itself.
+  void Function(InitiativeKind kind)? onInitiative;
+
+  /// The mood changed (robot link mirrors it).
+  void Function(MimoState state)? onMood;
+
+  /// Feeds an event to the behaviour engine and performs its commands.
+  void behave(BehaviorEvent e) => _perform(behavior.on(e));
+
+  void _perform(List<BodyCommand> cmds) {
+    for (final c in cmds) {
+      switch (c) {
+        case SetMood(:final state):
+          onMood?.call(state);
+          notifyListeners();
+        case LookAt(:final x, :final y, :final holdMs):
+          glance(Offset(x, y), hold: Duration(milliseconds: holdMs));
+        case PlaySkit(:final name):
+          final a = FaceActInfo.fromWire(name);
+          if (a != null && !acting && !dizzy && !temper.sulking) play(a);
+        case TakeInitiative(:final kind):
+          onInitiative?.call(kind);
+      }
+    }
+  }
 
   /// Strong character: annoyed, sulking, making up (see [Temper]).
   final Temper temper;
@@ -69,6 +116,7 @@ class CompanionController extends ChangeNotifier {
   /// takes about two strokes; returns 'madeUp', 'stillSulking' or 'happy'.
   String pet() {
     idle.interact();
+    behave(BehaviorEvent.touched);
     _resetSkit();
     final wasSulking = temper.sulking;
     if (!temper.pet()) {
@@ -90,6 +138,7 @@ class CompanionController extends ChangeNotifier {
   /// A finger poke on the face (not asleep): squish, grumble or sulk.
   PokeReaction poke() {
     idle.interact();
+    behave(BehaviorEvent.touched);
     _resetSkit();
     final r = temper.poke();
     switch (r) {
@@ -114,6 +163,11 @@ class CompanionController extends ChangeNotifier {
   /// while sulking (it stays turned away) or asleep.
   void glance(Offset g, {Duration hold = const Duration(milliseconds: 1500)}) {
     if (temper.sulking || idle.asleep || dizzy) return;
+    if (hold <= const Duration(milliseconds: 1500)) {
+      // A short glance = something moved in front of the eyes.
+      final cmds = behavior.on(BehaviorEvent.motion);
+      if (cmds.isNotEmpty) _perform(cmds);
+    }
     lookAt = g;
     _lookTimer?.cancel();
     _lookTimer = Timer(hold, () {
@@ -148,6 +202,7 @@ class CompanionController extends ChangeNotifier {
   /// user (woken up first if asleep).
   void heardName() {
     interact();
+    behave(BehaviorEvent.wake);
     if (temper.sulking) {
       // Still sulking: a quick side glance, then turned away again.
       glance(Offset.zero, hold: const Duration(milliseconds: 700));
@@ -203,6 +258,9 @@ class CompanionController extends ChangeNotifier {
   void _tick() {
     final isBusy = busy?.call() ?? false;
     final a = idle.tick(busy: isBusy);
+    _perform(behavior.tick());
+    if (a == IdleAction.fallAsleep) behave(BehaviorEvent.fellAsleep);
+    if (a == IdleAction.wakeUp) behave(BehaviorEvent.wokeUp);
     final sulking = temper.sulking;
     if (_wasSulking && !sulking) _endSulkFace();
     if (sulking && _wasSulking) {
@@ -257,6 +315,8 @@ class CompanionController extends ChangeNotifier {
   void interact({bool touch = false}) {
     final a = idle.interact();
     _resetSkit();
+    behave(touch ? BehaviorEvent.touched : BehaviorEvent.userSpoke);
+    if (a == IdleAction.wakeUp) behave(BehaviorEvent.wokeUp);
     if (a == IdleAction.wakeUp) {
       if (touch) {
         play(FaceAct.grumpy);

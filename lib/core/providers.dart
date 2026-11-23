@@ -13,6 +13,9 @@ import '../features/memory/memory_store.dart';
 import '../features/music/music_controller.dart';
 import '../features/music/youtube_controller.dart';
 import '../features/music/music_models.dart';
+import '../features/behavior/behavior_models.dart';
+import '../features/behavior/initiative_scheduler.dart';
+import '../features/behavior/mimo_behavior_engine.dart';
 import '../features/personality/companion_controller.dart';
 import '../features/personality/companion_lines.dart';
 import '../features/personality/idle_behavior.dart';
@@ -203,6 +206,11 @@ final voiceControllerProvider = ChangeNotifierProvider<VoiceController>((ref) {
 final ChangeNotifierProvider<CompanionController> companionProvider =
     ChangeNotifierProvider<CompanionController>((ref) {
       final c = CompanionController(
+        behavior: MimoBehaviorEngine(
+          scheduler: InitiativeScheduler(
+            isQuiet: (h) => ref.read(settingsProvider).isQuietHour(h),
+          ),
+        ),
         // The user is busy with the robot (or music). The robot's own talking
         // (a joke while the user is quiet) and the short listen after it are
         // not: otherwise it would never notice it is being ignored.
@@ -459,10 +467,68 @@ final proactiveProvider = Provider<void>((ref) {
       !chat.busy &&
       !music.playing &&
       !convo.active;
+  final behavior = companion.behavior;
+  // The autonomous loop may only start something when nothing else is
+  // going on and the user allows MIMO to talk by itself.
+  behavior.canAct = () => calm() && ref.read(settingsProvider).proactiveTalk;
+
+  Future<void> remark() async {
+    final spoke = await chat.proactive();
+    // Give the user a moment to answer without calling the name.
+    if (spoke &&
+        ref.read(settingsProvider).wakeByName &&
+        voice.state == VoiceState.idle &&
+        !music.playing) {
+      convo.start(robotInitiated: true, listenNow: true);
+    }
+  }
+
+  companion.onInitiative = (kind) {
+    if (!calm()) return;
+    switch (kind) {
+      case InitiativeKind.remark ||
+          InitiativeKind.riddle ||
+          InitiativeKind.trivia ||
+          InitiativeKind.reaction:
+        unawaited(remark());
+    }
+  };
+
+  // Conversation / listening drive the "listening" mood.
+  var wasConvo = convo.active;
+  void onConvo() {
+    if (convo.active == wasConvo) return;
+    wasConvo = convo.active;
+    companion.behave(
+      convo.active
+          ? BehaviorEvent.conversationStart
+          : BehaviorEvent.conversationEnd,
+    );
+  }
+
+  var wasListening = voice.state == VoiceState.listening;
+  void onVoice() {
+    final l = voice.state == VoiceState.listening;
+    if (l == wasListening) return;
+    wasListening = l;
+    companion.behave(l ? BehaviorEvent.listenStart : BehaviorEvent.listenEnd);
+  }
+
+  convo.addListener(onConvo);
+  voice.addListener(onVoice);
+  ref.onDispose(() {
+    convo.removeListener(onConvo);
+    voice.removeListener(onVoice);
+    companion.onInitiative = null;
+    behavior.canAct = () => false;
+  });
+
   companion.onIdleAction = (a) async {
     switch (a) {
       case IdleAction.chatter:
-        if (!calm()) return;
+        // Same limits as the autonomous loop (cooldown, quiet hours).
+        if (!calm() || !behavior.scheduler.canSpeak()) return;
+        behavior.scheduler.record();
         final spoke = await chat.proactive();
         // Give the user a moment to answer without calling the name.
         if (spoke &&

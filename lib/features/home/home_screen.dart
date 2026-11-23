@@ -298,6 +298,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         listenLevel: voice.level,
         music: music.playing,
         lookAt: companion.lookAt,
+        eyes: companion.eyes,
         dizzy: companion.dizzy,
         act: companion.act,
         actSeq: companion.actSeq,

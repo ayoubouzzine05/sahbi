@@ -19,6 +19,7 @@ class RobotLinkController extends ChangeNotifier {
   StreamSubscription<RobotMessage>? _events;
   StreamSubscription<RobotConnection>? _conn;
   String? _lastSentEmotion;
+  String? _lastSentMood;
 
   Future<void> use(RobotTransport t) async {
     await disconnect();
@@ -60,6 +61,29 @@ class RobotLinkController extends ChangeNotifier {
   void _mirror() {
     final t = transport;
     if (t == null || t.connection != RobotConnection.connected) return;
+    final mood = companion.mood;
+    if (mood.name != _lastSentMood) {
+      _lastSentMood = mood.name;
+      final eyes = companion.eyes;
+      t
+          .send(
+            RobotMessage(
+              type: 'behavior.state',
+              payload: {
+                'state': mood.name,
+                'blink_min_s': eyes.blinkMin,
+                'blink_max_s': eyes.blinkMax,
+                'lid': eyes.lid,
+                'widen': eyes.widen,
+              },
+            ),
+          )
+          .catchError((Object err) {
+            lastError = '$err';
+            notifyListeners();
+            return null;
+          });
+    }
     final e = companion.emotion.name;
     if (e == _lastSentEmotion) return;
     _lastSentEmotion = e;

@@ -133,3 +133,26 @@ Capabilities are strings: `face`, `audio`, `touch`, `presence`, `imu`, `battery`
 - I2S MEMS mic array (2–3 mics) feeding the phone for STT, plus an I2S amp and speaker.
 - Capacitive touch pads, optional 60 GHz mmWave presence sensor, IMU.
 - Li-Po with a fuel gauge. Optional micro-gear motors behind the safety layer above.
+
+## `behavior.state` (app → robot, MIMO mood) — added in v1.x, optional
+
+Sent whenever MIMO's autonomous mood changes (`MimoBehaviorEngine`, pure
+Dart in `lib/features/behavior/`). A robot body uses it to animate its own
+display / servos the same way the phone face does. Robots that do not know
+the message ignore it (unknown types are acked with `ok:false`).
+
+```json
+{"v":1,"id":42,"type":"behavior.state",
+ "payload":{"state":"bored","blink_min_s":4,"blink_max_s":8,"lid":0.45,"widen":0}}
+```
+
+| state | meaning | eyes |
+|---|---|---|
+| `idle` | calm, looks around now and then | normal blink 3–5.5 s |
+| `curious` | something moved in front of it | wide, quick glances |
+| `playful` | touched / playing a game | fast blinks, double blinks |
+| `bored` | ignored ≥ 5 min | lids half down, slow wander |
+| `sleepy` | ignored ≥ 9 min or quiet hours | lids mostly down |
+| `listening` | "MIMO" heard / conversation | wide, steady, no blinking |
+
+NOT VERIFIED on real hardware (no robot exists yet).
