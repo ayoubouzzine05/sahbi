@@ -30,6 +30,17 @@ void main() {
         reason: 'home shows the robot face',
       );
 
+      // First launch: the robot's eyes explain the camera once. Answer
+      // "not now" like a user (its eyes stay closed).
+      final eyesDialog = find.byType(AlertDialog);
+      if (eyesDialog.evaluate().isNotEmpty) {
+        await t.tap(
+          find.descendant(of: eyesDialog, matching: find.byType(TextButton)),
+        );
+        await frames(10);
+      }
+      expect(find.byType(AlertDialog), findsNothing);
+
       // Chat: the home face has no tab bar; its keyboard button opens chat.
       await t.tap(find.byIcon(Icons.keyboard_alt_outlined));
       await frames();
