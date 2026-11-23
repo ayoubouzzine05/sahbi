@@ -33,7 +33,7 @@
     <!-- No storage permission: local music uses the Storage Access Framework. -->
 
     <application
-        android:label="SAHBI صاحبي"
+        android:label="MIMO"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"

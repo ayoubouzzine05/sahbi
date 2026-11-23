@@ -25,10 +25,10 @@ export function trimHistory(history: ChatRequest['history'], budget: number): Ch
   return kept;
 }
 
-/** The user-chosen robot name, sanitised for the prompt (default صاحبي / Sahbi). */
+/** The user-chosen robot name, sanitised for the prompt (default MIMO / ميمو). */
 export function robotNameForPrompt(name: string | undefined): string {
   const clean = (name ?? '').replace(/[\n\r"{}<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
-  return clean ? `"${clean}"` : '"صاحبي" (Sahbi)';
+  return clean ? `"${clean}"` : '"MIMO" (ميمو)';
 }
 
 export function fillPrompt(template: string, req: ChatRequest): string {

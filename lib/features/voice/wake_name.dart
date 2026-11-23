@@ -129,6 +129,38 @@ String _plain(String s) => s
 /// Finds [name] (1–3 words, any script) in [transcript]. Matches the exact
 /// normalised words, or the phonetic skeleton (edit distance ≤ 1 when the
 /// skeleton has ≥ 4 consonants). A leading "ya / يا / a / أ" is allowed.
+/// Long vowels of a word in either script: a, i or u ("e" = unknown).
+/// "Zizou", "zizo" and "زيزو" → "iu"; "mama" / "ماما" → "aa".
+String vowelKey(String word) {
+  final w = word.toLowerCase();
+  final out = StringBuffer();
+  for (var i = 0; i < w.length; i++) {
+    final c = w[i];
+    final next = i + 1 < w.length ? w[i + 1] : '';
+    switch (c) {
+      case 'a' || 'ا' || 'آ' || 'أ':
+        out.write('a');
+      case 'i' || 'y' || 'ي' || 'ى':
+        out.write('i');
+      case 'o' || 'u' || 'و':
+        out.write('u');
+        if (c == 'o' && next == 'u') i++;
+      case 'e':
+        out.write('e');
+    }
+  }
+  return out.toString();
+}
+
+bool _vowelsAgree(String a, String b) {
+  if (a.isEmpty || b.isEmpty) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i] && a[i] != 'e' && b[i] != 'e') return false;
+  }
+  return true;
+}
+
 WakeHit? matchWakeName(String transcript, String name) {
   final words = _plain(transcript)
       .split(RegExp(r'[\s,.!?؟،:;]+'))
@@ -161,7 +193,10 @@ WakeHit? matchWakeName(String transcript, String name) {
     final phon =
         nameKey.length >= 2 &&
         (candKey == nameKey ||
-            (nameKey.length >= 4 && _lev(candKey, nameKey) <= 1));
+            (nameKey.length >= 4 && _lev(candKey, nameKey) <= 1)) &&
+        // Short names: the vowels must agree too ("mimo" ≠ "mama", "momo").
+        (nameKey.length > 3 ||
+            _vowelsAgree(vowelKey(cand), vowelKey(nameJoined)));
     if (exact || phon) {
       return WakeHit(words.sublist(i + n).join(' ').trim());
     }
@@ -169,10 +204,10 @@ WakeHit? matchWakeName(String transcript, String name) {
   return null;
 }
 
-/// Names to listen for: the user's chosen name, or صاحبي / Sahbi by default
-/// ("sahbi" is an everyday word, so it is not used once a name is chosen).
+/// Names to listen for: the user's chosen name, or MIMO by default (with
+/// the ways Moroccans say / the recogniser writes it).
 List<String> wakeNamesFor(AppSettings s) => s.robotName.trim().isEmpty
-    ? const ['صاحبي', 'sahbi']
+    ? const ['ميمو', 'mimo', 'mimou']
     : [s.robotName.trim()];
 
 /// While the app is open and idle, keeps the on-device recogniser running in

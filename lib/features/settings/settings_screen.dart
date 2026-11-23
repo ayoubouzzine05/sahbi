@@ -754,7 +754,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => showLicensePage(
                       context: context,
-                      applicationName: 'SAHBI صاحبي',
+                      applicationName: 'MIMO',
                       applicationVersion: AppConfig.appVersion,
                     ),
                   ),

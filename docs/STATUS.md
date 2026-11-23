@@ -1,4 +1,4 @@
-# Status (2026-11-21)
+# Status (2026-11-16)
 
 DONE = implemented and verified by commands run here. PARTIAL = part done. NOT DONE = missing. NOT VERIFIED = written but could not be run here; the reason is given.
 
@@ -124,6 +124,27 @@ So the `AQ.` key stopped being accepted for everything. Google's forum has many 
 | Photo mode: `/v1/chat` with the same JPEG | 200 in 22 s; correct Darija description |
 
 Still NOT VERIFIED: the app itself on a phone (camera plugin, mic streaming, speaker playback, wake by name), and the emulator `integration-test` job, which failed in runs 44418906637 and 44423251541 (the logs need a token to read; the `test-and-build` job passed and published the APK).
+
+## Follow-up 15 (2026-11-16): MIMO — autonomous EMO-style companion, always-on "MIMO" wake word, mic/camera toggles
+
+Commits `2ff4ff2` (1+2), `e42aecf` (3), `b5da471` (4) and the rename/docs commit. Package stays `ma.sahbi.sahbi` (installs over SAHBI and keeps memory and settings).
+
+| Request | How | Status |
+|---|---|---|
+| Autonomous behaviour engine | `MimoBehaviorEngine` (pure Dart, `lib/features/behavior/`): idle, curious (movement), playful (touch/game), bored (5 min ignored), sleepy (9 min / quiet hours), listening (name / conversation). Each state has an `EyeStyle` (blink rhythm, double blinks, droopy/wide lids, glance timing) that the face applies. Output = `BodyCommand`s (mood, look, skit, initiative) so a robot body can run the same engine; mood goes to the robot link as `behavior.state` | DONE (8 tests), NOT VERIFIED on a phone |
+| Speaks / plays on its own, not annoying | `InitiativeScheduler`: ≥ 3 min apart, ≤ 12/hour, ≤ 60/day, a game at most every 20 min, never in quiet hours (default 23:00–08:00, Settings), never during a conversation, music, live camera or in the background; switch "Talks on its own" | DONE (tests), NOT VERIFIED on a phone |
+| Mini-games | Offline: 10 original Darija riddles (7ajitek majitek), 10 three-choice questions, reaction game (eyes turn green → tap → ms). Started by MIMO, by the games button, or by voice ("nl3bo", "7ajitek", "quiz", "sor3a"). Answers checked locally in Arabizi, Arabic script and French | DONE (9 tests), NOT VERIFIED on a phone |
+| Always-on wake word "MIMO" | Vosk (offline, Apache-2.0) with a tiny grammar (`mimo` + decoys) in a native microphone foreground service. Model (42 MB) downloaded once with a progress bar when the user enables it, SHA-256 checked. On the phone's normal recogniser the default names are `ميمو`, `mimo`, `mimou`; short names also need matching vowels so "mama"/"momo" do not wake it. Tested only with synthetic voices here (ميمو 1.00, Mimo! 0.97, "momo" → decoy, normal sentences → nothing) | DONE, accuracy with real Moroccan voices NOT VERIFIED |
+| Wake reaction | Eyes snap to the user (wide "what?" look) + a short cached answer in MIMO's voice ("Na3am?", "Ana hna!", "Goul a sahbi", "Wach bghiti?"), then the mic opens | DONE (tests), NOT VERIFIED on a phone |
+| Barge-in, back to idle | Saying "MIMO" (or tapping) while MIMO talks cuts it off and listens; its own voice saying "mimo" is ignored. Conversation ends with "safi sir" or after 20 s of silence (Settings 5–60 s) | DONE (tests), NOT VERIFIED on a phone |
+| Independent mic and camera toggles | Two buttons on the face + Settings switches. Off = released at once (camera controller disposed, recorder/recogniser stopped, wake service stopped) | DONE (tests), NOT VERIFIED on a phone |
+| Front camera presence, back camera on demand, never both | `VisionController` is the only camera owner (live > back-camera look > eyes); switching always closes the current camera first (test: never two open). "chouf chno kayn 9damek" takes 1–3 back-camera frames, then the front camera comes back. The front camera rests when the battery is ≥ 42 °C, in battery saver, or after 30 min with nobody seen | DONE (tests), heat behaviour NOT VERIFIED on a phone |
+| Release everything on close / swipe-away | `HardwareGuard` + `WidgetsBindingObserver`: hidden/paused → camera closed (mic kept only if the mic toggle is on); detached → everything released. Native side: service `stopWithTask`, `onTaskRemoved` and `MainActivity.onDestroy` stop the wake engine and the service | DONE (tests), NOT VERIFIED on a phone |
+| Background listening with notification | Mic toggle on + app minimised: foreground service (type microphone) with a persistent notification, "Stop MIMO" and "Open" actions; the camera stays off in the background. Android 14+ only lets the service start while the app is visible, so it starts when the mic is turned on / the app opens. Android does not let an app bring itself to the front, so after "MIMO" in the background the notification offers "Open" | DONE, NOT VERIFIED on a phone |
+| Manifest | CAMERA, RECORD_AUDIO, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MICROPHONE, FOREGROUND_SERVICE_CAMERA (declared; the camera is never used from the service), POST_NOTIFICATIONS | DONE |
+| Name MIMO | App label, default robot name and wake word are MIMO. One-time migration: a robot still named "Sahbi"/"صاحبي" becomes MIMO; any other chosen name is kept. Backend prompt 1.9.0 uses MIMO as the default name | DONE (tests), NOT VERIFIED on a phone |
+
+Local checks here: `flutter analyze` 0 issues; unit tests run one file at a time (vision_controller 7, hardware_guard 10, mimo_wake 9, conversation_silence 3, mimo_behavior 8, games 9, mimo_name 3, robot_eyes 8, followup3 21, followup6 24, chat_controller 41, temper 17, face_act 11, robot_face 5) all passed; backend 135/135. `app_shell_test` does not compile in this sandbox (memory), so CI runs it. The Kotlin/Gradle/Vosk code is only checked by the CI build.
 
 ## Fix (2026-11-23): "Application non installée"
 

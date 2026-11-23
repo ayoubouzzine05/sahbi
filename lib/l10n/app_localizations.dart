@@ -102,7 +102,7 @@ abstract class L10n {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sahbi'**
+  /// **'MIMO'**
   String get appTitle;
 
   /// No description provided for @tabHome.

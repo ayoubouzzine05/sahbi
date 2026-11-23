@@ -10,7 +10,7 @@ class L10nFr extends L10n {
   L10nFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get appTitle => 'Sahbi';
+  String get appTitle => 'MIMO';
 
   @override
   String get tabHome => 'Sahbi';

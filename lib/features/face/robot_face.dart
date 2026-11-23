@@ -374,7 +374,7 @@ class _RobotFaceState extends State<RobotFace>
           c.maxHeight.isFinite ? c.maxHeight : c.maxWidth,
         );
         return Semantics(
-          label: widget.semanticLabel ?? 'Sahbi',
+          label: widget.semanticLabel ?? 'MIMO',
           button: widget.onTap != null,
           // Expose only meaningful actions to TalkBack; the drag-to-look pan
           // would otherwise show up as four bogus "scroll" actions.

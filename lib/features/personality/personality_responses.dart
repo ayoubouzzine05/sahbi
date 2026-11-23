@@ -180,11 +180,11 @@ class PersonalityResponses {
   ];
   static const _whoAreYou = [
     Line(
-      darijaAr: 'أنا صاحبي، الروبو الصغير ديالك وصاحبك.',
-      darijaLatin: 'Ana Sahbi, rrobot sghir dyalk w sa7bek.',
-      msa: 'أنا صاحبي، روبوتك الصغير وصديقك.',
-      fr: 'Je suis Sahbi, ton petit robot et ton pote.',
-      en: 'I am Sahbi, your little robot buddy.',
+      darijaAr: 'أنا ميمو، الروبو الصغير ديالك وصاحبك.',
+      darijaLatin: 'Ana MIMO, rrobot sghir dyalk w sa7bek.',
+      msa: 'أنا ميمو، روبوتك الصغير وصديقك.',
+      fr: 'Je suis MIMO, ton petit robot et ton pote.',
+      en: 'I am MIMO, your little robot buddy.',
       emotion: Emotion.happy,
     ),
   ];

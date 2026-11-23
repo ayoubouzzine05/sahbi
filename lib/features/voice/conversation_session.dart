@@ -12,6 +12,11 @@ bool isStopPhrase(String text, {String robotName = ''}) {
   var t = _clean(text);
   if (t.isEmpty) return false;
   final names = <String>{
+    'mimo',
+    'a mimo',
+    'ya mimo',
+    'ميمو',
+    'يا ميمو',
     'a sahbi',
     'ya sahbi',
     'sahbi',

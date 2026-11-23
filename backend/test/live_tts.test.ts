@@ -17,7 +17,7 @@ describe('robot name + Darija prompt', () => {
   it('fills the user-chosen robot name, sanitised, with a default', () => {
     expect(robotNameForPrompt('Zizou')).toBe('"Zizou"');
     expect(robotNameForPrompt(' a"b{{X}}\nc ')).toBe('"a b X c"');
-    expect(robotNameForPrompt(undefined)).toContain('صاحبي');
+    expect(robotNameForPrompt(undefined)).toContain('MIMO');
     const req = ChatRequestSchema.parse({ message: 'salam', settings: { robot_name: 'Bobo' } });
     const p = fillPrompt(PROMPT_TEMPLATE, req);
     expect(p).toContain('Your name is "Bobo"');

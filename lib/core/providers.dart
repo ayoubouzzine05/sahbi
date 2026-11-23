@@ -68,9 +68,16 @@ final micPermissionProvider = Provider<MicPermission>(
 
 class SettingsNotifier extends Notifier<AppSettings> {
   @override
-  AppSettings build() => AppSettings.decode(
-    ref.read(sharedPrefsProvider).getString('settings_v1'),
-  );
+  AppSettings build() {
+    final prefs = ref.read(sharedPrefsProvider);
+    final s = AppSettings.decode(prefs.getString('settings_v1'));
+    if (s.mimoMigrated) return s;
+    // SAHBI → MIMO (once): the old default name becomes MIMO; a name the
+    // user chose (and all memory / settings) is kept.
+    final m = migrateToMimo(s);
+    prefs.setString('settings_v1', m.encode());
+    return m;
+  }
 
   void update(AppSettings Function(AppSettings) f) {
     state = f(state);

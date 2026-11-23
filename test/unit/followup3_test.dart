@@ -68,7 +68,7 @@ void main() {
     });
 
     test('default names when the user did not pick one', () {
-      expect(wakeNamesFor(const AppSettings()), contains('صاحبي'));
+      expect(wakeNamesFor(const AppSettings()), containsAll(['mimo', 'ميمو']));
       expect(wakeNamesFor(const AppSettings(robotName: 'Bobo')), ['Bobo']);
     });
   });
@@ -302,7 +302,7 @@ void main() {
       expect(line.en, contains('Zizou'));
       expect(
         r.forIntent(OfflineIntent.whoAreYou, DateTime(2026)).darijaAr,
-        contains('صاحبي'),
+        contains('ميمو'),
       );
     });
   });

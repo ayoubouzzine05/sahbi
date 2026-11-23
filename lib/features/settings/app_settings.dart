@@ -7,6 +7,17 @@ enum SttMode { auto, cloud, device, typed }
 enum TtsMode { auto, cloud, device, off }
 
 /// Every user setting, persisted as JSON in shared_preferences.
+/// One-time SAHBI → MIMO update: a robot still called by the old default
+/// name ("Sahbi" / "صاحبي") becomes MIMO; any other chosen name is kept.
+AppSettings migrateToMimo(AppSettings s) {
+  if (s.mimoMigrated) return s;
+  const old = {'sahbi', 'sa7bi', 'صاحبي', 'sahbi صاحبي'};
+  final n = s.robotName.trim().toLowerCase();
+  return old.contains(n)
+      ? s.copyWith(robotName: '', mimoMigrated: true)
+      : s.copyWith(mimoMigrated: true);
+}
+
 class AppSettings {
   const AppSettings({
     this.uiLocale = 'ar',

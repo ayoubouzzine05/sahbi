@@ -142,7 +142,7 @@ display / servos the same way the phone face does. Robots that do not know
 the message ignore it (unknown types are acked with `ok:false`).
 
 ```json
-{"v":1,"id":42,"type":"behavior.state",
+{"v":1,"seq":43,"type":"behavior.state",
  "payload":{"state":"bored","blink_min_s":4,"blink_max_s":8,"lid":0.45,"widen":0}}
 ```
 

@@ -84,7 +84,7 @@ void main() {
     // Dashboard = full-screen face: no tab bar, buttons navigate instead.
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byTooltip('الإعدادات'), findsOneWidget);
-    expect(find.text('صاحبي'), findsWidgets, reason: 'default robot name');
+    expect(find.text('MIMO'), findsWidgets, reason: 'default robot name');
     // No backend URL configured → honest banner, not a fake AI.
     expect(
       find.text('السيرفر ما مضبوطش. زيد العنوان فالإعدادات.'),

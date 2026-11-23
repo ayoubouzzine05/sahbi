@@ -10,7 +10,7 @@ class L10nAr extends L10n {
   L10nAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => 'صاحبي';
+  String get appTitle => 'MIMO';
 
   @override
   String get tabHome => 'صاحبي';

@@ -33,6 +33,21 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 | webview_flutter | 4.14.1 | BSD-3-Clause | floating in-app card that runs YouTube's official IFrame embed player (music without leaving the app) |
 | webview_flutter_android | 4.14.1 | BSD-3-Clause | Android WebView implementation (media playback without a user gesture) |
 
+No new pub packages for MIMO (Follow-up 15): the model download uses `http`, the SHA-256 check uses `cryptography`, the paths use `path_provider`.
+
+## Android native (Gradle, `android/app/build.gradle.kts`)
+
+| Library | Version | Licence | Why |
+|---|---|---|---|
+| com.alphacephei:vosk-android | 0.3.75 | Apache-2.0 | offline "MIMO" wake word (Kaldi-based recogniser with a small grammar), runs inside `MimoWakeService`; ~13 MB AAR for all ABIs, split per ABI in the APKs |
+| net.java.dev.jna:jna (aar) | 5.18.1 | Apache-2.0 / LGPL-2.1 (dual; used under Apache-2.0) | native bridge needed by vosk-android |
+
+## Downloaded at run time (not in the APK)
+
+| Data | Size | Licence | Source |
+|---|---|---|---|
+| vosk-model-small-fr-0.22 | 42,233,323 bytes zip (≈ 66 MB unpacked) | Apache-2.0 (Alpha Cephei) | downloaded once when the user turns on the MIMO wake word, from our GitHub pre-release `wake-model-fr-0.22` (fallback: alphacephei.com); SHA-256 `cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad` checked before unzipping. French small model because the English one has no word close to "mimo"; the grammar listens only for `mimo` and decoys (`momo`, `mama`, `mimi`, `nemo`) |
+
 ## Flutter app (dev)
 
 | Package | Version | Licence |
@@ -44,6 +59,9 @@ All versions were added with `flutter pub add` / `npm install`, and are the reso
 ## Deliberately not used
 
 - **Drift + SQLCipher.** The spec suggested them for memory. I used a single AES-256-GCM-encrypted JSON blob instead (key in flutter_secure_storage), because the data is small (≤ 30 facts sent to the AI, ≤ 200 history items) and it avoids a native SQLCipher build. See FEATURES.md.
+- **Porcupine / Picovoice** wake word. Needs an AccessKey inside the APK (forbidden: no keys in the APK) and a paid custom word.
+- **flutter_foreground_task / flutter_background_service.** A small native Kotlin service (`MimoWakeService`, microphone type, "Stop MIMO" action, `stopWithTask`) does the job with less code and full control over releasing the mic.
+- **vosk_flutter.** Its Dart SDK constraint (< 3.0) does not resolve; the native Android library is used directly through a platform channel.
 - **BLE plugin** (flutter_blue_plus etc.). There is no hardware yet. `BleTransport` takes a `BleLink` adapter instead.
 - **Spotify App Remote SDK.** Not bundled. It requires a Spotify developer app and the proprietary SDK AAR. Deep links are used instead.
 
