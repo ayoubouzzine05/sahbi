@@ -1989,6 +1989,12 @@ abstract class L10n {
   /// **'Reaction game'**
   String get gameReaction;
 
+  /// No description provided for @gamesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Or say: “let’s play” or “riddle”'**
+  String get gamesHint;
+
   /// No description provided for @reactionWait.
   ///
   /// In en, this message translates to:

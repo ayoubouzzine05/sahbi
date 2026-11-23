@@ -23,6 +23,7 @@ import '../personality/personality_responses.dart';
 import '../personality/voice_state.dart';
 import '../settings/app_settings.dart';
 import '../voice/voice_controller.dart';
+import '../games/game_session.dart';
 import 'chat_models.dart';
 import 'result_lines.dart';
 
@@ -38,6 +39,8 @@ class ChatHooks {
     this.currentView,
     this.userSpoke,
     this.lookAround,
+    this.game,
+    this.startGame,
   });
   final void Function(AppSettings Function(AppSettings) update) updateSettings;
   final VoidCallback? openSettings;
@@ -63,6 +66,14 @@ class ChatHooks {
   /// One picture from the BACK camera ("chouf chno kayn 9damek", "look
   /// around"), then back to the front eyes. Null when the camera is off.
   final Future<Uint8List?> Function()? lookAround;
+
+  /// A riddle / question is waiting: checks the answer (offline). Null =
+  /// no game waiting.
+  final GameReply? Function(String text)? game;
+
+  /// "nl3bo" / "7ajitek" / "quiz": starts a mini-game and returns what MIMO
+  /// says first (null = no game started).
+  final Line? Function(String text)? startGame;
 }
 
 /// The single pipeline for typed AND spoken input:
@@ -176,6 +187,10 @@ class ChatController extends ChangeNotifier {
     r'(?:chouf|chof|tchouf|tchof|chno kayn|achno kayn|ach kayn|chno kain)\s+(?:chno kayn\s+|ach kayn\s+)?(?:9damek|qodamek|9damk|dork|dorr|7dak|hdak|lbit|l bit|lbayt|lte7t|lt7t|lfo9|mn lor|lor|lkhelf|f lbit|f dar)|(?:lcamera|camera|lkamira)\s+(?:lor|dyal lor|lkhelfiya|lkhalfiya)|look around|what s in front of you|whats in front of you|what is in front of you|look behind|regarde autour|regarde devant toi|qu est ce qu il y a devant toi|derriere toi|شوف شنو كاين قدامك|شوف قدامك|شنو كاين قدامك|شوف البيت|دور شوف|شوف اللور|الكاميرا اللورانية|الكاميرا اللي لور',
   );
 
+  static final _gameRe = RegExp(
+    r'(?:^|\s)(?:nl3bo|nla3bo|nl3bou|yallah nl3bo|l3eb m3aya|l3b m3aya|bghit nl3eb|7ajitek|7ajiti|7ajia|7jaya|devinette|riddle|quiz|lets play|let s play|on joue|jouons|joue avec moi|نلعبو|يالله نلعبو|لعب معايا|حاجيتك|حجايه|حاجيه|سؤال بثلاث|سرعه)(?:\s|$)',
+  );
+
   static final _rememberRe = RegExp(
     r'^(?:3[q9]el|aq[l]|3a9el|tfeker|tfkker|remember|retiens|souviens toi|n3qel|عقل|تفكر|تذكر)\s+(?:3la|3ela|bli|that|que|على|بلي|ان)?\s*(.+)$',
   );
@@ -254,6 +269,31 @@ class ChatController extends ChangeNotifier {
         }
       case TemperChange.none:
         break;
+    }
+
+    // Mini-game: the answer to MIMO's riddle / question (offline check).
+    final g = hooks.game?.call(text);
+    if (g != null) {
+      voice.setThinking(false);
+      if (g.won) companion.play(FaceAct.sparkle);
+      await _say(
+        _sahbi(g.line, ChatKind.command),
+        emotion: g.line.emotion,
+        intensity: g.line.intensity,
+      );
+      return;
+    }
+    if (_gameRe.hasMatch(normalizeText(text))) {
+      final first = hooks.startGame?.call(text);
+      if (first != null) {
+        voice.setThinking(false);
+        await _say(
+          _sahbi(first, ChatKind.command),
+          emotion: first.emotion,
+          intensity: first.intensity,
+        );
+        return;
+      }
     }
 
     // "3afak" right after he asked for the magic word: he does the skit.

@@ -25,6 +25,7 @@ class FaceInputs {
     this.act,
     this.actSeq = 0,
     this.eyes,
+    this.tint,
   });
 
   final Emotion emotion;
@@ -47,6 +48,9 @@ class FaceInputs {
   /// MIMO's mood eye style (blink rhythm, droopy / wide lids, how often it
   /// glances around). Null = the classic rhythm.
   final EyeStyle? eyes;
+
+  /// Forces the eye colour (the reaction game turns the eyes green).
+  final Color? tint;
 }
 
 /// The animated face: blinking at random intervals, gaze (automatic or
@@ -271,7 +275,9 @@ class _RobotFaceState extends State<RobotFace>
       gazeY: _gaze.dy.clamp(-1, 1),
     );
     // Music: the eye colour slowly cycles through the rainbow.
-    final accent = i.music && !i.speaking
+    final accent = i.tint != null
+        ? i.tint!
+        : i.music && !i.speaking
         ? Color.lerp(
             _current.accent,
             HSVColor.fromAHSV(1, (_t * 45) % 360, 0.6, 1).toColor(),

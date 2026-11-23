@@ -1021,6 +1021,9 @@ class L10nEn extends L10n {
   String get gameReaction => 'Reaction game';
 
   @override
+  String get gamesHint => 'Or say: “let’s play” or “riddle”';
+
+  @override
   String get reactionWait => 'Wait until my eyes turn green…';
 
   @override

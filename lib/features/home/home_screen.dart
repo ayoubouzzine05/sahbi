@@ -21,6 +21,7 @@ import '../personality/voice_state.dart';
 import '../voice/mic_flow.dart';
 import '../voice/mic_permission.dart';
 import '../voice/wake_model_manager.dart';
+import '../games/game_session.dart';
 import '../chat/photo_strip.dart';
 import 'talk_controls.dart';
 
@@ -236,6 +237,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// "Play with MIMO": riddle, quiz or the reaction game (offline).
+  Future<void> _openGames() async {
+    final l = L10n.of(context);
+    final kind = await showModalBottomSheet<GameKind>(
+      context: context,
+      backgroundColor: SahbiColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(
+                l.gamesTitle,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(l.gamesHint),
+            ),
+            for (final (k, icon, label) in [
+              (GameKind.riddle, Icons.psychology_alt_outlined, l.gameRiddle),
+              (GameKind.trivia, Icons.quiz_outlined, l.gameTrivia),
+              (GameKind.reaction, Icons.bolt_outlined, l.gameReaction),
+            ])
+              ListTile(
+                key: Key('game_${k.name}'),
+                leading: Icon(icon, color: SahbiColors.turquoise),
+                title: Text(label),
+                onTap: () => Navigator.pop(ctx, k),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (kind == null || !mounted) return;
+    final games = ref.read(gameProvider);
+    final chat = ref.read(chatControllerProvider);
+    final line = games.start(kind);
+    await chat.sayLocal(line);
+    final s = ref.read(settingsProvider);
+    if (games.awaitingAnswer && s.micEnabled && s.wakeByName && mounted) {
+      // Listen for the answer right away (no need to call the name).
+      ref.read(conversationProvider).start(listenNow: true);
+    }
+  }
+
   /// Show the controls again and restart the fade timer.
   void _poke() {
     _fade?.cancel();
@@ -268,6 +313,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final mimo = ref.watch(mimoWakeProvider);
     final hearing = wake.active || mimo.active;
     final convo = ref.watch(conversationProvider);
+    final games = ref.watch(gameProvider);
     final backend = ref.read(backendClientProvider);
     final name = settings.displayRobotName(l.appTitle);
 
@@ -299,6 +345,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         music: music.playing,
         lookAt: companion.lookAt,
         eyes: companion.eyes,
+        tint: games.reaction == ReactionPhase.now ? SahbiColors.green : null,
         dizzy: companion.dizzy,
         act: companion.act,
         actSeq: companion.actSeq,
@@ -316,6 +363,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
       onTap: () {
         _poke();
+        if (games.reactionActive) {
+          // Reaction game: the tap is the answer, not a poke.
+          games.tap();
+          return;
+        }
         if (companion.idle.asleep) {
           // Woken up by a finger: grumpy.
           companion.play(FaceAct.squish);
@@ -360,6 +412,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       VoiceState.thinking => l.stateThinking,
       VoiceState.speaking => lastSahbi?.text,
       VoiceState.error => l.stateError,
+      VoiceState.idle when games.reaction != ReactionPhase.off => switch (games
+          .reaction) {
+        ReactionPhase.waiting => l.reactionWait,
+        ReactionPhase.now => l.reactionNow,
+        ReactionPhase.early => l.reactionEarly,
+        ReactionPhase.done =>
+          games.reactionMs == null ? null : l.reactionResult(games.reactionMs!),
+        ReactionPhase.off => null,
+      },
       VoiceState.idle =>
         convo.active
             ? l.conversationOn
@@ -410,6 +471,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               icon: const Icon(Icons.forum_outlined, size: 18),
               label: Text(l.conversationEnd),
             ),
+          IconButton(
+            key: const Key('games_button'),
+            tooltip: l.gamesTitle,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              _poke();
+              unawaited(_openGames());
+            },
+            icon: const Icon(
+              Icons.sports_esports_outlined,
+              size: 20,
+              color: SahbiColors.textSecondary,
+            ),
+          ),
           // Hardware toggles: the user decides at any time what MIMO may
           // hear and see.
           IconButton(

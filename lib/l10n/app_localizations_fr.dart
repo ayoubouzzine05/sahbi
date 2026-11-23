@@ -1027,6 +1027,9 @@ class L10nFr extends L10n {
   String get gameReaction => 'Réflexes';
 
   @override
+  String get gamesHint => 'Ou dis : « on joue » ou « devinette »';
+
+  @override
   String get reactionWait => 'Attendez que mes yeux deviennent verts…';
 
   @override

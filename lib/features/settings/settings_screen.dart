@@ -635,9 +635,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SwitchListTile(
                     key: const Key('proactive_switch'),
                     contentPadding: EdgeInsets.zero,
-                    title: Text(l.proactiveTitle),
+                    title: Text(l.behaviorTitle),
                     subtitle: Text(
-                      l.proactiveSubtitle,
+                      l.behaviorSubtitle,
                       style: const TextStyle(fontSize: 12),
                     ),
                     value: s.proactiveTalk,

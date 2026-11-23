@@ -16,6 +16,7 @@ import '../features/music/music_models.dart';
 import '../features/behavior/behavior_models.dart';
 import '../features/behavior/initiative_scheduler.dart';
 import '../features/behavior/mimo_behavior_engine.dart';
+import '../features/games/game_session.dart';
 import '../features/personality/companion_controller.dart';
 import '../features/personality/companion_lines.dart';
 import '../features/personality/idle_behavior.dart';
@@ -250,6 +251,11 @@ final ChangeNotifierProvider<ChatController> chatControllerProvider =
           currentView: () => ref.read(robotEyesProvider).latestFrame(),
           userSpoke: () => ref.read(robotEyesProvider).userSpoke(),
           lookAround: () => ref.read(robotEyesProvider).inspect(),
+          game: (t) => ref.read(gameProvider).answer(t),
+          startGame: (t) {
+            final g = ref.read(gameProvider);
+            return g.start(g.kindFor(t));
+          },
         ),
       );
       ref.read(voiceControllerProvider).onFinalText = chat.send;
@@ -451,6 +457,10 @@ final ChangeNotifierProvider<ConversationSession> conversationProvider =
       return c;
     });
 
+/// Offline mini-games: riddles, 3-choice quiz, reaction tap game.
+final ChangeNotifierProvider<GameSession> gameProvider =
+    ChangeNotifierProvider<GameSession>((ref) => GameSession());
+
 /// The robot's own initiative: it talks when the user is quiet and falls
 /// asleep after 10 minutes of being ignored (see [IdleBehavior]).
 final proactiveProvider = Provider<void>((ref) {
@@ -483,22 +493,56 @@ final proactiveProvider = Provider<void>((ref) {
     }
   }
 
+  final games = ref.read(gameProvider);
+
+  Future<void> play(GameKind kind) async {
+    final line = games.start(kind);
+    await chat.sayLocal(line, robotInitiated: true);
+    // Riddles / questions: listen for the answer without the name.
+    if (kind != GameKind.reaction &&
+        games.awaitingAnswer &&
+        ref.read(settingsProvider).wakeByName &&
+        voice.state == VoiceState.idle &&
+        !music.playing) {
+      convo.start(robotInitiated: true, listenNow: true);
+    }
+  }
+
   companion.onInitiative = (kind) {
-    if (!calm()) return;
+    if (!calm() || games.active) return;
     switch (kind) {
-      case InitiativeKind.remark ||
-          InitiativeKind.riddle ||
-          InitiativeKind.trivia ||
-          InitiativeKind.reaction:
+      case InitiativeKind.remark:
         unawaited(remark());
+      case InitiativeKind.riddle:
+        unawaited(play(GameKind.riddle));
+      case InitiativeKind.trivia:
+        unawaited(play(GameKind.trivia));
+      case InitiativeKind.reaction:
+        unawaited(play(GameKind.reaction));
     }
   };
+
+  // Reaction game result: said out loud (offline line).
+  games.onReactionResult = (line) =>
+      unawaited(chat.sayLocal(line, robotInitiated: true));
+
+  var wasGame = games.active;
+  void onGame() {
+    final a = games.active;
+    if (a == wasGame) return;
+    wasGame = a;
+    companion.behave(a ? BehaviorEvent.gameStart : BehaviorEvent.gameEnd);
+  }
+
+  games.addListener(onGame);
 
   // Conversation / listening drive the "listening" mood.
   var wasConvo = convo.active;
   void onConvo() {
     if (convo.active == wasConvo) return;
     wasConvo = convo.active;
+    // The spoken game ends with the conversation ("safi sir", silence).
+    if (!convo.active && games.awaitingAnswer) games.stop();
     companion.behave(
       convo.active
           ? BehaviorEvent.conversationStart
@@ -519,6 +563,8 @@ final proactiveProvider = Provider<void>((ref) {
   ref.onDispose(() {
     convo.removeListener(onConvo);
     voice.removeListener(onVoice);
+    games.removeListener(onGame);
+    games.onReactionResult = null;
     companion.onInitiative = null;
     behavior.canAct = () => false;
   });

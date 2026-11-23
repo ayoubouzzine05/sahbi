@@ -1014,6 +1014,9 @@ class L10nAr extends L10n {
   String get gameReaction => 'الزربة';
 
   @override
+  String get gamesHint => 'ولا قول: \"نلعبو\" ولا \"حاجيتك\"';
+
+  @override
   String get reactionWait => 'تسنا حتى يخضارو عينيا…';
 
   @override
